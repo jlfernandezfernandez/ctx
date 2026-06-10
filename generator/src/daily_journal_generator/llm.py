@@ -3,6 +3,8 @@
 Provider-agnostic on purpose: switching provider means changing
 LLM_BASE_URL / LLM_API_KEY / LLM_MODEL, nothing else.
 """
+import json
+
 import requests
 
 
@@ -18,6 +20,26 @@ class LLMClient:
         self.timeout = timeout
 
     def generate(self, system: str, user: str) -> str:
+        return self._chat(system, user)
+
+    def generate_json(self, system: str, user: str) -> dict:
+        """For metadata extraction. Falls back gracefully at call sites:
+        providers without json_object support usually still return JSON text."""
+        content = self._chat(system, user, response_format={"type": "json_object"})
+        text = content.strip()
+        if text.startswith("```"):
+            text = text.strip("`")
+            if text.startswith("json"):
+                text = text[4:]
+        try:
+            data = json.loads(text)
+        except ValueError as exc:
+            raise LLMError(f"LLM did not return valid JSON: {content[:300]}") from exc
+        if not isinstance(data, dict):
+            raise LLMError(f"LLM JSON is not an object: {content[:300]}")
+        return data
+
+    def _chat(self, system: str, user: str, **extra) -> str:
         resp = requests.post(
             f"{self.base_url}/chat/completions",
             headers={"Authorization": f"Bearer {self.api_key}"},
@@ -28,6 +50,7 @@ class LLMClient:
                     {"role": "user", "content": user},
                 ],
                 "stream": False,
+                **extra,
             },
             timeout=self.timeout,
         )

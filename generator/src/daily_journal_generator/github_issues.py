@@ -13,6 +13,10 @@ class GitHubError(Exception):
     pass
 
 
+def _votes(issue: dict) -> int:
+    return issue.get("reactions", {}).get("+1", 0)
+
+
 class IssuesClient:
     def __init__(self, repo: str, token: str):
         self.base = f"https://api.github.com/repos/{repo}"
@@ -37,7 +41,8 @@ class IssuesClient:
             if any(l["name"] == PRIORITY_LABEL for l in i["labels"])
         ]
         pool = priority or issues
-        return min(pool, key=lambda i: i["created_at"])
+        # Most 👍 reactions wins; ties go to the oldest issue.
+        return sorted(pool, key=lambda i: (-_votes(i), i["created_at"]))[0]
 
     def close_with_comment(self, number: int, comment: str) -> None:
         resp = self.session.post(f"{self.base}/issues/{number}/comments", json={"body": comment})

@@ -7,7 +7,7 @@ import { defineConfig } from 'astro/config';
 // https://astro.build/config
 export default defineConfig({
 	site: 'https://jlfernandezfernandez.github.io',
-	base: '/daily-journal',
+	base: '/vibeengineers',
 	integrations: [mdx(), sitemap()],
 	markdown: {
 		shikiConfig: {

@@ -45,6 +45,34 @@ def test_make_description_truncates_at_200_chars():
     assert len(make_description(body)) <= 200
 
 
+def test_write_article_includes_summary_when_given(tmp_path):
+    path = write_article(
+        output_dir=str(tmp_path),
+        pub_date=date(2026, 6, 11),
+        slug="x",
+        title="X",
+        description="d",
+        tags=[],
+        body="palabra " * 1200,
+        summary="Resumen en\ndos líneas.",
+    )
+    content = Path(path).read_text(encoding="utf-8")
+    assert 'summary: "Resumen en dos líneas."' in content
+
+
+def test_write_article_omits_summary_line_when_empty(tmp_path):
+    path = write_article(
+        output_dir=str(tmp_path),
+        pub_date=date(2026, 6, 11),
+        slug="x",
+        title="X",
+        description="d",
+        tags=[],
+        body="palabra " * 1200,
+    )
+    assert "summary:" not in Path(path).read_text(encoding="utf-8")
+
+
 def test_write_article_creates_file_with_frontmatter(tmp_path):
     body = "palabra " * 1200
     path = write_article(

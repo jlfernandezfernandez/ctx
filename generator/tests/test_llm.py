@@ -49,3 +49,30 @@ def test_generate_raises_on_empty_content():
     with patch("daily_journal_generator.llm.requests.post", return_value=make_response(payload=payload)):
         with pytest.raises(LLMError, match="empty"):
             client().generate("sys", "user")
+
+
+def test_generate_json_parses_object_and_requests_json_format():
+    payload = {"choices": [{"message": {"content": '{"summary": "s", "tags": ["a"]}'}}]}
+    with patch("daily_journal_generator.llm.requests.post", return_value=make_response(payload=payload)) as post:
+        assert client().generate_json("sys", "user") == {"summary": "s", "tags": ["a"]}
+    assert post.call_args.kwargs["json"]["response_format"] == {"type": "json_object"}
+
+
+def test_generate_json_strips_code_fences():
+    payload = {"choices": [{"message": {"content": '```json\n{"tags": []}\n```'}}]}
+    with patch("daily_journal_generator.llm.requests.post", return_value=make_response(payload=payload)):
+        assert client().generate_json("sys", "user") == {"tags": []}
+
+
+def test_generate_json_raises_on_invalid_json():
+    payload = {"choices": [{"message": {"content": "not json"}}]}
+    with patch("daily_journal_generator.llm.requests.post", return_value=make_response(payload=payload)):
+        with pytest.raises(LLMError, match="JSON"):
+            client().generate_json("sys", "user")
+
+
+def test_generate_json_raises_on_non_object():
+    payload = {"choices": [{"message": {"content": "[1, 2]"}}]}
+    with patch("daily_journal_generator.llm.requests.post", return_value=make_response(payload=payload)):
+        with pytest.raises(LLMError, match="JSON"):
+            client().generate_json("sys", "user")

@@ -1,4 +1,4 @@
-# Contribuir a Daily Journal
+# Contribuir a vibeengineers
 
 ## Proponer un tema (lo más valioso)
 
@@ -7,9 +7,9 @@ Abre una issue con la plantilla **"Proponer tema"**:
 - El **título de la issue** es el tema del artículo. Sé concreto: mejor "Kafka sin ZooKeeper: KRaft" que "Kafka".
 - Las **notas de enfoque** (opcionales) se inyectan al prompt del generador: qué no entiendes, con qué compararlo, qué casos cubrir.
 - El label `topic` se aplica solo. Añade `priority` si debe saltar la cola.
-- Labels extra (`java`, `sql`, ...) se convierten en tags del artículo publicado.
+- Labels extra (`java`, `sql`, ...) se convierten en tags del artículo publicado (el LLM añade más).
 
-Cada día laborable se publica el tema más antiguo de la cola (los `priority` primero). Al publicarse, la issue se cierra con el link.
+**Vota con 👍** las issues que te interesen: cada día laborable se publica el tema más votado (empate → el más antiguo; `priority` siempre primero). Al publicarse, la issue se cierra con el link.
 
 ## Contribuir código
 

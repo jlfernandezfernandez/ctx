@@ -41,7 +41,8 @@ def make_description(body: str) -> str:
 
 
 def _yaml_str(value: str) -> str:
-    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    flat = " ".join(value.split())  # newlines would break single-line YAML
+    escaped = flat.replace("\\", "\\\\").replace('"', '\\"')
     return f'"{escaped}"'
 
 
@@ -53,14 +54,17 @@ def write_article(
     description: str,
     tags: list[str],
     body: str,
+    summary: str = "",
 ) -> str:
     tags_yaml = "[" + ", ".join(_yaml_str(t) for t in tags) + "]"
+    summary_line = f"summary: {_yaml_str(summary)}\n" if summary else ""
     frontmatter = (
         "---\n"
         f"title: {_yaml_str(title)}\n"
         f"description: {_yaml_str(description)}\n"
         f"pubDate: {pub_date.isoformat()}\n"
         f"tags: {tags_yaml}\n"
+        f"{summary_line}"
         "---\n\n"
     )
     out = Path(output_dir)

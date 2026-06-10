@@ -35,6 +35,19 @@ Devuelve SOLO el esquema: las secciones con 2-4 bullets cada una indicando qué 
 cubrir, qué ejemplos de código concretos incluir y qué trampas mencionar."""
 
 
+def metadata_prompt(topic: str, outline: str) -> str:
+    return f"""Para un artículo técnico sobre "{topic}" con este esquema:
+
+{outline}
+
+Devuelve un objeto JSON con exactamente estas claves:
+- "summary": resumen del artículo en 2-3 frases en español (el TL;DR que se muestra al inicio).
+- "tags": lista de 3 a 5 etiquetas cortas en minúsculas y en inglés técnico \
+(p. ej. "java", "reactive", "backpressure", "kafka", "sql").
+
+Devuelve SOLO el JSON, sin explicaciones."""
+
+
 def article_prompt(topic: str, notes: str, outline: str) -> str:
     notes_block = f"\n\nNotas del equipo sobre el enfoque deseado:\n{notes}" if notes.strip() else ""
     return f"""Escribe el artículo completo sobre: {topic}{notes_block}

@@ -6,13 +6,14 @@ import pytest
 from daily_journal_generator.github_issues import IssuesClient, GitHubError
 
 
-def issue(number, created, labels, title="t"):
+def issue(number, created, labels, title="t", votes=0):
     return {
         "number": number,
         "title": title,
         "body": "notes",
         "created_at": created,
         "labels": [{"name": name} for name in labels],
+        "reactions": {"+1": votes},
     }
 
 
@@ -41,6 +42,30 @@ def test_next_topic_priority_jumps_queue():
     c = client_with([
         issue(1, "2026-06-01T00:00:00Z", ["topic"]),
         issue(2, "2026-06-02T00:00:00Z", ["topic", "priority"]),
+    ])
+    assert c.next_topic()["number"] == 2
+
+
+def test_next_topic_most_voted_wins():
+    c = client_with([
+        issue(1, "2026-06-01T00:00:00Z", ["topic"], votes=1),
+        issue(2, "2026-06-02T00:00:00Z", ["topic"], votes=5),
+    ])
+    assert c.next_topic()["number"] == 2
+
+
+def test_next_topic_votes_tie_falls_back_to_oldest():
+    c = client_with([
+        issue(2, "2026-06-02T00:00:00Z", ["topic"], votes=3),
+        issue(1, "2026-06-01T00:00:00Z", ["topic"], votes=3),
+    ])
+    assert c.next_topic()["number"] == 1
+
+
+def test_next_topic_priority_beats_votes():
+    c = client_with([
+        issue(1, "2026-06-01T00:00:00Z", ["topic"], votes=99),
+        issue(2, "2026-06-02T00:00:00Z", ["topic", "priority"], votes=0),
     ])
     assert c.next_topic()["number"] == 2
 

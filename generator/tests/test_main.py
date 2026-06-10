@@ -35,6 +35,7 @@ def test_run_generates_validates_writes_and_closes(issues_cls, llm_cls, validate
     issues.next_topic.return_value = topic_issue()
     llm = llm_cls.return_value
     llm.generate.side_effect = ["the outline", "palabra " * 1200]
+    llm.generate_json.return_value = {"summary": "El TL;DR.", "tags": ["reactive", "java"]}
 
     assert run(env()) == 0
 
@@ -43,11 +44,36 @@ def test_run_generates_validates_writes_and_closes(issues_cls, llm_cls, validate
     write.assert_called_once()
     kwargs = write.call_args.kwargs
     assert kwargs["slug"] == "project-reactor"
-    assert kwargs["tags"] == ["java"]  # topic/priority labels excluded
+    assert kwargs["summary"] == "El TL;DR."
+    assert kwargs["description"] == "El TL;DR."
+    assert kwargs["tags"] == ["java", "reactive"]  # issue labels first, LLM tags appended, deduped
     issues.close_with_comment.assert_called_once()
     comment = issues.close_with_comment.call_args.args[1]
     assert "https://owner.github.io/repo/blog/" in comment
     assert "-project-reactor/" in comment
+
+
+@patch("daily_journal_generator.main.write_article", return_value="/tmp/out/x.md")
+@patch("daily_journal_generator.main.validate_body")
+@patch("daily_journal_generator.main.LLMClient")
+@patch("daily_journal_generator.main.IssuesClient")
+def test_run_falls_back_when_metadata_call_fails(issues_cls, llm_cls, validate, write):
+    from daily_journal_generator.llm import LLMError
+
+    issues = issues_cls.return_value
+    issues.next_topic.return_value = topic_issue()
+    llm = llm_cls.return_value
+    body = "Primer párrafo del artículo.\n\n" + "palabra " * 1200
+    llm.generate.side_effect = ["outline", body]
+    llm.generate_json.side_effect = LLMError("bad json")
+
+    assert run(env()) == 0
+
+    kwargs = write.call_args.kwargs
+    assert kwargs["summary"] == ""
+    assert kwargs["description"] == "Primer párrafo del artículo."
+    assert kwargs["tags"] == ["java"]
+    issues.close_with_comment.assert_called_once()
 
 
 @patch("daily_journal_generator.main.write_article", return_value="/tmp/out/x.md")

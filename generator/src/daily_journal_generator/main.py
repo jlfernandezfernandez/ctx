@@ -6,8 +6,8 @@ from pathlib import Path
 
 from .article import make_description, slugify, validate_body, write_article
 from .github_issues import PRIORITY_LABEL, TOPIC_LABEL, IssuesClient
-from .llm import LLMClient
-from .prompts import SYSTEM_PROMPT, article_prompt, outline_prompt
+from .llm import LLMClient, LLMError
+from .prompts import SYSTEM_PROMPT, article_prompt, metadata_prompt, outline_prompt
 
 QUEUE_LABELS = {TOPIC_LABEL, PRIORITY_LABEL}
 
@@ -52,17 +52,31 @@ def run(env: dict) -> int:
     body = llm.generate(SYSTEM_PROMPT, article_prompt(topic, notes, outline))
     validate_body(body)
 
+    tags = [l["name"] for l in issue["labels"] if l["name"] not in QUEUE_LABELS]
+    summary = ""
+    try:
+        meta = llm.generate_json(SYSTEM_PROMPT, metadata_prompt(topic, outline))
+        if isinstance(meta.get("summary"), str):
+            summary = meta["summary"].strip()
+        if isinstance(meta.get("tags"), list):
+            for tag in meta["tags"]:
+                tag = str(tag).strip().lower()
+                if tag and tag not in tags:
+                    tags.append(tag)
+    except LLMError as exc:
+        print(f"Metadata generation failed ({exc}); falling back to defaults.")
+
     pub_date = today
     slug = slugify(topic)
-    tags = [l["name"] for l in issue["labels"] if l["name"] not in QUEUE_LABELS]
     path = write_article(
         output_dir=output_dir,
         pub_date=pub_date,
         slug=slug,
         title=topic,
-        description=make_description(body),
+        description=summary or make_description(body),
         tags=tags,
         body=body,
+        summary=summary,
     )
     print(f"Article written: {path}")
 
