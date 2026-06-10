@@ -19,33 +19,64 @@ const [latest, ...rest] = posts;
 		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
 		<style>
 			.kicker {
-				margin: 0;
-				text-transform: uppercase;
-				letter-spacing: 0.1em;
-				font-size: 0.8em;
+				margin: 0 0 0.8em 0;
+				font-family: var(--font-mono);
+				font-size: 0.85em;
+				color: var(--accent);
+			}
+			.kicker::before {
+				content: '$ ';
 				color: rgb(var(--gray));
 			}
+			.today {
+				padding: 2.5em 0 2em 0;
+			}
 			.today h1 {
-				margin: 0.2em 0;
+				margin: 0 0 0.3em 0;
+				font-family: var(--font-sans);
+				font-weight: 700;
+				font-size: 2.4em;
+				letter-spacing: -0.02em;
+				line-height: 1.15;
 			}
 			.today h1 a {
 				color: rgb(var(--black));
 				text-decoration: none;
 			}
 			.today h1 a:hover {
-				color: rgb(var(--accent));
+				color: var(--accent);
 			}
-			.date {
-				margin: 0;
+			.date,
+			.tags {
+				font-family: var(--font-mono);
+				font-size: 0.8em;
+				text-transform: uppercase;
+				letter-spacing: 0.06em;
 				color: rgb(var(--gray));
+			}
+			.description {
+				margin: 1em 0 0 0;
+				font-size: 1.1em;
+				color: rgb(var(--gray-dark));
+				max-width: 44em;
 			}
 			.read {
 				display: inline-block;
-				margin-top: 0.5em;
-				font-weight: bold;
+				margin-top: 1.2em;
+				font-family: var(--font-mono);
+				font-weight: 500;
 			}
 			.archive {
 				margin-top: 3em;
+				border-top: 1px solid rgb(var(--gray-light));
+				padding-top: 1.5em;
+			}
+			.archive h2 {
+				margin: 0 0 1em 0;
+				font-size: 0.85em;
+				text-transform: uppercase;
+				letter-spacing: 0.08em;
+				color: rgb(var(--gray));
 			}
 			.archive ul {
 				list-style: none;
@@ -54,13 +85,30 @@ const [latest, ...rest] = posts;
 			}
 			.archive li {
 				display: flex;
-				justify-content: space-between;
-				gap: 1em;
-				padding: 0.4em 0;
+				align-items: baseline;
+				gap: 1.5em;
+				padding: 0.55em 0;
 				border-bottom: 1px solid rgb(var(--gray-light));
 			}
+			.archive .date {
+				flex-shrink: 0;
+				width: 7.5em;
+			}
 			.archive a {
+				color: rgb(var(--black));
 				text-decoration: none;
+			}
+			.archive a:hover {
+				color: var(--accent);
+			}
+			@media (max-width: 720px) {
+				.today h1 {
+					font-size: 1.7em;
+				}
+				.archive li {
+					flex-direction: column;
+					gap: 0.1em;
+				}
 			}
 		</style>
 	</head>
@@ -70,16 +118,19 @@ const [latest, ...rest] = posts;
 			{
 				latest && (
 					<section class="today">
-						<p class="kicker">Artículo de hoy</p>
+						<p class="kicker">cat artículo-de-hoy.md</p>
 						<h1>
-							<a href={`${base}/blog/${latest.id}/`}>{latest.data.title}</a>
+							<a class="cursor" href={`${base}/blog/${latest.id}/`}>
+								{latest.data.title}
+							</a>
 						</h1>
 						<p class="date">
 							<FormattedDate date={latest.data.pubDate} />
+							{latest.data.tags.length > 0 && <span class="tags"> · {latest.data.tags.join(' · ')}</span>}
 						</p>
-						<p>{latest.data.description}</p>
+						<p class="description">{latest.data.description}</p>
 						<a class="read" href={`${base}/blog/${latest.id}/`}>
-							Leer →
+							leer artículo →
 						</a>
 					</section>
 				)
@@ -91,10 +142,10 @@ const [latest, ...rest] = posts;
 						<ul>
 							{rest.map((post) => (
 								<li>
-									<a href={`${base}/blog/${post.id}/`}>{post.data.title}</a>
 									<span class="date">
 										<FormattedDate date={post.data.pubDate} />
 									</span>
+									<a href={`${base}/blog/${post.id}/`}>{post.data.title}</a>
 								</li>
 							))}
 						</ul>

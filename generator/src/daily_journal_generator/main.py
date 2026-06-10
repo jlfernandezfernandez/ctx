@@ -2,6 +2,7 @@
 import os
 import sys
 from datetime import date
+from pathlib import Path
 
 from .article import make_description, slugify, validate_body, write_article
 from .github_issues import PRIORITY_LABEL, TOPIC_LABEL, IssuesClient
@@ -21,13 +22,21 @@ def clean_notes(body: str) -> str:
 
 
 def run(env: dict) -> int:
+    output_dir = env.get("OUTPUT_DIR", "site/src/content/blog")
+    today = date.today()
+
+    # One article per day, even if the workflow is dispatched again.
+    existing = list(Path(output_dir).glob(f"{today.isoformat()}-*.md"))
+    if existing:
+        print(f"Already published today: {existing[0].name}. Nothing to do.")
+        return 0
+
     issues = IssuesClient(repo=env["GITHUB_REPOSITORY"], token=env["GITHUB_TOKEN"])
     llm = LLMClient(
         base_url=env["LLM_BASE_URL"],
         api_key=env["LLM_API_KEY"],
         model=env["LLM_MODEL"],
     )
-    output_dir = env.get("OUTPUT_DIR", "site/src/content/blog")
     site_url = env.get("SITE_URL", "").rstrip("/")
 
     issue = issues.next_topic()
@@ -43,7 +52,7 @@ def run(env: dict) -> int:
     body = llm.generate(SYSTEM_PROMPT, article_prompt(topic, notes, outline))
     validate_body(body)
 
-    pub_date = date.today()
+    pub_date = today
     slug = slugify(topic)
     tags = [l["name"] for l in issue["labels"] if l["name"] not in QUEUE_LABELS]
     path = write_article(
