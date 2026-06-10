@@ -1,0 +1,17 @@
+name: Proponer tema
+description: Propón un tema para el artículo diario
+labels: ["topic"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        El **título de la issue** es el tema del artículo (p. ej. "Kafka sin ZooKeeper: KRaft").
+        Si corre prisa, añade el label `priority` después de crearla para saltar la cola.
+  - type: textarea
+    id: notas
+    attributes:
+      label: Notas de enfoque
+      description: Opcional. Qué no entendéis, con qué compararlo, qué casos cubrir. Se inyectan al prompt del artículo.
+      placeholder: "No entendemos el paradigma reactivo. Partir de código imperativo y compararlo."
+    validations:
+      required: false

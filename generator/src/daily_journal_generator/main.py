@@ -10,6 +10,15 @@ from .prompts import SYSTEM_PROMPT, article_prompt, outline_prompt
 
 QUEUE_LABELS = {TOPIC_LABEL, PRIORITY_LABEL}
 
+# Artifacts that GitHub issue forms inject into the body.
+FORM_ARTIFACTS = ("### Notas de enfoque", "_No response_")
+
+
+def clean_notes(body: str) -> str:
+    for artifact in FORM_ARTIFACTS:
+        body = body.replace(artifact, "")
+    return body.strip()
+
 
 def run(env: dict) -> int:
     issues = IssuesClient(repo=env["GITHUB_REPOSITORY"], token=env["GITHUB_TOKEN"])
@@ -27,7 +36,7 @@ def run(env: dict) -> int:
         return 0
 
     topic = issue["title"]
-    notes = issue.get("body") or ""
+    notes = clean_notes(issue.get("body") or "")
     print(f"Generating article for issue #{issue['number']}: {topic}")
 
     outline = llm.generate(SYSTEM_PROMPT, outline_prompt(topic, notes))

@@ -50,6 +50,24 @@ def test_run_generates_validates_writes_and_closes(issues_cls, llm_cls, validate
     assert "-project-reactor/" in comment
 
 
+@patch("daily_journal_generator.main.write_article", return_value="/tmp/out/x.md")
+@patch("daily_journal_generator.main.validate_body")
+@patch("daily_journal_generator.main.LLMClient")
+@patch("daily_journal_generator.main.IssuesClient")
+def test_run_strips_issue_form_artifacts_from_notes(issues_cls, llm_cls, validate, write):
+    issue = topic_issue()
+    issue["body"] = "### Notas de enfoque\n\n_No response_"
+    issues_cls.return_value.next_topic.return_value = issue
+    llm = llm_cls.return_value
+    llm.generate.side_effect = ["outline", "palabra " * 1200]
+
+    run(env())
+
+    outline_user_prompt = llm.generate.call_args_list[0].args[1]
+    assert "Notas del equipo" not in outline_user_prompt
+    assert "_No response_" not in outline_user_prompt
+
+
 @patch("daily_journal_generator.main.LLMClient")
 @patch("daily_journal_generator.main.IssuesClient")
 def test_run_exits_zero_when_no_topics(issues_cls, llm_cls):
