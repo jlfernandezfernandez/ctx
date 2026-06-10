@@ -1,0 +1,51 @@
+name: Generate daily article
+
+on:
+  schedule:
+    # 04:30 UTC Mon-Fri = 06:30 Madrid (summer) / 05:30 (winter)
+    - cron: "30 4 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: generate
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install generator
+        run: pip install ./generator
+
+      - name: Generate article
+        env:
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          OUTPUT_DIR: site/src/content/blog
+          SITE_URL: https://${{ github.repository_owner }}.github.io/daily-journal
+        run: daily-journal-generate
+
+      - name: Commit and push article
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/src/content/blog
+          if git diff --cached --quiet; then
+            echo "Nothing to publish."
+          else
+            git commit -m "chore: publish daily article"
+            git push
+          fi
