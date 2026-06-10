@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.egg-info/
+.venv/
+.pytest_cache/
+
+# Node / Astro
+node_modules/
+site/dist/
+.astro/
+
+# Local secrets — never commit keys
+.env
