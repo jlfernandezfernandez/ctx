@@ -1,0 +1,107 @@
+---
+import { getCollection } from 'astro:content';
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import FormattedDate from '../components/FormattedDate.astro';
+import Header from '../components/Header.astro';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+
+const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
+const posts = (await getCollection('blog')).sort(
+	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+);
+const [latest, ...rest] = posts;
+---
+
+<!doctype html>
+<html lang="es">
+	<head>
+		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
+		<style>
+			.kicker {
+				margin: 0;
+				text-transform: uppercase;
+				letter-spacing: 0.1em;
+				font-size: 0.8em;
+				color: rgb(var(--gray));
+			}
+			.today h1 {
+				margin: 0.2em 0;
+			}
+			.today h1 a {
+				color: rgb(var(--black));
+				text-decoration: none;
+			}
+			.today h1 a:hover {
+				color: rgb(var(--accent));
+			}
+			.date {
+				margin: 0;
+				color: rgb(var(--gray));
+			}
+			.read {
+				display: inline-block;
+				margin-top: 0.5em;
+				font-weight: bold;
+			}
+			.archive {
+				margin-top: 3em;
+			}
+			.archive ul {
+				list-style: none;
+				margin: 0;
+				padding: 0;
+			}
+			.archive li {
+				display: flex;
+				justify-content: space-between;
+				gap: 1em;
+				padding: 0.4em 0;
+				border-bottom: 1px solid rgb(var(--gray-light));
+			}
+			.archive a {
+				text-decoration: none;
+			}
+		</style>
+	</head>
+	<body>
+		<Header />
+		<main>
+			{
+				latest && (
+					<section class="today">
+						<p class="kicker">Artículo de hoy</p>
+						<h1>
+							<a href={`${base}/blog/${latest.id}/`}>{latest.data.title}</a>
+						</h1>
+						<p class="date">
+							<FormattedDate date={latest.data.pubDate} />
+						</p>
+						<p>{latest.data.description}</p>
+						<a class="read" href={`${base}/blog/${latest.id}/`}>
+							Leer →
+						</a>
+					</section>
+				)
+			}
+			{
+				rest.length > 0 && (
+					<section class="archive">
+						<h2>Anteriores</h2>
+						<ul>
+							{rest.map((post) => (
+								<li>
+									<a href={`${base}/blog/${post.id}/`}>{post.data.title}</a>
+									<span class="date">
+										<FormattedDate date={post.data.pubDate} />
+									</span>
+								</li>
+							))}
+						</ul>
+					</section>
+				)
+			}
+		</main>
+		<Footer />
+	</body>
+</html>
