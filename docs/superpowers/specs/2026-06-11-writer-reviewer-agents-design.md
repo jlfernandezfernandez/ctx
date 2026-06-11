@@ -91,10 +91,8 @@ a reflejar ambos modelos, p.ej. `deepseek-v4-pro + <reviewer> (reviewer)`).
 ## Workflows (GH Actions)
 
 - `generate.yml`: añadir permiso `pull-requests: write` y las nuevas vars. Resto igual.
-- **Deploy**: hoy escucha `workflow_run`; el merge humano de un draft PR no lo
-  dispararía. Añadir trigger `push` a main con path
-  `site/src/content/blog/**`. (El gotcha de GITHUB_TOKEN no aplica: el merge lo
-  hace un humano.)
+- **Deploy**: sin cambios — `deploy.yml` ya tiene trigger `push` a main, y el
+  merge de un draft PR lo hace un humano (el gotcha de GITHUB_TOKEN no aplica).
 
 ## Errores
 
