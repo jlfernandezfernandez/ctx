@@ -77,7 +77,7 @@ class User(BaseModel):
 # Agente con system prompt que instruye al LLM
 agent = Agent(
     model="openai:gpt-4o-mini",  # requiere OPENAI_API_KEY en entorno
-    result_type=User,
+    output_type=User,
     system_prompt="Extrae el nombre y la edad de la persona descrita en el texto."
 )
 
@@ -127,7 +127,7 @@ async def get_weather(ctx: RunContext[Location], location: str) -> dict:
 # Agente con tool y dependencias tipadas
 agent = Agent(
     model="openai:gpt-4o-mini",
-    result_type=WeatherResponse,
+    output_type=WeatherResponse,
     system_prompt="Usa la tool get_weather para obtener el clima y devuelve los datos estructurados.",
     deps_type=Location,
     tools=[Tool(get_weather)]
@@ -150,6 +150,7 @@ Este ejemplo muestra un agente que realiza una investigación usando una tool de
 from typing import List
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent, RunContext, Tool
+from pydantic_ai.messages import ModelRequest, TextPart
 
 # Documentos simulados (vector store en producción)
 DOCUMENTS = [
@@ -177,7 +178,7 @@ async def search_docs(ctx: RunContext[None], query: str) -> List[str]:
 # Agente con memoria (lista de mensajes)
 agent = Agent(
     model="openai:gpt-4o-mini",
-    result_type=ResearchResult,
+    output_type=ResearchResult,
     system_prompt=(
         "Eres un asistente de investigación. Usa la tool search_docs para encontrar información. "
         "Resume los hallazgos y proporciona fuentes. La confianza debe reflejar la relevancia."
@@ -186,9 +187,8 @@ agent = Agent(
 )
 
 # Historial de mensajes para memoria
-messages = []
 user_query = "¿Qué diferencias hay entre Pydantic AI y LangChain?"
-messages.append({"role": "user", "content": user_query})
+messages = [ModelRequest(parts=[TextPart(content=user_query)])]
 
 # Ejecución con memoria
 result = agent.run_sync(user_query, message_history=messages)
@@ -222,4 +222,3 @@ El agente utiliza `search_docs` para recuperar fragmentos relevantes, construye 
 - Documentación de Pydantic V2: [https://docs.pydantic.dev/latest/](https://docs.pydantic.dev/latest/)
 - OpenAI Function Calling Guide: [https://platform.openai.com/docs/guides/function-calling](https://platform.openai.com/docs/guides/function-calling)
 - Blog de Pydantic sobre el lanzamiento de Pydantic AI: [https://pydantic.dev/articles/pydantic-ai](https://pydantic.dev/articles/pydantic-ai)
-- Comparativa comunitaria en Hacker News: [https://news.ycombinator.com/item?id=42345678](https://news.ycombinator.com/item?id=42345678) (discusión sobre Pydantic AI vs LangChain)
