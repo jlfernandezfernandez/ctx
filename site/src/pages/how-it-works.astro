@@ -52,15 +52,17 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 		<h2>Pipeline real de publicación</h2>
 		<ol>
 			<li>issue + votos</li>
-			<li>esquema generado</li>
-			<li>artículo generado</li>
-			<li>segunda revisión del código</li>
-			<li>validaciones automáticas</li>
-			<li>Markdown publicado</li>
+			<li>writer: esquema y artículo</li>
+			<li>PR con label <code>needs-review</code></li>
+			<li>reviewer: evalúa código, rigor y legibilidad</li>
+			<li>si aprueba → merge automático</li>
+			<li>si rechaza → corrige y merge, o label <code>needs-human-review</code></li>
 		</ol>
 		<p>
-			No hay revisión humana antes de publicar ni se compilan los ejemplos: la segunda pasada
-			busca defectos objetivos en el código y las validaciones bloquean errores estructurales.
+			Dos agentes LLM con modelos distintos: el <strong>writer</strong> genera, el <strong>reviewer</strong>
+		_evalúa y corrige_. Si el reviewer no logra aprobar tras corregir, la PR queda abierta para
+			revisión humana. Los enlaces en las referencias no bloquean publicación: es documentación, más
+			es mejor siempre que sea válido.
 		</p>
 	</div>
 
