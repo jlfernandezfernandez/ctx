@@ -15,7 +15,7 @@ def client():
     c.session.get.return_value = ref
     branch = MagicMock(status_code=201)
     pr = MagicMock(status_code=201)
-    pr.json.return_value = {"html_url": "https://github.com/owner/repo/pull/9"}
+    pr.json.return_value = {"html_url": "https://github.com/owner/repo/pull/9", "number": 9}
     c.session.post.side_effect = [branch, pr]
     c.session.put.return_value = MagicMock(status_code=201)
     return c
@@ -23,7 +23,7 @@ def client():
 
 def test_create_draft_pr_creates_branch_file_and_pr():
     c = client()
-    url = c.create_draft_pr(
+    url, number = c.create_draft_pr(
         branch="draft/issue-5",
         path="site/src/content/blog/2026-06-11-tema.md",
         content="---\ntitle: x\n---\n\ncuerpo\n",
@@ -31,6 +31,7 @@ def test_create_draft_pr_creates_branch_file_and_pr():
         body="Closes #5",
     )
     assert url == "https://github.com/owner/repo/pull/9"
+    assert number == 9
 
     c.session.get.assert_called_once_with(
         "https://api.github.com/repos/owner/repo/git/ref/heads/main"

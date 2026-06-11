@@ -93,7 +93,7 @@ def run(env: dict) -> int:
         requested_by=(issue.get("user") or {}).get("login", ""),
         model=writer_model,
     )
-    url = drafts.create_draft_pr(
+    url, pr_number = drafts.create_draft_pr(
         branch=f"article/issue-{issue['number']}",
         path=f"site/src/content/blog/{today.isoformat()}-{slug}.md",
         content=content,
@@ -101,7 +101,8 @@ def run(env: dict) -> int:
         body=f"Closes #{issue['number']}",
     )
     issues.add_label(issue["number"], NEEDS_REVIEW_LABEL)
-    print(f"Draft PR opened for issue #{issue['number']}: {url}")
+    issues.add_label(pr_number, NEEDS_REVIEW_LABEL)
+    print(f"PR #{pr_number} opened for issue #{issue['number']}: {url}")
     return 0
 
 

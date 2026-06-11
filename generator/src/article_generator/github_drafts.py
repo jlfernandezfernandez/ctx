@@ -59,7 +59,7 @@ class DraftsClient:
             json={"title": title, "head": branch, "base": base, "body": body},
         )
         self._require(pr, (201,), "open draft pull request")
-        return pr.json()["html_url"]
+        return pr.json()["html_url"], pr.json()["number"]
 
     def get_pr(self, number: int) -> dict:
         resp = self.session.get(f"{self.base}/pulls/{number}")

@@ -45,7 +45,7 @@ def test_writer_generates_and_opens_pr(issues_cls, llm_cls, drafts_cls):
     writer.generate.side_effect = ["outline", "palabra " * 1200]
     writer.generate_json.return_value = {"summary": "El TL;DR.", "tags": ["reactive", "java"]}
     drafts = drafts_cls.return_value
-    drafts.create_draft_pr.return_value = "https://github.com/owner/repo/pull/9"
+    drafts.create_draft_pr.return_value = ("https://github.com/owner/repo/pull/9", 9)
 
     assert run(env()) == 0
 
@@ -56,7 +56,8 @@ def test_writer_generates_and_opens_pr(issues_cls, llm_cls, drafts_cls):
     assert kwargs["path"].startswith("site/src/content/blog/")
     assert "Closes #5" in kwargs["body"]
     assert "title: " in kwargs["content"]
-    issues.add_label.assert_called_once_with(5, "needs-review")
+    issues.add_label.assert_any_call(5, "needs-review")
+    issues.add_label.assert_any_call(9, "needs-review")
 
 
 @patch("article_generator.main.DraftsClient")
@@ -71,7 +72,7 @@ def test_metadata_failure_falls_back_to_description(issues_cls, llm_cls, drafts_
     writer.generate.side_effect = ["outline", "palabra " * 1200]
     writer.generate_json.side_effect = LLMError("bad json")
     drafts = drafts_cls.return_value
-    drafts.create_draft_pr.return_value = "https://github.com/owner/repo/pull/9"
+    drafts.create_draft_pr.return_value = ("https://github.com/owner/repo/pull/9", 9)
 
     assert run(env()) == 0
 
@@ -91,7 +92,7 @@ def test_run_strips_issue_form_artifacts_from_notes(issues_cls, llm_cls, drafts_
     writer.generate.side_effect = ["outline", "palabra " * 1200]
     writer.generate_json.return_value = {"summary": "s", "tags": []}
     drafts = drafts_cls.return_value
-    drafts.create_draft_pr.return_value = "https://github.com/owner/repo/pull/9"
+    drafts.create_draft_pr.return_value = ("https://github.com/owner/repo/pull/9", 9)
 
     run(env())
 
@@ -134,7 +135,7 @@ def test_validation_failure_still_opens_pr(issues_cls, llm_cls, drafts_cls):
     writer.generate.side_effect = ["outline", "palabra " * 1200]
     writer.generate_json.return_value = {"summary": "s", "tags": []}
     drafts = drafts_cls.return_value
-    drafts.create_draft_pr.return_value = "https://github.com/owner/repo/pull/9"
+    drafts.create_draft_pr.return_value = ("https://github.com/owner/repo/pull/9", 9)
 
     with patch("article_generator.main.validate_body", side_effect=ValidationError("Body too short")):
         assert run(env()) == 0
