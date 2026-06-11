@@ -74,6 +74,8 @@ Sigue fielmente este esquema:
 Requisitos:
 - Entre 2500 y 3500 palabras (~15 minutos de lectura).
 - Markdown puro: títulos con ##, código en bloques con su lenguaje (```java, ```python...).
+- Redacta títulos de sección propios, descriptivos y concretos para este tema. No copies \
+literalmente el texto del esquema ni incluyas su numeración ("1.", "2.") en los títulos.
 - NO incluyas frontmatter YAML ni el título principal: empieza directamente por la \
 primera sección con ##.
 - Código completo y ejecutable, con comentarios donde aporten.
