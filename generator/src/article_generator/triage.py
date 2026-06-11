@@ -22,11 +22,19 @@ Decide una acción:
 - REJECT: únicamente spam, promoción o contenido claramente no técnico.
 - REVIEW: cualquier caso dudoso o ambiguo.
 
-Si el tema es técnico y válido (APPROVE), normaliza título y descripción para que el writer
-reciba el mejor input posible: corrije errores, mejora la redacción, aclara el enfoque y añade
-contexto técnico útil. Si la descripción original ya es buena, devuélvela sin cambios.
-Preserva siempre la intención, el significado y los términos técnicos de la propuesta.
-Ante cualquier duda, elige REVIEW.
+Si el tema es técnico y válido (APPROVE), mejora título y descripción para que el writer
+reciba el mejor input posible.
+
+Título: conviértelo en el título final del artículo. Reglas:
+- Si es muy corto o genérico ("Pydantic AI"), añade un subtítulo descriptivo tras ": "
+  que adelante el enfoque (ej: "Introducción a Pydantic AI: structured output para LLMs").
+- Si es comparativo ("X vs Y"), añade el criterio de decisión ("X vs Y: cuándo usar cada uno").
+- Si es un listado ("Novedades de Java 21 a 25"), concreta los temas principales tras ": ".
+- Corrige capitalización y puntuación, pero no traduzcas términos técnicos.
+- Preserva la intención original; no cambies el tema.
+
+Descripción: si es escasa o confusa, reescríbela para dar contexto técnico útil al writer.
+Si ya es buena, devuélvela sin cambios. Ante cualquier duda, elige REVIEW.
 
 Responde únicamente con un objeto JSON con estas claves:
 - action: APPROVE, REJECT o REVIEW
