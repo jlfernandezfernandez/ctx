@@ -7,6 +7,7 @@ summary: "Tomcat utiliza un modelo hilo-por-petición que simplifica el desarrol
 issue: 15
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"
+reviewer: "minimax-m3"
 ---
 
 ## El cuello de botella del modelo hilo-por-petición y la necesidad de I/O no bloqueante
