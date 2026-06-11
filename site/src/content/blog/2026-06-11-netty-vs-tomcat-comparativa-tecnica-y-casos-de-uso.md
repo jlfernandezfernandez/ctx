@@ -208,6 +208,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 import java.util.concurrent.TimeUnit;
@@ -232,7 +233,7 @@ public class NettySlowConnections {
                            @Override
                            public void userEventTriggered(ChannelHandlerContext ctx,
                                                           Object evt) {
-                               if (evt instanceof IdleStateHandler) {
+                               if (evt instanceof IdleStateEvent) {
                                    // Envía un keep-alive cada 30s sin crear hilos
                                    ctx.writeAndFlush("ping\n");
                                }
