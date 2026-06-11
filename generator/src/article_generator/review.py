@@ -115,7 +115,11 @@ def run(env: dict) -> int:
     # The LLMs only ever see and rewrite the body; the frontmatter is
     # machine-built metadata and must survive every round untouched.
     frontmatter, draft = split_frontmatter(prs.read_file(branch, path))
-    print(f"Reviewing article for issue #{issue_number}: {topic}")
+    # Prepend the title so the reviewer can check it matches the content.
+    title_match = re.search(r'^title:\s*"(.+)"$', frontmatter, re.MULTILINE)
+    title = title_match.group(1) if title_match else topic
+    review_body = f"# {title}\n\n{draft}"
+    print(f"Reviewing article for issue #{issue_number}: {title}")
 
     site_url = env.get("SITE_URL", "").rstrip("/")
 
@@ -135,7 +139,7 @@ def run(env: dict) -> int:
             )
         # Quality log: traceable per-article stats for prompt tuning.
         log = (
-            f"quality_log: issue=#{issue_number or '?'} topic={topic} "
+            f"quality_log: issue=#{issue_number or '?'} title={title} "
             f"writer={env['LLM_WRITER_MODEL']} reviewer={reviewer_model} "
             f"rounds={fixes} approved=true\n"
         )
@@ -153,7 +157,7 @@ def run(env: dict) -> int:
 
     previous_blocking: list[str] | None = None
     for fixes_done in range(max_rounds + 1):
-        report = _review_report(reviewer, topic, draft, previous_blocking)
+        report = _review_report(reviewer, title, review_body, previous_blocking)
         blocking, suggestions = _split_issues(report)
         if not blocking:
             print(f"Approved after {fixes_done} fix(es). Merging.")

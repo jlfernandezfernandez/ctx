@@ -69,11 +69,14 @@ def metadata_prompt(topic: str, body: str, existing_tags: list[str] | None = Non
 {body}{tag_hint}
 
 Devuelve un objeto JSON con exactamente estas claves:
+- "title": el título final del artículo. Mejora el título original si es necesario: \
+si es muy corto o genérico, añade un subtítulo descriptivo tras ": ". Si es comparativo, \
+añade el criterio de decisión. Si ya es bueno, devuélvelo sin cambios.
 - "summary": el TL;DR en 2-3 frases en español: los takeaways técnicos concretos \
 que el lector se lleva (qué es, qué resuelve, cuándo usarlo o no). Nunca describas \
 el artículo ni empieces con "El artículo", "Este artículo" o similar.
-- "tags": lista de 3 a 5 etiquetas cortas en minúsculas y en inglés técnico \
-(p. ej. "java", "reactive", "backpressure", "kafka", "sql").
+- "tags": lista de 2 a 3 etiquetas en minúsculas y en inglés técnico, reutilizando \
+las del blog siempre que sea posible (p. ej. "java", "reactive", "kafka", "llm").
 
 Devuelve SOLO el JSON, sin explicaciones."""
 

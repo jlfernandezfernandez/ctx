@@ -55,11 +55,14 @@ def clean_notes(body: str) -> str:
     return body.strip()
 
 
-def collect_metadata(llm: LLMClient, topic: str, body: str, existing_tags: list[str]) -> tuple[str, list[str]]:
+def collect_metadata(llm: LLMClient, topic: str, body: str, existing_tags: list[str]) -> tuple[str, str, list[str]]:
+    title = topic
     tags = []
     summary = ""
     try:
         meta = llm.generate_json(SYSTEM_PROMPT, metadata_prompt(topic, body, existing_tags))
+        if isinstance(meta.get("title"), str) and meta["title"].strip():
+            title = meta["title"].strip()
         if isinstance(meta.get("summary"), str):
             summary = meta["summary"].strip()
         if isinstance(meta.get("tags"), list):
@@ -69,7 +72,7 @@ def collect_metadata(llm: LLMClient, topic: str, body: str, existing_tags: list[
                     tags.append(tag)
     except LLMError as exc:
         print(f"Metadata generation failed ({exc}); falling back to defaults.")
-    return summary, tags
+    return title, summary, tags
 
 
 def export_output(env: dict, name: str, value: str) -> None:
@@ -105,12 +108,12 @@ def run(env: dict) -> int:
         print(f"Structure validation failed ({exc}); opening PR anyway for the reviewer.")
 
     canonical_tags = load_canonical_tags()
-    summary, raw_tags = collect_metadata(writer, topic, draft, canonical_tags)
+    title, summary, raw_tags = collect_metadata(writer, topic, draft, canonical_tags)
     tags = normalize_tags(raw_tags)
-    slug = slugify(topic)
+    slug = slugify(title)
     content = render_article(
         pub_date=today,
-        title=topic,
+        title=title,
         description=summary or make_description(draft),
         tags=tags,
         body=draft,
@@ -123,7 +126,7 @@ def run(env: dict) -> int:
         branch=f"article/issue-{issue['number']}",
         path=f"site/src/content/blog/{today.isoformat()}-{slug}.md",
         content=content,
-        title=f"article: {topic}",
+        title=f"article: {title}",
         body=f"Closes #{issue['number']}",
     )
     export_output(env, "pr_number", str(pr_number))
