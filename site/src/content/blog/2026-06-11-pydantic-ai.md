@@ -7,6 +7,7 @@ summary: "Pydantic AI garantiza salidas estructuradas y validadas de LLMs usando
 issue: 12
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"
+reviewer: "minimax-m3"
 ---
 
 ## El problema de la salida no estructurada en LLMs
