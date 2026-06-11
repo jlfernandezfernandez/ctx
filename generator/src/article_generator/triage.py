@@ -30,18 +30,24 @@ frameworks, cloud, DevOps, seguridad, sistemas, datos e ingeniería de IA.
 Rechaza contenido claramente no técnico, spam y promociones.
 Usa REVIEW cuando haya cualquier duda.
 
-Devuelve exactamente una línea, sin Markdown:
+RESPUESTA OBLIGATORIA: exactamente una línea, sin saltos, sin Markdown, cuatro campos separados por |:
 ACTION|category|confidence|reason
 
-ACTION debe ser APPROVE, REJECT o REVIEW.
-Para APPROVE, category debe ser una categoría breve en minúsculas y kebab-case.
-Para REJECT o REVIEW, category debe ser none.
-confidence debe estar entre 0 y 1. reason debe ser breve y no contener el carácter |.
+Reglas estrictas:
+- ACTION: APPROVE, REJECT o REVIEW (mayúsculas)
+- category: kebab-case minúsculas (ej: kafka, sql, python). Para REJECT/REVIEW: none
+- confidence: número entre 0 y 1 (ej: 0.95)
+- reason: texto breve sin | ni saltos de línea (máx 100 chars)
 
-Ejemplos:
+Ejemplos válidos:
 APPROVE|postgresql|0.95|Tema de bases de datos con enfoque concreto
 REJECT|none|0.97|Promoción comercial sin contenido técnico
-REVIEW|none|0.55|El título es ambiguo y las notas no aclaran el enfoque"""
+REVIEW|none|0.55|El título es ambiguo y las notas no aclaran el enfoque
+
+Inválido (NO hacer esto):
+- APPROVE | kafka | 0.9 | razón con espacios (espacios extra)
+- APPROVE|kafka|0.9|razón con | tubo adentro (no permitido)
+- APPROVE kafka 0.9 razón (separador incorrecto)"""
 
 
 class TriageError(Exception):
@@ -65,9 +71,9 @@ def parse_classification(output: str) -> Classification:
     if "\n" in text:
         raise TriageError("classifier returned more than one line")
 
-    fields = [field.strip() for field in text.split("|")]
+    fields = [field.strip() for field in text.split("|", 3)]
     if len(fields) != 4:
-        raise TriageError("classifier response must contain four fields")
+        raise TriageError(f"classifier response must contain four fields (got {len(fields)}): {text[:200]}")
 
     action, category, confidence_text, reason = fields
     action = action.upper()
