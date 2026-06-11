@@ -37,7 +37,7 @@ del modelo permanece en `triage`; nunca se acepta ni descarta por defecto.
 | Secret | `LLM_API_KEY` | API key del proveedor |
 | Variable | `LLM_BASE_URL` | `https://ollama.com/v1` (Ollama Cloud) |
 | Variable | `LLM_MODEL` | `deepseek-v4-pro` |
-| Variable | `LLM_TRIAGE_MODEL` | `deepseek-v4-flash` |
+| Variable | `LLM_TRIAGE_MODEL` | `deepseek-v4-pro` |
 
 Cambiar de proveedor o modelo = cambiar esas variables, cero código. Nunca commitees keys; `.env` está en `.gitignore` y los secrets viven solo en GitHub Actions Secrets.
 
