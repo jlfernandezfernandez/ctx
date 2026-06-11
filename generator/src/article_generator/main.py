@@ -4,7 +4,14 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from .article import ValidationError, make_description, slugify, validate_body, write_article
+from .article import (
+    ValidationError,
+    make_description,
+    slugify,
+    validate_body,
+    validate_reference_urls,
+    write_article,
+)
 from .github_issues import PRIORITY_LABEL, TOPIC_LABEL, IssuesClient
 from .llm import LLMClient, LLMError
 from .prompts import SYSTEM_PROMPT, article_prompt, metadata_prompt, outline_prompt, review_prompt
@@ -70,6 +77,7 @@ def run(env: dict) -> int:
     body = llm.generate(SYSTEM_PROMPT, article_prompt(topic, notes, outline))
     validate_body(body)
     body = review_code(llm, body)
+    validate_reference_urls(body)
 
     tags = [l["name"] for l in issue["labels"] if l["name"] not in QUEUE_LABELS]
     summary = ""

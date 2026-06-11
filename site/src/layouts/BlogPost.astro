@@ -4,7 +4,8 @@ import type { MarkdownHeading } from 'astro';
 import BaseHead from '../components/BaseHead.astro';
 import Footer from '../components/Footer.astro';
 import Header from '../components/Header.astro';
-import { BASE, REPO_URL } from '../consts';
+import TopicQueue from '../components/TopicQueue.astro';
+import { BASE, REPO_URL, TOPICS_URL } from '../consts';
 
 type Props = CollectionEntry<'blog'>['data'] & { headings?: MarkdownHeading[] };
 
@@ -24,7 +25,10 @@ const {
 <html lang="es">
 	<head>
 		<BaseHead title={title} description={description} />
-		<style>
+			<style>
+			main {
+				width: 820px;
+			}
 			.prose {
 				color: rgb(var(--gray-dark));
 			}
@@ -121,6 +125,54 @@ const {
 				color: var(--accent);
 				text-decoration: none;
 			}
+			.continue {
+				margin-top: 3em;
+				padding: 1.25em 1.5em;
+				border: 1px solid rgb(var(--gray-light));
+				border-left: 3px solid var(--accent);
+				border-radius: 6px;
+				background: var(--bg-raise);
+			}
+			.continue .command {
+				margin: 0 0 0.6em;
+				font-family: var(--font-mono);
+				font-size: 0.8em;
+				color: var(--accent);
+			}
+			.continue .command::before {
+				content: '$ ';
+				color: rgb(var(--gray));
+			}
+			.continue h2 {
+				margin: 0 0 0.35em;
+				font-family: var(--font-sans);
+				font-size: 1.15em;
+			}
+			.continue p {
+				margin-bottom: 0.8em;
+			}
+			.continue-links {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.5em 1.4em;
+				font-family: var(--font-mono);
+				font-size: 0.82em;
+			}
+			@media (max-width: 720px) {
+				.title {
+					padding-top: 0.5em;
+				}
+				.title h1 {
+					font-size: 1.85em;
+				}
+				.meta {
+					padding: 0.7em 1em;
+					line-height: 1.7;
+				}
+				.toc {
+					margin-bottom: 2em;
+				}
+			}
 		</style>
 	</head>
 
@@ -183,7 +235,7 @@ const {
 					}
 					{
 						headings.length > 1 && (
-							<nav class="toc">
+							<nav class="toc" aria-label="Índice del artículo">
 								<span class="label">En este artículo</span>
 								<ol>
 									{headings.map((h) => (
@@ -197,6 +249,21 @@ const {
 					}
 					<slot />
 				</div>
+				<aside class="continue">
+					<p class="command">continuar</p>
+					<h2>¿Has encontrado un error?</h2>
+					<p>
+						Este artículo se genera automáticamente. Comenta la corrección en la issue original
+						para mantener la discusión junto al tema.
+					</p>
+					<div class="continue-links">
+						{issue && <a href={`${REPO_URL}/issues/${issue}`} target="_blank">comentar corrección →</a>}
+						<a href={TOPICS_URL} target="_blank">ver y votar próximos temas →</a>
+						<a href={`${REPO_URL}/issues/new/choose`} target="_blank">proponer tema →</a>
+						<a href={`${BASE}/articles/`}>volver a artículos →</a>
+					</div>
+				</aside>
+				<TopicQueue limit={3} compact />
 			</article>
 		</main>
 		<Footer />

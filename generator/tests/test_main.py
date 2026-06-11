@@ -1,7 +1,15 @@
 """Tests for the generation orchestration."""
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from article_generator.main import run
+
+
+@pytest.fixture(autouse=True)
+def avoid_reference_network():
+    with patch("article_generator.main.validate_reference_urls"):
+        yield
 
 
 def env():

@@ -1,12 +1,13 @@
 name: Proponer tema
 description: Propón un tema para el artículo diario
-labels: ["topic"]
+labels: ["triage"]
 body:
   - type: markdown
     attributes:
       value: |
         El **título de la issue** es el tema del artículo (p. ej. "Kafka sin ZooKeeper: KRaft").
-        Si corre prisa, añade el label `priority` después de crearla para saltar la cola.
+        Un clasificador automático comprobará que sea técnico y le asignará una categoría.
+        Máximo 5 propuestas por persona y día.
   - type: textarea
     id: notas
     attributes:

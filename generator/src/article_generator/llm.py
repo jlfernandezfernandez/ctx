@@ -19,8 +19,8 @@ class LLMClient:
         self.model = model
         self.timeout = timeout
 
-    def generate(self, system: str, user: str) -> str:
-        return self._chat(system, user)
+    def generate(self, system: str, user: str, **extra) -> str:
+        return self._chat(system, user, **extra)
 
     def generate_json(self, system: str, user: str) -> dict:
         """For metadata extraction. Falls back gracefully at call sites:

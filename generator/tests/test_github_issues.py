@@ -26,6 +26,7 @@ def client_with(issues_payload, status=200):
     c.session = MagicMock()
     c.session.get.return_value = resp
     c.session.post.return_value = MagicMock(status_code=201)
+    c.session.put.return_value = MagicMock(status_code=200)
     c.session.patch.return_value = MagicMock(status_code=200)
     return c
 
@@ -107,3 +108,42 @@ def test_close_with_comment_tolerates_label_failure():
     c.session.post.side_effect = [ok, label_fail]
     c.close_with_comment(7, "done")  # must not raise
     c.session.patch.assert_called_once()
+
+
+def test_count_issues_by_author_since_filters_old_issues_and_adds_current():
+    c = client_with([
+        {**issue(1, "2026-06-11T08:00:00Z", []), "user": {"login": "jordi"}},
+        {**issue(2, "2026-06-10T08:00:00Z", []), "user": {"login": "jordi"}},
+    ])
+    assert c.count_issues_by_author_since("jordi", "2026-06-11T00:00:00Z", 3) == 2
+    assert c.session.get.call_args.kwargs["params"]["creator"] == "jordi"
+
+
+def test_category_labels_excludes_queue_labels():
+    c = client_with([
+        {"name": "topic"},
+        {"name": "triage"},
+        {"name": "enhancement"},
+        {"name": "java"},
+        {"name": "sql"},
+    ])
+    assert c.category_labels() == ["java", "sql"]
+
+
+def test_ensure_system_labels_creates_only_missing_labels():
+    c = client_with([{"name": "topic"}, {"name": "triage"}])
+    c.ensure_system_labels()
+    created = [call.kwargs["json"]["name"] for call in c.session.post.call_args_list]
+    assert "topic" not in created
+    assert "triage" not in created
+    assert "rejected" in created
+    assert "rate-limited" in created
+
+
+def test_set_labels_replaces_all_issue_labels():
+    c = client_with([])
+    c.set_labels(7, ["topic", "java"])
+    c.session.put.assert_called_once_with(
+        "https://api.github.com/repos/owner/repo/issues/7/labels",
+        json={"labels": ["topic", "java"]},
+    )

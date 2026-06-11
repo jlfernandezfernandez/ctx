@@ -1,0 +1,36 @@
+name: Triage proposed topic
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: triage-topic-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Install topic classifier
+        run: pip install ./generator
+
+      - name: Classify proposed topic
+        env:
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          TRIAGE_MODEL: ${{ vars.TRIAGE_MODEL || 'nemotron-3-nano:30b-cloud' }}
+          TRIAGE_DAILY_LIMIT: "5"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: triage-topic

@@ -96,6 +96,10 @@ Requisitos:
 - Markdown puro: títulos con ##, código en bloques con su lenguaje (```java, ```python...).
 - Redacta títulos de sección propios, descriptivos y concretos para este tema. No copies \
 literalmente el texto del esquema ni incluyas su numeración ("1.", "2.") en los títulos.
+- Usa exactamente seis secciones ##, sin saltos en la jerarquía de encabezados.
+- La última sección ## debe llamarse "Para saber más" o incluir "Referencias" o "Fuentes", \
+y contener entre 3 y 5 enlaces Markdown directos a fuentes concretas. No indiques al lector \
+que busque un recurso ni menciones recursos sin URL.
 - NO incluyas frontmatter YAML ni el título principal: empieza directamente por la \
 primera sección con ##.
 - Código completo y ejecutable, con comentarios donde aporten.

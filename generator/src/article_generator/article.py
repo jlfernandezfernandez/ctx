@@ -8,7 +8,16 @@ import unicodedata
 from datetime import date
 from pathlib import Path
 
+import requests
+
 MIN_WORDS = 1000  # target is 2500-3500; below 1000 means generation went wrong
+EXPECTED_H2_COUNT = 6
+REFERENCE_HEADING = re.compile(r"(para saber m[aá]s|referencias|fuentes)", re.IGNORECASE)
+MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\((https?://[^)\s]+)\)")
+VAGUE_REFERENCE = re.compile(
+    r"\b(buscar(?:lo)? en|disponible en|enlace pendiente|url pendiente)\b",
+    re.IGNORECASE,
+)
 
 
 class ValidationError(Exception):
@@ -27,6 +36,92 @@ def validate_body(body: str) -> None:
     words = len(body.split())
     if words < MIN_WORDS:
         raise ValidationError(f"Body too short: {words} words (min {MIN_WORDS})")
+
+    headings = _parse_headings(body)
+    _validate_headings(headings)
+    _validate_code_fences(body)
+    _validate_references(body, headings)
+
+
+def _heading_lines(body: str) -> list[tuple[int, int, str]]:
+    """(line index, level, title) for each heading outside fenced code blocks."""
+    headings = []
+    in_fence = False
+    for index, line in enumerate(body.splitlines()):
+        if line.strip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        match = re.match(r"^(#{1,6})\s+(.+)$", line)
+        if match:
+            headings.append((index, len(match.group(1)), match.group(2).strip()))
+    return headings
+
+
+def _parse_headings(body: str) -> list[tuple[int, str]]:
+    return [(level, title) for _, level, title in _heading_lines(body)]
+
+
+def _validate_headings(headings: list[tuple[int, str]]) -> None:
+    if any(level == 1 for level, _ in headings):
+        raise ValidationError("Body must not contain an H1; the layout renders the article title")
+
+    h2s = [title for level, title in headings if level == 2]
+    if len(h2s) != EXPECTED_H2_COUNT:
+        raise ValidationError(f"Body must contain exactly {EXPECTED_H2_COUNT} H2 sections")
+    if any(re.match(r"^\d+[.)]\s+", title) for title in h2s):
+        raise ValidationError("H2 section titles must not be numbered")
+
+    previous_level = 1
+    for level, _ in headings:
+        if level > previous_level + 1:
+            raise ValidationError("Heading hierarchy skips a level")
+        previous_level = level
+
+
+def _validate_code_fences(body: str) -> None:
+    if sum(1 for line in body.splitlines() if line.strip().startswith("```")) % 2:
+        raise ValidationError("Body contains an unclosed fenced code block")
+
+
+def _validate_references(body: str, headings: list[tuple[int, str]]) -> None:
+    h2s = [title for level, title in headings if level == 2]
+    reference_index = next(
+        (index for index, title in enumerate(h2s) if REFERENCE_HEADING.search(title)),
+        None,
+    )
+    if reference_index != len(h2s) - 1:
+        raise ValidationError("The final H2 section must contain references")
+    references = _reference_urls(body)
+    if not 3 <= len(references) <= 5:
+        raise ValidationError("References section must contain 3 to 5 linked sources")
+    if VAGUE_REFERENCE.search(_reference_section(body)):
+        raise ValidationError("References section contains vague or incomplete references")
+
+
+def _reference_section(body: str) -> str:
+    h2_lines = [index for index, level, _ in _heading_lines(body) if level == 2]
+    if not h2_lines:
+        return body
+    return "\n".join(body.splitlines()[h2_lines[-1] + 1 :])
+
+
+def _reference_urls(body: str) -> list[str]:
+    return list(dict.fromkeys(MARKDOWN_LINK.findall(_reference_section(body))))
+
+
+def validate_reference_urls(body: str, timeout: int = 15) -> None:
+    """Fail publication when a linked source cannot be reached."""
+    for url in _reference_urls(body):
+        try:
+            response = requests.head(url, allow_redirects=True, timeout=timeout)
+            if response.status_code == 405 or response.status_code >= 500:
+                response = requests.get(url, allow_redirects=True, timeout=timeout, stream=True)
+        except requests.RequestException as exc:
+            raise ValidationError(f"Reference URL is unreachable: {url}") from exc
+        if response.status_code >= 400 and response.status_code not in (401, 403):
+            raise ValidationError(f"Reference URL returned {response.status_code}: {url}")
 
 
 def make_description(body: str) -> str:

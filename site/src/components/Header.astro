@@ -12,7 +12,7 @@ import HeaderLink from './HeaderLink.astro';
 			<HeaderLink href="/">Inicio</HeaderLink>
 			<HeaderLink href="/articles">Artículos</HeaderLink>
 			<HeaderLink href="/how-it-works">Cómo funciona</HeaderLink>
-			<a href={`${REPO_URL}/issues/new/choose`} target="_blank">Proponer tema</a>
+			<a class="propose-link" href={`${REPO_URL}/issues/new/choose`} target="_blank">Proponer tema</a>
 		</div>
 		<div class="social-links">
 			<a href={REPO_URL} target="_blank">
@@ -97,8 +97,31 @@ import HeaderLink from './HeaderLink.astro';
 		height: 22px;
 	}
 	@media (max-width: 720px) {
+		header {
+			padding: 0 0.55em;
+		}
+		nav {
+			gap: 0.35em;
+		}
+		nav a {
+			padding-right: 0.4em;
+			padding-left: 0.4em;
+		}
+		.internal-links {
+			justify-content: flex-end;
+			overflow: visible;
+		}
+		.propose-link,
 		.social-links {
 			display: none;
+		}
+	}
+	@media (max-width: 360px) {
+		header {
+			font-size: 0.8em;
+		}
+		nav {
+			gap: 0;
 		}
 	}
 </style>

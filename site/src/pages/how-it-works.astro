@@ -2,7 +2,7 @@
 import BaseHead from '../components/BaseHead.astro';
 import Footer from '../components/Footer.astro';
 import Header from '../components/Header.astro';
-import { BASE, REPO_URL, SITE_TITLE } from '../consts';
+import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 ---
 
 <!doctype html>
@@ -60,6 +60,53 @@ import { BASE, REPO_URL, SITE_TITLE } from '../consts';
 			code {
 				font-size: 0.85em;
 			}
+			.pipeline {
+				margin-top: 2.5em;
+				padding: 1.25em 1.5em;
+				border: 1px solid rgb(var(--gray-light));
+				border-radius: 6px;
+				background: var(--bg-raise);
+			}
+			.pipeline h2 {
+				margin: 0 0 1em;
+				font-size: 0.85em;
+				text-transform: uppercase;
+				letter-spacing: 0.08em;
+				color: rgb(var(--gray));
+			}
+			.pipeline ol {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.6em;
+				margin: 0;
+				padding: 0;
+				list-style: none;
+				font-family: var(--font-mono);
+				font-size: 0.76em;
+			}
+			.pipeline li {
+				display: flex;
+				align-items: center;
+				gap: 0.6em;
+				color: rgb(var(--gray-dark));
+			}
+			.pipeline li:not(:last-child)::after {
+				content: '→';
+				color: var(--accent);
+			}
+			.pipeline p {
+				margin: 1em 0 0;
+				font-size: 0.9em;
+				color: rgb(var(--gray));
+			}
+			.participate {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.5em 1.5em;
+				margin-top: 2em;
+				font-family: var(--font-mono);
+				font-weight: 500;
+			}
 		</style>
 	</head>
 	<body>
@@ -106,6 +153,22 @@ import { BASE, REPO_URL, SITE_TITLE } from '../consts';
 				</div>
 			</div>
 
+			<div class="pipeline">
+				<h2>Pipeline real de publicación</h2>
+				<ol>
+					<li>issue + votos</li>
+					<li>esquema generado</li>
+					<li>artículo generado</li>
+					<li>segunda revisión del código</li>
+					<li>validaciones automáticas</li>
+					<li>Markdown publicado</li>
+				</ol>
+				<p>
+					No hay revisión humana antes de publicar ni se compilan los ejemplos: la segunda pasada
+					busca defectos objetivos en el código y las validaciones bloquean errores estructurales.
+				</p>
+			</div>
+
 			<div class="structure">
 				<h2>La estructura de cada artículo</h2>
 				<ol>
@@ -117,6 +180,10 @@ import { BASE, REPO_URL, SITE_TITLE } from '../consts';
 					<li><strong>Trampas comunes</strong> — errores reales y cómo evitarlos.</li>
 					<li><strong>Para saber más</strong> — referencias para seguir profundizando.</li>
 				</ol>
+			</div>
+			<div class="participate">
+				<a href={TOPICS_URL} target="_blank">ver y votar próximos temas →</a>
+				<a href={`${REPO_URL}/issues/new/choose`} target="_blank">proponer tema →</a>
 			</div>
 		</main>
 		<Footer />

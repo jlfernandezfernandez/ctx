@@ -1,0 +1,315 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+	posts: CollectionEntry<'blog'>[];
+}
+
+const MODEL_LIMIT = 4;
+const REQUESTER_LIMIT = 6;
+
+function countValues(values: (string | undefined)[]): [string, number][] {
+	const counts = new Map<string, number>();
+	for (const value of values) {
+		if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
+	}
+	return [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+}
+
+const { posts } = Astro.props;
+const models = countValues(posts.map((post) => post.data.model));
+const requesters = countValues(posts.map((post) => post.data.requestedBy));
+const visibleModels = models.slice(0, MODEL_LIMIT);
+const visibleRequesters = requesters.slice(0, REQUESTER_LIMIT);
+const maxModelCount = Math.max(...models.map(([, count]) => count), 1);
+---
+
+<section class="activity" aria-label="Actividad de ctx">
+	<div class="activity-head">
+		<span class="activity-command">ctx --status</span>
+		<span class="live">actividad pública</span>
+	</div>
+	<div class="activity-grid">
+		<div class="activity-primary">
+			<div class="signal">
+				<strong data-count={posts.length}>0</strong>
+				<h2>deep dives publicados</h2>
+				<p>Markdown generado y versionado públicamente.</p>
+			</div>
+			<div class="signal">
+				<strong data-queue-count>—</strong>
+				<h2>temas esperando</h2>
+				<p>Orden: priority → votos → antigüedad.</p>
+			</div>
+		</div>
+		<div class="activity-detail">
+			<div class="activity-panel">
+				<p class="panel-label">Generados por modelo</p>
+				{
+					visibleModels.map(([name, count]) => (
+						<div class="model-row">
+							<span class="model-name">{name}</span>
+							<span class="model-count">{count}</span>
+							<span class="model-bar"><i style={`--share: ${(count / maxModelCount) * 100}%`}></i></span>
+						</div>
+					))
+				}
+				{models.length > MODEL_LIMIT && <span class="more-data">+{models.length - MODEL_LIMIT} modelos más</span>}
+			</div>
+			<div class="activity-panel">
+				<p class="panel-label">Propuestos por</p>
+				<div class="people">
+					{
+						visibleRequesters.map(([name, count]) => (
+							<a class="person" href={`https://github.com/${name}`} target="_blank">
+								<i>{name.slice(0, 1)}</i>
+								<span>@{name}</span>
+								<small>×{count}</small>
+							</a>
+						))
+					}
+					{
+						requesters.length > REQUESTER_LIMIT && (
+							<span class="more-data">+{requesters.length - REQUESTER_LIMIT} personas más</span>
+						)
+					}
+				</div>
+			</div>
+		</div>
+	</div>
+</section>
+
+<script is:inline>
+	const counters = document.querySelectorAll('[data-count]');
+	const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+	function animateCounter(counter) {
+		const target = Number(counter.dataset.count);
+		if (reduceMotion) {
+			counter.textContent = String(target);
+			return;
+		}
+
+		let value = 0;
+		function step() {
+			value += 1;
+			counter.textContent = String(value);
+			if (value < target) window.setTimeout(step, 90);
+		}
+		if (target > 0) window.setTimeout(step, 250);
+	}
+
+	counters.forEach(animateCounter);
+</script>
+
+<style>
+	.activity {
+		margin-top: 3em;
+		border: 1px solid rgb(var(--gray-light));
+		border-radius: 8px;
+		background: rgba(17, 21, 28, 0.72);
+		overflow: hidden;
+	}
+	.activity-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1em;
+		padding: 0.7em 1em;
+		border-bottom: 1px solid rgb(var(--gray-light));
+		font-family: var(--font-mono);
+		font-size: 0.72em;
+		color: rgb(var(--gray));
+	}
+	.activity-command {
+		color: var(--accent);
+	}
+	.activity-command::before {
+		content: '$ ';
+		color: rgb(var(--gray));
+	}
+	.live {
+		display: flex;
+		align-items: center;
+		gap: 0.5em;
+	}
+	.live::before {
+		content: '';
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: var(--accent);
+		box-shadow: 0 0 0 4px rgba(255, 180, 84, 0.1);
+	}
+	.activity-grid {
+		display: grid;
+		grid-template-columns: 1.1fr 0.9fr;
+	}
+	.activity-primary {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		min-width: 0;
+		border-right: 1px solid rgb(var(--gray-light));
+	}
+	.signal {
+		position: relative;
+		min-height: 12em;
+		padding: 1.5em;
+		overflow: hidden;
+	}
+	.signal:first-child {
+		border-right: 1px solid rgb(var(--gray-light));
+	}
+	.signal::after {
+		content: '';
+		position: absolute;
+		right: -2em;
+		bottom: -4em;
+		width: 11em;
+		height: 11em;
+		border: 1px solid rgba(255, 180, 84, 0.12);
+		border-radius: 50%;
+		box-shadow:
+			0 0 0 2em rgba(255, 180, 84, 0.025),
+			0 0 0 4em rgba(255, 180, 84, 0.015);
+	}
+	.signal strong {
+		display: block;
+		font-family: var(--font-mono);
+		font-size: clamp(3.2em, 7vw, 5.5em);
+		font-weight: 500;
+		line-height: 0.95;
+		color: var(--accent);
+	}
+	.signal h2 {
+		margin: 0.55em 0 0.25em;
+		font-family: var(--font-sans);
+		font-size: 1em;
+	}
+	.signal p {
+		position: relative;
+		z-index: 1;
+		margin: 0;
+		font-family: var(--font-mono);
+		font-size: 0.68em;
+		line-height: 1.6;
+		color: rgb(var(--gray));
+	}
+	.activity-detail {
+		min-width: 0;
+	}
+	.activity-panel {
+		padding: 1.25em 1.5em;
+	}
+	.activity-panel + .activity-panel {
+		border-top: 1px solid rgb(var(--gray-light));
+	}
+	.panel-label {
+		margin: 0 0 1em;
+		font-family: var(--font-mono);
+		font-size: 0.68em;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: rgb(var(--gray));
+	}
+	.model-row {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: 0.35em 1em;
+		margin-top: 0.9em;
+		font-family: var(--font-mono);
+		font-size: 0.72em;
+	}
+	.model-name {
+		overflow: hidden;
+		color: rgb(var(--gray-dark));
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.model-count {
+		color: var(--accent);
+	}
+	.model-bar {
+		grid-column: 1 / -1;
+		height: 3px;
+		background: rgb(var(--gray-light));
+		overflow: hidden;
+	}
+	.model-bar i {
+		display: block;
+		width: var(--share);
+		height: 100%;
+		background: linear-gradient(90deg, var(--accent-dark), var(--accent));
+		transform-origin: left;
+		animation: grow 700ms ease-out both;
+	}
+	.people {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.6em;
+	}
+	.person {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.55em;
+		padding: 0.35em 0.65em 0.35em 0.4em;
+		border: 1px solid rgb(var(--gray-light));
+		border-radius: 999px;
+		font-family: var(--font-mono);
+		font-size: 0.7em;
+		color: rgb(var(--gray-dark));
+	}
+	.person i {
+		display: grid;
+		width: 1.8em;
+		height: 1.8em;
+		place-items: center;
+		border-radius: 50%;
+		background: rgba(255, 180, 84, 0.12);
+		color: var(--accent);
+		font-style: normal;
+		text-transform: uppercase;
+	}
+	.person small {
+		color: rgb(var(--gray));
+	}
+	.more-data {
+		display: inline-flex;
+		align-items: center;
+		margin-top: 0.9em;
+		font-family: var(--font-mono);
+		font-size: 0.68em;
+		color: rgb(var(--gray));
+	}
+	.people .more-data {
+		margin-top: 0;
+		padding: 0.35em 0.65em;
+	}
+	@keyframes grow {
+		from {
+			transform: scaleX(0);
+		}
+	}
+	@media (max-width: 720px) {
+		.activity-grid {
+			display: block;
+		}
+		.activity-primary {
+			grid-template-columns: 1fr 1fr;
+			border-right: none;
+			border-bottom: 1px solid rgb(var(--gray-light));
+		}
+		.signal {
+			min-height: 10em;
+			padding: 1.25em;
+		}
+		.signal strong {
+			font-size: 3.5em;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.model-bar i {
+			animation: none;
+		}
+	}
+</style>

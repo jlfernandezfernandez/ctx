@@ -1,0 +1,278 @@
+---
+import { REPO_URL, TOPICS_API_URL, TOPICS_URL } from '../consts';
+
+interface Props {
+	limit?: number;
+	compact?: boolean;
+}
+
+const { limit = 4, compact = false } = Astro.props;
+---
+
+<section class:list={['topic-queue', { compact }]} data-topic-queue data-limit={limit}>
+	<div class="queue-head">
+		<div>
+			<p class="queue-command">next_topic --live</p>
+			<h2>Próximos temas</h2>
+		</div>
+		<span class="queue-status"><i></i><span data-queue-status>conectando con GitHub…</span></span>
+	</div>
+	<ol class="queue-list" data-queue-list aria-live="polite">
+		<li class="queue-loading">Leyendo la cola de propuestas…</li>
+	</ol>
+	<div class="queue-actions">
+		<a href={TOPICS_URL} target="_blank">ver todos y votar →</a>
+		<a href={`${REPO_URL}/issues/new/choose`} target="_blank">proponer tema →</a>
+	</div>
+</section>
+
+<script is:inline define:vars={{ topicsApiUrl: TOPICS_API_URL }}>
+	const CACHE_KEY = 'ctx-topic-queue';
+	const CACHE_TTL = 5 * 60 * 1000;
+	const EXCLUDED_LABELS = new Set(['topic', 'priority']);
+
+	function escapeHtml(value) {
+		return String(value)
+			.replaceAll('&', '&amp;')
+			.replaceAll('<', '&lt;')
+			.replaceAll('>', '&gt;')
+			.replaceAll('"', '&quot;')
+			.replaceAll("'", '&#039;');
+	}
+
+	function getVotes(issue) {
+		return issue.reactions?.['+1'] ?? 0;
+	}
+
+	function hasPriority(issue) {
+		return issue.labels.some((label) => label.name === 'priority');
+	}
+
+	function compareTopics(a, b) {
+		return (
+			Number(hasPriority(b)) - Number(hasPriority(a)) ||
+			getVotes(b) - getVotes(a) ||
+			new Date(a.created_at) - new Date(b.created_at)
+		);
+	}
+
+	function readCache() {
+		try {
+			const cached = JSON.parse(sessionStorage.getItem(CACHE_KEY));
+			if (cached && Date.now() - cached.savedAt < CACHE_TTL) return cached.issues;
+		} catch {
+			// Ignore invalid or unavailable session storage.
+		}
+		return null;
+	}
+
+	async function loadIssues() {
+		const cached = readCache();
+		if (cached) return cached;
+
+		const response = await fetch(topicsApiUrl, {
+			headers: { Accept: 'application/vnd.github+json' },
+		});
+		if (!response.ok) throw new Error('GitHub API unavailable');
+
+		const issues = await response.json();
+		sessionStorage.setItem(CACHE_KEY, JSON.stringify({ savedAt: Date.now(), issues }));
+		return issues;
+	}
+
+	function renderTopic(issue, index) {
+		const labels = issue.labels
+			.filter((label) => !EXCLUDED_LABELS.has(label.name))
+			.map((label) => `<span>#${escapeHtml(label.name)}</span>`)
+			.join('');
+		const next = index === 0 ? '<strong class="next">NEXT</strong>' : '';
+		const priority = hasPriority(issue) ? '<strong class="priority">priority</strong>' : '';
+
+		return `
+			<li>
+				<span class="position">${String(index + 1).padStart(2, '0')}</span>
+				<div class="topic">
+					<div class="topic-flags">${next}${priority}</div>
+					<a href="${escapeHtml(issue.html_url)}" target="_blank">${escapeHtml(issue.title)}</a>
+					<p>👍 ${getVotes(issue)} · @${escapeHtml(issue.user.login)} ${labels}</p>
+				</div>
+			</li>`;
+	}
+
+	function updateQueueCount(count) {
+		document.querySelectorAll('[data-queue-count]').forEach((counter) => {
+			counter.dataset.count = count;
+			counter.textContent = String(count);
+		});
+	}
+
+	function renderQueue(queue, topics) {
+		const list = queue.querySelector('[data-queue-list]');
+		const status = queue.querySelector('[data-queue-status]');
+		status.textContent = `${topics.length} ${topics.length === 1 ? 'tema pendiente' : 'temas pendientes'}`;
+
+		if (!topics.length) {
+			list.innerHTML = '<li class="queue-loading">La cola está vacía. Propón el próximo tema.</li>';
+			return;
+		}
+
+		const limit = Number(queue.dataset.limit) || 4;
+		list.innerHTML = topics.slice(0, limit).map(renderTopic).join('');
+	}
+
+	function renderError(queue) {
+		queue.querySelector('[data-queue-status]').textContent = 'GitHub no disponible';
+		queue.querySelector('[data-queue-list]').innerHTML =
+			'<li class="queue-loading">Consulta la cola directamente en GitHub.</li>';
+	}
+
+	const queues = document.querySelectorAll('[data-topic-queue]');
+	loadIssues()
+		.then((issues) => {
+			const topics = issues.filter((issue) => !issue.pull_request).sort(compareTopics);
+			updateQueueCount(topics.length);
+			queues.forEach((queue) => renderQueue(queue, topics));
+		})
+		.catch(() => queues.forEach(renderError));
+</script>
+
+<style is:global>
+	.topic-queue {
+		margin-top: 3em;
+		padding: 1.5em 1.75em;
+		border: 1px solid rgb(var(--gray-light));
+		border-radius: 6px;
+		background: var(--bg-raise);
+	}
+	.queue-head {
+		display: flex;
+		align-items: start;
+		justify-content: space-between;
+		gap: 1em;
+		padding-bottom: 1em;
+		border-bottom: 1px solid rgb(var(--gray-light));
+	}
+	.queue-command {
+		margin: 0 0 0.2em;
+		font-family: var(--font-mono);
+		font-size: 0.75em;
+		color: var(--accent);
+	}
+	.queue-command::before {
+		content: '$ ';
+		color: rgb(var(--gray));
+	}
+	.topic-queue h2 {
+		margin: 0;
+		font-family: var(--font-sans);
+		font-size: 1.35em;
+	}
+	.queue-status {
+		display: flex;
+		align-items: center;
+		gap: 0.5em;
+		font-family: var(--font-mono);
+		font-size: 0.72em;
+		color: rgb(var(--gray));
+		white-space: nowrap;
+	}
+	.queue-status i {
+		width: 7px;
+		height: 7px;
+		border-radius: 50%;
+		background: var(--accent);
+		box-shadow: 0 0 0 4px rgba(255, 180, 84, 0.1);
+		animation: pulse 1.8s ease-in-out infinite;
+	}
+	.queue-list {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.queue-list li {
+		display: grid;
+		grid-template-columns: 2em 1fr;
+		gap: 1em;
+		padding: 0.9em 0;
+		border-bottom: 1px solid rgb(var(--gray-light));
+	}
+	.position {
+		padding-top: 0.2em;
+		font-family: var(--font-mono);
+		font-size: 0.75em;
+		color: rgb(var(--gray));
+	}
+	.topic-flags {
+		display: flex;
+		gap: 0.5em;
+		min-height: 1.1em;
+		margin-bottom: 0.15em;
+		font-family: var(--font-mono);
+		font-size: 0.65em;
+		letter-spacing: 0.08em;
+	}
+	.next {
+		color: var(--accent);
+	}
+	.priority {
+		color: rgb(var(--gray));
+	}
+	.topic > a {
+		color: rgb(var(--black));
+		font-weight: 600;
+	}
+	.topic > a:hover {
+		color: var(--accent);
+	}
+	.topic p {
+		margin: 0.2em 0 0;
+		font-family: var(--font-mono);
+		font-size: 0.72em;
+		color: rgb(var(--gray));
+	}
+	.topic p span {
+		margin-left: 0.5em;
+		color: rgb(var(--gray-dark));
+	}
+	.queue-loading {
+		display: block !important;
+		font-family: var(--font-mono);
+		font-size: 0.8em;
+		color: rgb(var(--gray));
+	}
+	.queue-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5em 1.5em;
+		margin-top: 1.1em;
+		font-family: var(--font-mono);
+		font-size: 0.85em;
+	}
+	.compact {
+		margin-top: 2.5em;
+	}
+	.compact .queue-head h2 {
+		font-size: 1.1em;
+	}
+	@keyframes pulse {
+		50% {
+			opacity: 0.35;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.queue-status i {
+			animation: none;
+		}
+	}
+	@media (max-width: 720px) {
+		.topic-queue {
+			padding: 1.25em;
+		}
+		.queue-head {
+			display: block;
+		}
+		.queue-status {
+			margin-top: 0.7em;
+		}
+	}
+</style>

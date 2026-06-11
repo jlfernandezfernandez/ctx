@@ -32,6 +32,14 @@ def test_generate_returns_message_content():
     ]
 
 
+def test_generate_passes_optional_completion_parameters():
+    payload = {"choices": [{"message": {"content": "ok"}}]}
+    with patch("article_generator.llm.requests.post", return_value=make_response(payload=payload)) as post:
+        client().generate("sys", "user", temperature=0, max_tokens=100)
+    assert post.call_args.kwargs["json"]["temperature"] == 0
+    assert post.call_args.kwargs["json"]["max_tokens"] == 100
+
+
 def test_generate_raises_on_http_error():
     with patch("article_generator.llm.requests.post", return_value=make_response(status=500, text="boom")):
         with pytest.raises(LLMError, match="500"):
