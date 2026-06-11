@@ -1,4 +1,4 @@
-# Contribuir a ctx
+# Contribuir a Ctx
 
 ## Proponer un tema (lo más valioso)
 
