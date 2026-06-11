@@ -15,8 +15,8 @@ from .llm import LLMClient, LLMError
 
 TAGS_FILE = Path("site/src/data/tags.json")
 BLOG_DIR = Path("site/src/content/blog")
-MAX_RECENT = 10  # only the last N articles' metadata for token budget
-MAX_TAGS = 15  # hard cap, prompt already aims for fewer
+MAX_RECENT = 30  # enough for the curator to see patterns
+MAX_TAGS = 50  # generous safety cap; the prompt drives reduction
 
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---", re.DOTALL)
 TAGS_LINE = re.compile(r'^tags:\s*\[(.+)\]$', re.MULTILINE)
@@ -32,10 +32,10 @@ Reglas:
 - Fusiona tags equivalentes sin piedad (ej: "raft", "kraft", "controller" → solo "kafka").
 - Un tag debe representar una tecnología, lenguaje o concepto transversal, nunca un \
 detalle de implementación ni un feature puntual.
-- Prefieres 5 tags a 15. Prefieres 10 a 20.
+- Prefieres 5 tags a 15, pero no impongas un límite artificial: si el blog cubre 8 \
+tecnologías distintas, 8 tags está bien.
 - Mantén los nombres de tecnología/proyecto tal cual (java, kafka, snowflake, postgresql).
 - Los conceptos transversales se reutilizan entre artículos (agents, llm, reactive).
-- Máximo 15 tags absolutos. Para 7 artículos, 10 es un buen número.
 - No inventes tags que no aparezcan en los artículos.
 
 Responde únicamente con un objeto JSON:
