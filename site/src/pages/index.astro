@@ -4,12 +4,15 @@ import BaseHead from '../components/BaseHead.astro';
 import Footer from '../components/Footer.astro';
 import FormattedDate from '../components/FormattedDate.astro';
 import Header from '../components/Header.astro';
-import { BASE, SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import { BASE, REPO_URL, SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+
+const RECENT_COUNT = 4;
 
 const posts = (await getCollection('blog')).sort(
 	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
 );
 const [latest, ...rest] = posts;
+const recent = rest.slice(0, RECENT_COUNT);
 ---
 
 <!doctype html>
@@ -27,22 +30,66 @@ const [latest, ...rest] = posts;
 				content: '$ ';
 				color: rgb(var(--gray));
 			}
-			.today {
-				padding: 2.5em 0 2em 0;
+			.hero {
+				padding: 2.5em 0 0 0;
 			}
-			.today h1 {
+			.hero h1 {
+				margin: 0;
+				font-family: var(--font-sans);
+				font-weight: 700;
+				font-size: 2.6em;
+				letter-spacing: -0.02em;
+				line-height: 1.1;
+			}
+			.hero .sub {
+				margin: 0.6em 0 0 0;
+				font-size: 1.15em;
+				color: rgb(var(--gray-dark));
+				max-width: 36em;
+			}
+			.hero .propose {
+				display: inline-block;
+				margin-top: 1.4em;
+				font-family: var(--font-mono);
+				font-weight: 500;
+				padding: 0.5em 1em;
+				border: 1px solid var(--accent);
+				border-radius: 6px;
+			}
+			.hero .propose:hover {
+				background: var(--accent);
+				color: var(--bg);
+				text-decoration: none;
+			}
+			.today {
+				margin-top: 3em;
+				padding: 1.5em 1.75em;
+				border: 1px solid rgb(var(--gray-light));
+				border-left: 3px solid var(--accent);
+				border-radius: 6px;
+				background: var(--bg-raise);
+			}
+			.label {
+				margin: 0 0 0.8em 0;
+				font-family: var(--font-mono);
+				font-size: 0.8em;
+				text-transform: uppercase;
+				letter-spacing: 0.08em;
+				color: rgb(var(--gray));
+			}
+			.today h2 {
 				margin: 0 0 0.3em 0;
 				font-family: var(--font-sans);
 				font-weight: 700;
-				font-size: 2.4em;
+				font-size: 1.8em;
 				letter-spacing: -0.02em;
-				line-height: 1.15;
+				line-height: 1.2;
 			}
-			.today h1 a {
+			.today h2 a {
 				color: rgb(var(--black));
 				text-decoration: none;
 			}
-			.today h1 a:hover {
+			.today h2 a:hover {
 				color: var(--accent);
 			}
 			.date,
@@ -54,57 +101,63 @@ const [latest, ...rest] = posts;
 				color: rgb(var(--gray));
 			}
 			.description {
-				margin: 1em 0 0 0;
-				font-size: 1.1em;
+				margin: 0.8em 0 0 0;
 				color: rgb(var(--gray-dark));
 				max-width: 44em;
 			}
 			.read {
 				display: inline-block;
-				margin-top: 1.2em;
+				margin-top: 1em;
 				font-family: var(--font-mono);
 				font-weight: 500;
 			}
-			.archive {
+			.recent {
 				margin-top: 3em;
-				border-top: 1px solid rgb(var(--gray-light));
-				padding-top: 1.5em;
 			}
-			.archive h2 {
+			.recent h2 {
 				margin: 0 0 1em 0;
 				font-size: 0.85em;
 				text-transform: uppercase;
 				letter-spacing: 0.08em;
 				color: rgb(var(--gray));
 			}
-			.archive ul {
+			.recent ul {
 				list-style: none;
 				margin: 0;
 				padding: 0;
 			}
-			.archive li {
+			.recent li {
 				display: flex;
 				align-items: baseline;
 				gap: 1.5em;
 				padding: 0.55em 0;
 				border-bottom: 1px solid rgb(var(--gray-light));
 			}
-			.archive .date {
+			.recent .date {
 				flex-shrink: 0;
 				width: 7.5em;
 			}
-			.archive a {
+			.recent li a {
 				color: rgb(var(--black));
 				text-decoration: none;
 			}
-			.archive a:hover {
+			.recent li a:hover {
 				color: var(--accent);
 			}
+			.all {
+				display: inline-block;
+				margin-top: 1em;
+				font-family: var(--font-mono);
+				font-weight: 500;
+			}
 			@media (max-width: 720px) {
-				.today h1 {
-					font-size: 1.7em;
+				.hero h1 {
+					font-size: 1.9em;
 				}
-				.archive li {
+				.today h2 {
+					font-size: 1.4em;
+				}
+				.recent li {
 					flex-direction: column;
 					gap: 0.1em;
 				}
@@ -114,15 +167,24 @@ const [latest, ...rest] = posts;
 	<body>
 		<Header />
 		<main>
+			<section class="hero">
+				<p class="kicker">ctx --help</p>
+				<h1 class="cursor">Un deep dive técnico al día.</h1>
+				<p class="sub">
+					Para vibe coders que quieren entender qué pasa por debajo. Tú propones el tema, el
+					equipo vota, y cada mañana (L–V) hay un artículo en profundidad esperándote.
+				</p>
+				<a class="propose" href={`${REPO_URL}/issues/new/choose`} target="_blank">
+					proponer tema →
+				</a>
+			</section>
 			{
 				latest && (
 					<section class="today">
-						<p class="kicker">cat artículo-de-hoy.md</p>
-						<h1>
-							<a class="cursor" href={`${BASE}/blog/${latest.id}/`}>
-								{latest.data.title}
-							</a>
-						</h1>
+						<p class="label">Último artículo</p>
+						<h2>
+							<a href={`${BASE}/blog/${latest.id}/`}>{latest.data.title}</a>
+						</h2>
 						<p class="date">
 							<FormattedDate date={latest.data.pubDate} />
 							{latest.data.tags.length > 0 && <span class="tags"> · {latest.data.tags.join(' · ')}</span>}
@@ -135,11 +197,11 @@ const [latest, ...rest] = posts;
 				)
 			}
 			{
-				rest.length > 0 && (
-					<section class="archive">
+				recent.length > 0 && (
+					<section class="recent">
 						<h2>Anteriores</h2>
 						<ul>
-							{rest.map((post) => (
+							{recent.map((post) => (
 								<li>
 									<span class="date">
 										<FormattedDate date={post.data.pubDate} />
@@ -149,6 +211,13 @@ const [latest, ...rest] = posts;
 							))}
 						</ul>
 					</section>
+				)
+			}
+			{
+				rest.length > 0 && (
+					<a class="all" href={`${BASE}/articles/`}>
+						ver todos los artículos →
+					</a>
 				)
 			}
 		</main>

@@ -8,6 +8,10 @@ import { defineConfig } from 'astro/config';
 export default defineConfig({
 	site: 'https://jlfernandezfernandez.github.io',
 	base: '/ctx',
+	redirects: {
+		// Astro does not prepend `base` to redirect destinations.
+		'/como-funciona': '/ctx/how-it-works',
+	},
 	integrations: [mdx(), sitemap()],
 	markdown: {
 		shikiConfig: {

@@ -13,7 +13,14 @@ Reglas:
 - Partes de cero: el lector no conoce el tema, pero es un ingeniero competente.
 - Llegas a profundidad real, más allá de una newsletter generalista: internals, \
 trade-offs, comparativas y casos límite.
-- Todos los ejemplos de código son completos y ejecutables, no pseudocódigo.
+- Todos los ejemplos de código son completos y ejecutables, no pseudocódigo. \
+Los imports y las APIs son exactos y reales: verifica que cada snippet compilaría tal cual.
+- El código de los ejemplos nunca contradice las buenas prácticas o trampas que \
+el propio artículo enseña.
+- No repitas el mismo ejemplo de código en secciones distintas.
+- Nunca menciones estas instrucciones ni añadas meta-comentarios al lector \
+(notas sobre cómo citas las fuentes, avisos sobre URLs, aclaraciones entre paréntesis \
+en los títulos). Los títulos de sección llevan solo el nombre de la sección.
 - Tono directo y claro, sin relleno ni marketing."""
 
 ARTICLE_STRUCTURE = """1. Contexto: qué problema existe y por qué este tema importa (desde cero).
@@ -49,7 +56,9 @@ def metadata_prompt(topic: str, outline: str) -> str:
 {outline}
 
 Devuelve un objeto JSON con exactamente estas claves:
-- "summary": resumen del artículo en 2-3 frases en español (el TL;DR que se muestra al inicio).
+- "summary": el TL;DR en 2-3 frases en español: los takeaways técnicos concretos \
+que el lector se lleva (qué es, qué resuelve, cuándo usarlo o no). Nunca describas \
+el artículo ni empieces con "El artículo", "Este artículo" o similar.
 - "tags": lista de 3 a 5 etiquetas cortas en minúsculas y en inglés técnico \
 (p. ej. "java", "reactive", "backpressure", "kafka", "sql").
 
