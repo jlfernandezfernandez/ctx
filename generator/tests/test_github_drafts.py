@@ -1,6 +1,6 @@
-"""Tests for the draft PR rescue client."""
+"""Tests for the draft PR client."""
 import base64
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -75,3 +75,56 @@ def test_create_draft_pr_raises_on_ref_lookup_error():
     c.session.get.return_value = MagicMock(status_code=404, text="nope")
     with pytest.raises(DraftsError):
         c.create_draft_pr(branch="b", path="p.md", content="x", title="t", body="b")
+
+
+def test_get_pr_returns_pr_data():
+    c = DraftsClient(repo="owner/repo", token="tok")
+    c.session = MagicMock()
+    resp = MagicMock(status_code=200)
+    resp.json.return_value = {"number": 9, "title": "article: Topic", "body": "Closes #5"}
+    c.session.get.return_value = resp
+    result = c.get_pr(9)
+    assert result["number"] == 9
+
+
+def test_merge_pr_sends_put():
+    c = DraftsClient(repo="owner/repo", token="tok")
+    c.session = MagicMock()
+    c.session.put.return_value = MagicMock(status_code=200)
+    c.merge_pr(9)
+    c.session.put.assert_called_once_with(
+        "https://api.github.com/repos/owner/repo/pulls/9/merge",
+        json={},
+    )
+
+
+def test_comment_on_pr_posts_comment():
+    c = DraftsClient(repo="owner/repo", token="tok")
+    c.session = MagicMock()
+    c.session.post.return_value = MagicMock(status_code=201)
+    c.comment_on_pr(9, "review comment")
+    c.session.post.assert_called_once_with(
+        "https://api.github.com/repos/owner/repo/issues/9/comments",
+        json={"body": "review comment"},
+    )
+
+
+def test_update_file_puts_new_content():
+    c = DraftsClient(repo="owner/repo", token="tok")
+    c.session = MagicMock()
+    get_resp = MagicMock(status_code=200)
+    get_resp.json.return_value = {"sha": "oldsha"}
+    put_resp = MagicMock(status_code=200)
+    c.session.get.return_value = get_resp
+    c.session.put.return_value = put_resp
+
+    c.update_file("article/issue-5", "site/src/content/blog/file.md", "new content", "fix: review")
+
+    c.session.get.assert_called_once_with(
+        "https://api.github.com/repos/owner/repo/contents/site/src/content/blog/file.md",
+        params={"ref": "article/issue-5"},
+    )
+    call_json = c.session.put.call_args.kwargs["json"]
+    assert call_json["sha"] == "oldsha"
+    assert base64.b64decode(call_json["content"]).decode() == "new content"
+    assert call_json["branch"] == "article/issue-5"

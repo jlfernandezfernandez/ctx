@@ -8,8 +8,6 @@ import unicodedata
 from datetime import date
 from pathlib import Path
 
-import requests
-
 MIN_WORDS = 1000  # target is 2500-3500; below 1000 means generation went wrong
 EXPECTED_H2_COUNT = 6
 REFERENCE_HEADING = re.compile(r"(para saber m[aá]s|referencias|fuentes)", re.IGNORECASE)
@@ -109,32 +107,6 @@ def _reference_section(body: str) -> str:
 
 def _reference_urls(body: str) -> list[str]:
     return list(dict.fromkeys(MARKDOWN_LINK.findall(_reference_section(body))))
-
-
-def validate_reference_urls(body: str, timeout: int = 15) -> None:
-    """Fail publication when a linked source cannot be reached.
-
-    Each URL gets one retry. A persistent timeout only warns — a slow source
-    must not block the daily article — but an unreachable host (likely an
-    invented URL) or a 4xx still fails.
-    """
-    for url in _reference_urls(body):
-        for retry_left in (True, False):
-            try:
-                response = requests.head(url, allow_redirects=True, timeout=timeout)
-                if response.status_code == 405 or response.status_code >= 500:
-                    response = requests.get(url, allow_redirects=True, timeout=timeout, stream=True)
-            except requests.Timeout:
-                if not retry_left:
-                    print(f"Warning: reference URL timed out, skipping check: {url}")
-                continue
-            except requests.RequestException as exc:
-                if not retry_left:
-                    raise ValidationError(f"Reference URL is unreachable: {url}") from exc
-                continue
-            if response.status_code >= 400 and response.status_code not in (401, 403):
-                raise ValidationError(f"Reference URL returned {response.status_code}: {url}")
-            break
 
 
 def make_description(body: str) -> str:

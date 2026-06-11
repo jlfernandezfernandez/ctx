@@ -1,4 +1,4 @@
-"""Opens a pull request with a rejected article so a human can rescue it.
+"""Opens and manages pull requests for article generation.
 
 Uses the GitHub contents API instead of local git: the run must not leave
 uncommitted files behind for the publish step, and merging the PR is the
@@ -50,7 +50,7 @@ class DraftsClient:
         encoded = base64.b64encode(content.encode("utf-8")).decode("ascii")
         put = self.session.put(
             f"{self.base}/contents/{path}",
-            json={"message": f"draft: {title}", "content": encoded, "branch": branch},
+            json={"message": f"article: {title}", "content": encoded, "branch": branch},
         )
         self._require(put, (201,), f"create {path} on {branch}")
 
@@ -60,3 +60,52 @@ class DraftsClient:
         )
         self._require(pr, (201,), "open draft pull request")
         return pr.json()["html_url"]
+
+    def get_pr(self, number: int) -> dict:
+        resp = self.session.get(f"{self.base}/pulls/{number}")
+        self._require(resp, (200,), f"get PR #{number}")
+        return resp.json()
+
+    def merge_pr(self, number: int, commit_title: str = "") -> None:
+        resp = self.session.put(
+            f"{self.base}/pulls/{number}/merge",
+            json={"commit_title": commit_title} if commit_title else {},
+        )
+        self._require(resp, (200,), f"merge PR #{number}")
+
+    def get_file(self, ref: str, dir_path: str) -> tuple[str, str] | None:
+        """Get the filename and decoded content of the first .md file in the directory at the given ref."""
+        resp = self.session.get(
+            f"{self.base}/contents/{dir_path}",
+            params={"ref": ref},
+        )
+        self._require(resp, (200,), f"list files in {dir_path} at {ref}")
+        entries = resp.json()
+        for entry in entries:
+            if entry.get("name", "").endswith(".md") and entry.get("type") == "file":
+                file_resp = self.session.get(entry["download_url"])
+                self._require(file_resp, (200,), f"download {entry['name']}")
+                return entry["name"], file_resp.text
+        return None
+
+    def update_file(self, branch: str, path: str, content: str, message: str) -> None:
+        """Get the file's SHA, then update it."""
+        resp = self.session.get(
+            f"{self.base}/contents/{path}",
+            params={"ref": branch},
+        )
+        self._require(resp, (200,), f"get SHA for {path}")
+        sha = resp.json()["sha"]
+        encoded = base64.b64encode(content.encode("utf-8")).decode("ascii")
+        put = self.session.put(
+            f"{self.base}/contents/{path}",
+            json={"message": message, "content": encoded, "branch": branch, "sha": sha},
+        )
+        self._require(put, (200,), f"update {path} on {branch}")
+
+    def comment_on_pr(self, number: int, body: str) -> None:
+        resp = self.session.post(
+            f"{self.base}/issues/{number}/comments",
+            json={"body": body},
+        )
+        self._require(resp, (200, 201), f"comment on PR #{number}")

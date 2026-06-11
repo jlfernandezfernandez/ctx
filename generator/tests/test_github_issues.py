@@ -162,6 +162,14 @@ def test_next_topic_none_when_all_need_human_review():
     assert c.next_topic() is None
 
 
+def test_next_topic_skips_needs_review():
+    c = client_with([
+        issue(1, "2026-06-01T00:00:00Z", ["topic", "needs-review"]),
+        issue(2, "2026-06-02T00:00:00Z", ["topic"]),
+    ])
+    assert c.next_topic()["number"] == 2
+
+
 def test_add_label_posts_single_label():
     c = client_with([])
     c.add_label(7, "needs-human-review")

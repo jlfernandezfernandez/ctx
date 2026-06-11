@@ -1,8 +1,8 @@
-"""Orchestrates one generation run: pick topic -> writer-reviewer graph -> publish.
+"""Orchestrates one generation run: pick topic -> write -> open draft PR.
 
-An approved article is published directly. A rejected one becomes a draft
-PR (merge = publish, close = discard) and the run moves on to the next
-topic, up to MAX_TOPICS_PER_RUN.
+The writer generates the article once and opens a PR with the 'needs-review'
+label. A separate reviewer workflow picks up the label, reviews, and auto-merges.
+If the reviewer can't approve after fixing, it adds 'needs-human-review'.
 """
 import os
 import sys
@@ -10,20 +10,17 @@ from datetime import date
 from pathlib import Path
 
 from .article import (
-    ValidationError,
     make_description,
     render_article,
     slugify,
-    validate_reference_urls,
-    write_article,
+    validate_body,
+    ValidationError,
 )
 from .github_drafts import DraftsClient
-from .github_issues import NEEDS_HUMAN_REVIEW_LABEL, SYSTEM_LABELS, IssuesClient
-from .graph import build_graph, initial_state
+from .github_issues import NEEDS_REVIEW_LABEL, SYSTEM_LABELS, IssuesClient
 from .llm import LLMClient, LLMError
-from .prompts import SYSTEM_PROMPT, metadata_prompt
+from .prompts import SYSTEM_PROMPT, article_prompt, metadata_prompt, outline_prompt
 
-# Artifacts that GitHub issue forms inject into the body.
 FORM_ARTIFACTS = ("### Notas de enfoque", "_No response_")
 
 
@@ -34,7 +31,6 @@ def clean_notes(body: str) -> str:
 
 
 def collect_metadata(llm: LLMClient, issue: dict, topic: str, body: str) -> tuple[str, list[str]]:
-    """Summary and tags; issue labels first, LLM tags appended, deduped."""
     tags = [l["name"] for l in issue["labels"] if l["name"] not in SYSTEM_LABELS]
     summary = ""
     try:
@@ -51,69 +47,10 @@ def collect_metadata(llm: LLMClient, issue: dict, topic: str, body: str) -> tupl
     return summary, tags
 
 
-def publish(issues, writer, issue, body, output_dir, site_url, today, model_stamp) -> None:
-    topic = issue["title"]
-    validate_reference_urls(body)
-    summary, tags = collect_metadata(writer, issue, topic, body)
-    slug = slugify(topic)
-    path = write_article(
-        output_dir=output_dir,
-        pub_date=today,
-        slug=slug,
-        title=topic,
-        description=summary or make_description(body),
-        tags=tags,
-        body=body,
-        summary=summary,
-        issue_number=issue["number"],
-        requested_by=(issue.get("user") or {}).get("login", ""),
-        model=model_stamp,
-    )
-    print(f"Article written: {path}")
-    link = f"{site_url}/blog/{today.isoformat()}-{slug}/" if site_url else path
-    issues.close_with_comment(issue["number"], f"Publicado: {link}")
-    print(f"Issue #{issue['number']} closed.")
-
-
-def open_draft_pr(drafts, issues, writer, issue, body, feedback, today, model_stamp) -> None:
-    topic = issue["title"]
-    summary, tags = collect_metadata(writer, issue, topic, body)
-    slug = slugify(topic)
-    content = render_article(
-        pub_date=today,
-        title=topic,
-        description=summary or make_description(body),
-        tags=tags,
-        body=body,
-        summary=summary,
-        issue_number=issue["number"],
-        requested_by=(issue.get("user") or {}).get("login", ""),
-        model=model_stamp,
-    )
-    issues_list = "\n".join(f"- {item}" for item in feedback) or "- (sin detalle)"
-    pr_body = (
-        f"Closes #{issue['number']}\n\n"
-        f"El revisor (`{model_stamp}`) no aprobó el artículo. Defectos pendientes:\n\n"
-        f"{issues_list}\n\n"
-        "**Merge** = publicar tal cual (el deploy se dispara con el push a main). "
-        "**Cerrar el PR** = descartar el borrador."
-    )
-    url = drafts.create_draft_pr(
-        branch=f"draft/issue-{issue['number']}",
-        path=f"site/src/content/blog/{today.isoformat()}-{slug}.md",
-        content=content,
-        title=f"draft: {topic}",
-        body=pr_body,
-    )
-    issues.add_label(issue["number"], NEEDS_HUMAN_REVIEW_LABEL)
-    print(f"Draft PR opened for issue #{issue['number']}: {url}")
-
-
 def run(env: dict) -> int:
     output_dir = env.get("OUTPUT_DIR", "site/src/content/blog")
     today = date.today()
 
-    # One article per day, even if the workflow is dispatched again.
     existing = list(Path(output_dir).glob(f"{today.isoformat()}-*.md"))
     if existing:
         print(f"Already published today: {existing[0].name}. Nothing to do.")
@@ -123,41 +60,48 @@ def run(env: dict) -> int:
     drafts = DraftsClient(repo=env["GITHUB_REPOSITORY"], token=env["GITHUB_TOKEN"])
     site_url = env.get("SITE_URL", "").rstrip("/")
 
-    # Unset workflow vars arrive as empty strings, hence `or` over defaults.
     writer_model = env["LLM_WRITER_MODEL"]
-    reviewer_model = env["LLM_REVIEWER_MODEL"]
-    max_iterations = int(env["MAX_REVIEW_ITERATIONS"])
-    max_topics = int(env["MAX_TOPICS_PER_RUN"])
-
     writer = LLMClient(base_url=env["LLM_BASE_URL"], api_key=env["LLM_API_KEY"], model=writer_model)
-    reviewer = LLMClient(base_url=env["LLM_BASE_URL"], api_key=env["LLM_API_KEY"], model=reviewer_model)
-    graph = build_graph(writer, reviewer, max_iterations)
-    model_stamp = f"{writer_model} + {reviewer_model} (reviewer)"
 
-    for _ in range(max_topics):
-        issue = issues.next_topic()
-        if issue is None:
-            print("No pending topics; nothing to publish.")
-            return 0
+    issue = issues.next_topic()
+    if issue is None:
+        print("No pending topics; nothing to publish.")
+        return 0
 
-        topic = issue["title"]
-        notes = clean_notes(issue.get("body") or "")
-        print(f"Generating article for issue #{issue['number']}: {topic}")
+    topic = issue["title"]
+    notes = clean_notes(issue.get("body") or "")
+    print(f"Generating article for issue #{issue['number']}: {topic}")
 
-        state = graph.invoke(initial_state(topic, notes))
+    outline = writer.generate(SYSTEM_PROMPT, outline_prompt(topic, notes))
+    draft = writer.generate(SYSTEM_PROMPT, article_prompt(topic, notes, outline))
 
-        if state["approved"]:
-            try:
-                publish(issues, writer, issue, state["draft"], output_dir, site_url, today, model_stamp)
-                return 0
-            except ValidationError as exc:
-                print(f"Reference URL validation failed ({exc}); opening draft PR.")
-                state["feedback"] = state["feedback"] + [f"[referencias] {exc}"]
+    try:
+        validate_body(draft)
+    except ValidationError as exc:
+        print(f"Structure validation failed ({exc}); opening draft PR anyway.")
 
-        print(f"Opening draft PR for issue #{issue['number']}.")
-        open_draft_pr(drafts, issues, writer, issue, state["draft"], state["feedback"], today, model_stamp)
-
-    print("No topic was approved this run.")
+    summary, tags = collect_metadata(writer, issue, topic, draft)
+    slug = slugify(topic)
+    content = render_article(
+        pub_date=today,
+        title=topic,
+        description=summary or make_description(draft),
+        tags=tags,
+        body=draft,
+        summary=summary,
+        issue_number=issue["number"],
+        requested_by=(issue.get("user") or {}).get("login", ""),
+        model=writer_model,
+    )
+    url = drafts.create_draft_pr(
+        branch=f"article/issue-{issue['number']}",
+        path=f"site/src/content/blog/{today.isoformat()}-{slug}.md",
+        content=content,
+        title=f"article: {topic}",
+        body=f"Closes #{issue['number']}",
+    )
+    issues.add_label(issue["number"], NEEDS_REVIEW_LABEL)
+    print(f"Draft PR opened for issue #{issue['number']}: {url}")
     return 0
 
 

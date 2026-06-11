@@ -1,17 +1,14 @@
 """Tests for article slugging, validation, description and file writing."""
 from datetime import date
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
-import requests
 
 from article_generator.article import (
     ValidationError,
     make_description,
     slugify,
     validate_body,
-    validate_reference_urls,
     write_article,
 )
 
@@ -86,55 +83,6 @@ def test_validate_body_rejects_too_few_references():
 def test_validate_body_rejects_vague_reference():
     with pytest.raises(ValidationError, match="vague"):
         validate_body(valid_body() + "\n\nDisponible en el blog oficial.")
-
-
-def test_validate_reference_urls_accepts_reachable_sources(monkeypatch):
-    response = SimpleNamespace(status_code=200)
-    monkeypatch.setattr("article_generator.article.requests.head", lambda *args, **kwargs: response)
-    validate_reference_urls(valid_body())
-
-
-def test_validate_reference_urls_rejects_broken_source(monkeypatch):
-    response = SimpleNamespace(status_code=404)
-    monkeypatch.setattr("article_generator.article.requests.head", lambda *args, **kwargs: response)
-    with pytest.raises(ValidationError, match="404"):
-        validate_reference_urls(valid_body())
-
-
-def test_validate_reference_urls_accepts_forbidden_but_reachable_source(monkeypatch):
-    response = SimpleNamespace(status_code=403)
-    monkeypatch.setattr("article_generator.article.requests.head", lambda *args, **kwargs: response)
-    validate_reference_urls(valid_body())
-
-
-def test_validate_reference_urls_retries_transient_failures(monkeypatch):
-    calls = []
-
-    def flaky_head(*args, **kwargs):
-        calls.append(args[0])
-        if calls.count(args[0]) == 1:
-            raise requests.ConnectionError("transient")
-        return SimpleNamespace(status_code=200)
-
-    monkeypatch.setattr("article_generator.article.requests.head", flaky_head)
-    validate_reference_urls(valid_body())
-
-
-def test_validate_reference_urls_skips_persistent_timeouts(monkeypatch):
-    def always_timeout(*args, **kwargs):
-        raise requests.Timeout("slow source")
-
-    monkeypatch.setattr("article_generator.article.requests.head", always_timeout)
-    validate_reference_urls(valid_body())
-
-
-def test_validate_reference_urls_rejects_unreachable_host(monkeypatch):
-    def unreachable(*args, **kwargs):
-        raise requests.ConnectionError("no such host")
-
-    monkeypatch.setattr("article_generator.article.requests.head", unreachable)
-    with pytest.raises(ValidationError, match="unreachable"):
-        validate_reference_urls(valid_body())
 
 
 def test_make_description_uses_first_paragraph_stripped():

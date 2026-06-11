@@ -11,6 +11,7 @@ PRIORITY_LABEL = "priority"
 PUBLISHED_LABEL = "published"
 REJECTED_LABEL = "rejected"
 RATE_LIMITED_LABEL = "rate-limited"
+NEEDS_REVIEW_LABEL = "needs-review"
 NEEDS_HUMAN_REVIEW_LABEL = "needs-human-review"
 
 SYSTEM_LABELS = {
@@ -20,6 +21,7 @@ SYSTEM_LABELS = {
     PUBLISHED_LABEL,
     REJECTED_LABEL,
     RATE_LIMITED_LABEL,
+    NEEDS_REVIEW_LABEL,
     NEEDS_HUMAN_REVIEW_LABEL,
 }
 
@@ -37,6 +39,8 @@ GITHUB_DEFAULT_LABELS = {
 
 NON_CATEGORY_LABELS = SYSTEM_LABELS | GITHUB_DEFAULT_LABELS
 
+SKIP_LABELS = {NEEDS_REVIEW_LABEL, NEEDS_HUMAN_REVIEW_LABEL}
+
 SYSTEM_LABEL_DETAILS = {
     TOPIC_LABEL: ("0e8a16", "Tema aceptado y pendiente de publicación"),
     TRIAGE_LABEL: ("fbca04", "Propuesta pendiente de clasificación o revisión"),
@@ -44,6 +48,7 @@ SYSTEM_LABEL_DETAILS = {
     PUBLISHED_LABEL: ("5319e7", "Artículo publicado"),
     REJECTED_LABEL: ("d93f0b", "Propuesta descartada"),
     RATE_LIMITED_LABEL: ("6e7781", "Propuesta cerrada por límite diario"),
+    NEEDS_REVIEW_LABEL: ("1d76db", "Artículo generado, pendiente de revisión automática"),
     NEEDS_HUMAN_REVIEW_LABEL: ("e99695", "El revisor IA no aprobó el borrador; pendiente de humano"),
 }
 
@@ -84,7 +89,7 @@ class IssuesClient:
             i
             for i in resp.json()
             if "pull_request" not in i
-            and not any(l["name"] == NEEDS_HUMAN_REVIEW_LABEL for l in i["labels"])
+            and not any(l["name"] in SKIP_LABELS for l in i["labels"])
         ]
         if not issues:
             return None

@@ -28,8 +28,8 @@ Abre una issue con la plantilla **"Proponer tema"**:
 
 ```
 Issue (triage) → clasificador LLM → label topic + categoría → votos 👍
-  → Action nocturna (L-V) → generador Python (esquema → artículo → revisión → validaciones)
-  → markdown en site/src/content/blog/ → commit → deploy a GitHub Pages → issue cerrada
+  → Action nocturna (L-V) → writer genera artículo → PR con label needs-review
+  → reviewer evalúa y corrige → merge → deploy a GitHub Pages → issue cerrada
 ```
 
 Detalles en `README.md`.
