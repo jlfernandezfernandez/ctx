@@ -2,7 +2,7 @@
 import BaseHead from '../components/BaseHead.astro';
 import Footer from '../components/Footer.astro';
 import Header from '../components/Header.astro';
-import { REPO_URL, SITE_TITLE } from '../consts';
+import { BASE, REPO_URL, SITE_TITLE } from '../consts';
 ---
 
 <!doctype html>
@@ -75,7 +75,7 @@ import { REPO_URL, SITE_TITLE } from '../consts';
 	<body>
 		<Header />
 		<main>
-			<p class="kicker">man vibeengineers</p>
+			<p class="kicker">man ctx</p>
 			<h1>Cómo funciona</h1>
 			<p>
 				Hacemos vibe coding, pero queremos entender qué pasa por debajo. Cada día laborable se
@@ -110,7 +110,7 @@ import { REPO_URL, SITE_TITLE } from '../consts';
 					<h2>Lee el artículo</h2>
 					<p>
 						A primera hora (L–V) el artículo está publicado y la issue se cierra con el link.
-						También hay <a href={`${import.meta.env.BASE_URL.replace(/\/+$/, '')}/rss.xml`}>RSS</a> para
+						También hay <a href={`${BASE}/rss.xml`}>RSS</a> para
 						leerlo donde quieras.
 					</p>
 				</div>

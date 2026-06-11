@@ -4,7 +4,7 @@
 import '../styles/global.css';
 import type { ImageMetadata } from 'astro';
 import FallbackImage from '../assets/blog-placeholder-1.jpg';
-import { SITE_TITLE } from '../consts';
+import { BASE, SITE_TITLE } from '../consts';
 
 interface Props {
 	title: string;
@@ -13,7 +13,6 @@ interface Props {
 }
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
-const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 
 const { title, description, image = FallbackImage } = Astro.props;
 ---
@@ -21,14 +20,14 @@ const { title, description, image = FallbackImage } = Astro.props;
 <!-- Global Metadata -->
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
-<link rel="icon" href={`${base}/favicon.ico`} />
-<link rel="sitemap" href={`${base}/sitemap-index.xml`} />
+<link rel="icon" type="image/svg+xml" href={`${BASE}/favicon.svg`} />
+<link rel="icon" href={`${BASE}/favicon.ico`} />
+<link rel="sitemap" href={`${BASE}/sitemap-index.xml`} />
 <link
 	rel="alternate"
 	type="application/rss+xml"
 	title={SITE_TITLE}
-	href={new URL(`${base}/rss.xml`, Astro.site)}
+	href={new URL(`${BASE}/rss.xml`, Astro.site)}
 />
 <meta name="generator" content={Astro.generator} />
 

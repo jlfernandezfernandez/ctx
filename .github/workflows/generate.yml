@@ -35,8 +35,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           OUTPUT_DIR: site/src/content/blog
-          SITE_URL: https://${{ github.repository_owner }}.github.io/vibeengineers
-        run: daily-journal-generate
+          SITE_URL: https://${{ github.repository_owner }}.github.io/ctx
+        run: ctx-generate
 
       - name: Commit and push article
         run: |

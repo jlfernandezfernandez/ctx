@@ -21,12 +21,20 @@ ARTICLE_STRUCTURE = """1. Contexto: qué problema existe y por qué este tema im
 3. En profundidad: internals, trade-offs, comparativas (lo que una newsletter no cuenta).
 4. Ejemplos de código ejecutables, comentados, de menos a más complejo.
 5. Trampas comunes: errores reales que comete la gente y cómo evitarlos.
-6. Para saber más: 3-5 referencias concretas (docs oficiales, papers, posts de calidad)."""
+6. Para saber más: 3-5 referencias reales y verificables, por orden de prioridad: \
+documentación oficial del proyecto/lenguaje, papers o specs relevantes, y blogs o \
+newsletters de ingeniería reconocidos (ByteByteGo, Martin Fowler, InfoQ, blogs de \
+ingeniería de empresas como Netflix/Uber/Cloudflare, artículos destacados de Medium). \
+Nunca inventes URLs: si no estás seguro del enlace exacto, da el nombre de la fuente \
+y el título del recurso."""
+
+
+def _notes_block(notes: str) -> str:
+    return f"\n\nNotas del equipo sobre el enfoque deseado:\n{notes}" if notes.strip() else ""
 
 
 def outline_prompt(topic: str, notes: str) -> str:
-    notes_block = f"\n\nNotas del equipo sobre el enfoque deseado:\n{notes}" if notes.strip() else ""
-    return f"""Diseña el esquema de un artículo técnico de ~3000 palabras sobre: {topic}{notes_block}
+    return f"""Diseña el esquema de un artículo técnico de ~3000 palabras sobre: {topic}{_notes_block(notes)}
 
 El artículo seguirá esta estructura:
 {ARTICLE_STRUCTURE}
@@ -49,8 +57,7 @@ Devuelve SOLO el JSON, sin explicaciones."""
 
 
 def article_prompt(topic: str, notes: str, outline: str) -> str:
-    notes_block = f"\n\nNotas del equipo sobre el enfoque deseado:\n{notes}" if notes.strip() else ""
-    return f"""Escribe el artículo completo sobre: {topic}{notes_block}
+    return f"""Escribe el artículo completo sobre: {topic}{_notes_block(notes)}
 
 Sigue fielmente este esquema:
 {outline}

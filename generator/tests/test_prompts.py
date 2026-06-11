@@ -1,5 +1,5 @@
 """Tests for prompt builders."""
-from daily_journal_generator.prompts import SYSTEM_PROMPT, outline_prompt, article_prompt
+from ctx_generator.prompts import SYSTEM_PROMPT, outline_prompt, article_prompt
 
 
 def test_system_prompt_sets_role_and_language():

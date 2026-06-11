@@ -1,14 +1,12 @@
 ---
-import { REPO_URL, SITE_TITLE } from '../consts';
+import { BASE, REPO_URL, SITE_TITLE } from '../consts';
 import HeaderLink from './HeaderLink.astro';
-
-const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 ---
 
 <header>
 	<nav>
 		<h2>
-			<a href={`${base}/`}><span class="prompt">$</span> {SITE_TITLE}</a>
+			<a href={`${BASE}/`}><span class="prompt">$</span> {SITE_TITLE}</a>
 		</h2>
 		<div class="internal-links">
 			<HeaderLink href="/">Inicio</HeaderLink>

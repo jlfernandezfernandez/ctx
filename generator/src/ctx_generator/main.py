@@ -80,10 +80,7 @@ def run(env: dict) -> int:
     )
     print(f"Article written: {path}")
 
-    if site_url:
-        link = f"{site_url}/blog/{pub_date.isoformat()}-{slug}/"
-    else:
-        link = path
+    link = f"{site_url}/blog/{pub_date.isoformat()}-{slug}/" if site_url else path
     issues.close_with_comment(issue["number"], f"Publicado: {link}")
     print(f"Issue #{issue['number']} closed.")
     return 0

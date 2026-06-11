@@ -1,7 +1,7 @@
 """Tests for the generation orchestration."""
 from unittest.mock import MagicMock, patch
 
-from daily_journal_generator.main import run
+from ctx_generator.main import run
 
 
 def env():
@@ -26,10 +26,10 @@ def topic_issue():
     }
 
 
-@patch("daily_journal_generator.main.write_article", return_value="/tmp/out/2026-06-10-project-reactor.md")
-@patch("daily_journal_generator.main.validate_body")
-@patch("daily_journal_generator.main.LLMClient")
-@patch("daily_journal_generator.main.IssuesClient")
+@patch("ctx_generator.main.write_article", return_value="/tmp/out/2026-06-10-project-reactor.md")
+@patch("ctx_generator.main.validate_body")
+@patch("ctx_generator.main.LLMClient")
+@patch("ctx_generator.main.IssuesClient")
 def test_run_generates_validates_writes_and_closes(issues_cls, llm_cls, validate, write):
     issues = issues_cls.return_value
     issues.next_topic.return_value = topic_issue()
@@ -53,12 +53,12 @@ def test_run_generates_validates_writes_and_closes(issues_cls, llm_cls, validate
     assert "-project-reactor/" in comment
 
 
-@patch("daily_journal_generator.main.write_article", return_value="/tmp/out/x.md")
-@patch("daily_journal_generator.main.validate_body")
-@patch("daily_journal_generator.main.LLMClient")
-@patch("daily_journal_generator.main.IssuesClient")
+@patch("ctx_generator.main.write_article", return_value="/tmp/out/x.md")
+@patch("ctx_generator.main.validate_body")
+@patch("ctx_generator.main.LLMClient")
+@patch("ctx_generator.main.IssuesClient")
 def test_run_falls_back_when_metadata_call_fails(issues_cls, llm_cls, validate, write):
-    from daily_journal_generator.llm import LLMError
+    from ctx_generator.llm import LLMError
 
     issues = issues_cls.return_value
     issues.next_topic.return_value = topic_issue()
@@ -76,10 +76,10 @@ def test_run_falls_back_when_metadata_call_fails(issues_cls, llm_cls, validate, 
     issues.close_with_comment.assert_called_once()
 
 
-@patch("daily_journal_generator.main.write_article", return_value="/tmp/out/x.md")
-@patch("daily_journal_generator.main.validate_body")
-@patch("daily_journal_generator.main.LLMClient")
-@patch("daily_journal_generator.main.IssuesClient")
+@patch("ctx_generator.main.write_article", return_value="/tmp/out/x.md")
+@patch("ctx_generator.main.validate_body")
+@patch("ctx_generator.main.LLMClient")
+@patch("ctx_generator.main.IssuesClient")
 def test_run_strips_issue_form_artifacts_from_notes(issues_cls, llm_cls, validate, write):
     issue = topic_issue()
     issue["body"] = "### Notas de enfoque\n\n_No response_"
@@ -94,8 +94,8 @@ def test_run_strips_issue_form_artifacts_from_notes(issues_cls, llm_cls, validat
     assert "_No response_" not in outline_user_prompt
 
 
-@patch("daily_journal_generator.main.LLMClient")
-@patch("daily_journal_generator.main.IssuesClient")
+@patch("ctx_generator.main.LLMClient")
+@patch("ctx_generator.main.IssuesClient")
 def test_run_skips_when_article_already_published_today(issues_cls, llm_cls, tmp_path):
     from datetime import date
 
@@ -109,17 +109,17 @@ def test_run_skips_when_article_already_published_today(issues_cls, llm_cls, tmp
     llm_cls.return_value.generate.assert_not_called()
 
 
-@patch("daily_journal_generator.main.LLMClient")
-@patch("daily_journal_generator.main.IssuesClient")
+@patch("ctx_generator.main.LLMClient")
+@patch("ctx_generator.main.IssuesClient")
 def test_run_exits_zero_when_no_topics(issues_cls, llm_cls):
     issues_cls.return_value.next_topic.return_value = None
     assert run(env()) == 0
     llm_cls.return_value.generate.assert_not_called()
 
 
-@patch("daily_journal_generator.main.write_article")
-@patch("daily_journal_generator.main.LLMClient")
-@patch("daily_journal_generator.main.IssuesClient")
+@patch("ctx_generator.main.write_article")
+@patch("ctx_generator.main.LLMClient")
+@patch("ctx_generator.main.IssuesClient")
 def test_run_does_not_close_issue_if_validation_fails(issues_cls, llm_cls, write):
     issues = issues_cls.return_value
     issues.next_topic.return_value = topic_issue()

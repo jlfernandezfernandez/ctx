@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from daily_journal_generator.article import (
+from ctx_generator.article import (
     ValidationError,
     make_description,
     slugify,
