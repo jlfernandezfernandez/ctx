@@ -63,8 +63,8 @@ Este ejemplo crea un agente con dos tools: búsqueda web (Tavily) y una calculad
 import os
 from langchain_openai import ChatOpenAI
 from langchain.agents import AgentExecutor, create_openai_tools_agent, Tool
-from langchain.tools import TavilySearchResults
-from langchain.chains import LLMMathChain
+from langchain_community.tools import TavilySearchResults
+from langchain_experimental.llm_math.chain import LLMMathChain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 # Configurar API keys (se asume que están en variables de entorno)
