@@ -67,24 +67,6 @@ el artículo ni empieces con "El artículo", "Este artículo" o similar.
 Devuelve SOLO el JSON, sin explicaciones."""
 
 
-def review_prompt(body: str) -> str:
-    return f"""Revisa este artículo técnico en markdown y corrige SOLO defectos objetivos \
-en los bloques de código:
-- imports que faltan o son incorrectos (todo tipo usado debe estar importado, también \
-los que aparecen solo en firmas de métodos),
-- código que no compilaría tal cual (referencias `this` en contextos static, APIs \
-inexistentes, tipos mal usados),
-- ejemplos que contradicen las trampas o buenas prácticas que el propio artículo enseña.
-
-No reescribas la prosa, no cambies títulos ni estructura, no añadas ni quites secciones. \
-Si un bloque ya es correcto, déjalo idéntico.
-
-{body}
-
-Devuelve el artículo completo en markdown, idéntico salvo las correcciones de código. \
-Sin explicaciones ni comentarios sobre lo corregido."""
-
-
 def article_prompt(topic: str, notes: str, outline: str) -> str:
     return f"""Escribe el artículo completo sobre: {topic}{_notes_block(notes)}
 
