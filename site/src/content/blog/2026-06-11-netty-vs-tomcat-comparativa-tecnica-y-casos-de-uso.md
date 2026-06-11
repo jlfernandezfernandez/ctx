@@ -2,7 +2,7 @@
 title: "Netty vs Tomcat: Comparativa técnica y casos de uso"
 description: "Tomcat utiliza un modelo hilo-por-petición que simplifica el desarrollo pero limita la escalabilidad a miles de conexiones concurrentes. Netty emplea event loops y I/O no bloqueante para manejar decenas de miles de conexiones con un puñado de hilos, y Reactor Netty añade backpressure reactiva extremo a extremo. La elección depende de la carga: Tomcat para aplicaciones web tradicionales con concurrencia moderada, Netty/Reactor Netty para alta concurrencia, WebSockets y stacks completamente reactivos."
 date: 2026-06-11
-tags: ["java", "non-blocking", "reactive", "backpressure", "project-reactor"]
+tags: ["java", "reactive"]
 summary: "Tomcat utiliza un modelo hilo-por-petición que simplifica el desarrollo pero limita la escalabilidad a miles de conexiones concurrentes. Netty emplea event loops y I/O no bloqueante para manejar decenas de miles de conexiones con un puñado de hilos, y Reactor Netty añade backpressure reactiva extremo a extremo. La elección depende de la carga: Tomcat para aplicaciones web tradicionales con concurrencia moderada, Netty/Reactor Netty para alta concurrencia, WebSockets y stacks completamente reactivos."
 issue: 15
 requestedBy: "jlfernandezfernandez"

@@ -1,22 +1,11 @@
 [
   "agents",
-  "backpressure",
-  "function-calling",
   "java",
   "kafka",
   "langchain",
-  "langgraph",
   "llm",
-  "non-blocking",
-  "pattern-matching",
-  "project-reactor",
   "pydantic",
   "reactive",
-  "scoped-values",
   "snowflake",
-  "structured-concurrency",
-  "structured-output",
-  "tools",
-  "validation",
   "virtual-threads"
 ]
