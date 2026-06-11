@@ -7,6 +7,7 @@ summary: "KRaft elimina la dependencia de ZooKeeper mediante un quorum Raft inte
 issue: 4
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"
+reviewer: "minimax-m3"
 ---
 
 ## El problema de la doble operación: ZooKeeper como dependencia externa
