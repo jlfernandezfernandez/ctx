@@ -37,20 +37,23 @@ class LLMClient:
         return data
 
     def generate(self, system: str, user: str, **extra) -> str:
-        resp = requests.post(
-            f"{self.base_url}/chat/completions",
-            headers={"Authorization": f"Bearer {self.api_key}"},
-            json={
-                "model": self.model,
-                "messages": [
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": user},
-                ],
-                "stream": False,
-                **extra,
-            },
-            timeout=self.timeout,
-        )
+        try:
+            resp = requests.post(
+                f"{self.base_url}/chat/completions",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                json={
+                    "model": self.model,
+                    "messages": [
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": user},
+                    ],
+                    "stream": False,
+                    **extra,
+                },
+                timeout=self.timeout,
+            )
+        except requests.exceptions.RequestException as exc:
+            raise LLMError(f"LLM request failed: {exc}") from exc
         if resp.status_code != 200:
             raise LLMError(f"LLM API error {resp.status_code}: {resp.text[:500]}")
         data = resp.json()
