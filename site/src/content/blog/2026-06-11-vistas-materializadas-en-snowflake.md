@@ -2,7 +2,7 @@
 title: "Vistas materializadas en Snowflake"
 description: "Las vistas materializadas en Snowflake almacenan resultados pre-calculados de consultas agregadas y se refrescan incrementalmente ante cambios en las tablas base, permitiendo que el optimizador redirija consultas compatibles de forma transparente (query rewrite). Reducen latencia y coste de consulta en dashboards y reportes con agregaciones simples, pero imponen restricciones SQL severas (sin window functions, DISTINCT, UNION ni joins complejos) y conllevan costes de cómputo y almacenamiento propios. Para transformaciones complejas o pipelines multi-paso, las Dynamic Tables ofrecen mayor flexibilidad sin query rewrite."
 date: 2026-06-11
-tags: ["snowflake", "materialized-views", "dynamic-tables", "incremental-refresh", "query-rewrite"]
+tags: ["snowflake"]
 summary: "Las vistas materializadas en Snowflake almacenan resultados pre-calculados de consultas agregadas y se refrescan incrementalmente ante cambios en las tablas base, permitiendo que el optimizador redirija consultas compatibles de forma transparente (query rewrite). Reducen latencia y coste de consulta en dashboards y reportes con agregaciones simples, pero imponen restricciones SQL severas (sin window functions, DISTINCT, UNION ni joins complejos) y conllevan costes de cómputo y almacenamiento propios. Para transformaciones complejas o pipelines multi-paso, las Dynamic Tables ofrecen mayor flexibilidad sin query rewrite."
 issue: 5
 requestedBy: "jlfernandezfernandez"

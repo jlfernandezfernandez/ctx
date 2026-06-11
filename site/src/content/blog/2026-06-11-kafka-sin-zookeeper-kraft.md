@@ -2,7 +2,7 @@
 title: "Kafka sin ZooKeeper: KRaft"
 description: "KRaft elimina la dependencia de ZooKeeper mediante un quorum Raft interno que almacena metadatos en un topic compactado, reduciendo el failover del controller a segundos y escalando a millones de particiones. Unifica la seguridad bajo los mecanismos nativos de Kafka y admite modos combinado y dedicado, pero exige dimensionar correctamente los controllers para evitar timeouts en el quorum."
 date: 2026-06-11
-tags: ["kraft", "kafka", "raft", "metadata", "controller"]
+tags: ["kafka"]
 summary: "KRaft elimina la dependencia de ZooKeeper mediante un quorum Raft interno que almacena metadatos en un topic compactado, reduciendo el failover del controller a segundos y escalando a millones de particiones. Unifica la seguridad bajo los mecanismos nativos de Kafka y admite modos combinado y dedicado, pero exige dimensionar correctamente los controllers para evitar timeouts en el quorum."
 issue: 4
 requestedBy: "jlfernandezfernandez"
