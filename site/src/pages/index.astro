@@ -29,9 +29,8 @@ const recent = rest.slice(0, RECENT_COUNT);
 				// Reveal characters in place (no reflow) so the headline never shifts layout.
 				const typingText = document.querySelector('.typing-text');
 				const typingCursor = document.querySelector('.typing-cursor');
-				const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-				if (typingText && typingCursor && !reduceMotion) {
+				if (typingText && typingCursor) {
 					const characters = Array.from(typingText.textContent);
 					typingText.textContent = '';
 					for (const character of characters) {
@@ -48,8 +47,6 @@ const recent = rest.slice(0, RECENT_COUNT);
 					window.setTimeout(() => {
 						typingCursor.classList.remove('pending');
 					}, 70 * characters.length);
-				} else {
-					typingCursor?.classList.remove('pending');
 				}
 			}
 		</script>
@@ -67,7 +64,7 @@ const recent = rest.slice(0, RECENT_COUNT);
 				<p class="cmd">ctx --how</p>
 				<p class="out">
 					Propones un tema → el equipo vota con 👍 → cada mañana (L–V) un LLM publica aquí un
-					deep dive de ~15 min: desde cero hasta internals, con código ejecutable.
+					deep dive de ~15 min: desde cero hasta internals, con ejemplos de código completos.
 				</p>
 			</div>
 		</div>

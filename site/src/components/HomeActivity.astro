@@ -82,11 +82,9 @@ const maxModelCount = Math.max(...models.map(([, count]) => count), 1);
 <script is:inline>
 	{
 		const counters = document.querySelectorAll('[data-count]');
-		const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 		function animateCounter(counter) {
 			const target = Number(counter.dataset.count);
-			if (reduceMotion) return;
 
 			// Keep the count-up under ~1.2s no matter how many articles exist.
 			const delay = Math.min(90, 1200 / target);
@@ -295,11 +293,6 @@ const maxModelCount = Math.max(...models.map(([, count]) => count), 1);
 		}
 		.signal strong {
 			font-size: 3.5em;
-		}
-	}
-	@media (prefers-reduced-motion: reduce) {
-		.model-bar i {
-			animation: none;
 		}
 	}
 </style>

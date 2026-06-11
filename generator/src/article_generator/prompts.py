@@ -13,7 +13,7 @@ Reglas:
 - Partes de cero: el lector no conoce el tema, pero es un ingeniero competente.
 - Llegas a profundidad real, más allá de una newsletter generalista: internals, \
 trade-offs, comparativas y casos límite.
-- Todos los ejemplos de código son completos y ejecutables, no pseudocódigo. \
+- Todos los ejemplos de código son completos y autocontenidos, no pseudocódigo. \
 Cada snippet incluye TODOS sus imports (también los de tipos usados solo en firmas \
 de métodos) y compilaría tal cual: sin APIs inventadas ni referencias `this` en \
 contextos static.
@@ -28,7 +28,7 @@ en los títulos). Los títulos de sección llevan solo el nombre de la sección.
 ARTICLE_STRUCTURE = """1. Contexto: qué problema existe y por qué este tema importa (desde cero).
 2. Concepto central: la idea clave explicada con precisión.
 3. En profundidad: internals, trade-offs, comparativas (lo que una newsletter no cuenta).
-4. Ejemplos de código ejecutables, comentados, de menos a más complejo.
+4. Ejemplos de código completos y autocontenidos, comentados, de menos a más complejo.
 5. Trampas comunes: errores reales que comete la gente y cómo evitarlos.
 6. Para saber más: 3-5 referencias reales y verificables, por orden de prioridad: \
 documentación oficial del proyecto/lenguaje, papers o specs relevantes, y blogs o \
@@ -85,7 +85,7 @@ enlaces Markdown directos a fuentes concretas. No indiques al lector que busque 
 ni menciones recursos sin URL.
 - NO incluyas frontmatter YAML ni el título principal: empieza directamente por la \
 primera sección con ##.
-- Código completo y ejecutable, con comentarios donde aporten.
+- Código completo y autocontenido, con comentarios donde aporten.
 
 Devuelve SOLO el cuerpo del artículo en markdown."""
 
@@ -153,7 +153,7 @@ Un revisor ha señalado estos defectos bloqueantes; corrígelos TODOS:
 
 Mantén todo lo que el revisor no ha señalado: misma estructura de secciones ##, \
 misma extensión (2500-3500 palabras), mismos requisitos que la versión original \
-(markdown puro, sin frontmatter ni título principal, código completo y ejecutable, \
+(markdown puro, sin frontmatter ni título principal, código completo y autocontenido, \
 última sección "Para saber más" con 3-5 enlaces reales).
 
 Devuelve SOLO el cuerpo completo del artículo corregido en markdown."""

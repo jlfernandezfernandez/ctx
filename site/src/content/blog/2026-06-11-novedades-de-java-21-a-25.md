@@ -48,7 +48,7 @@ Las sequenced collections (Java 21) cierran una carencia histórica: acceder al 
 
 ## Ejemplos de código paso a paso
 
-Todos los fragmentos que siguen son ejecutables y muestran las novedades en escenarios realistas.
+Todos los fragmentos que siguen son completos y muestran las novedades en escenarios realistas.
 
 **Ejemplo 1: Virtual threads y su escalabilidad en tareas bloqueantes**  
 Simulamos 100.000 peticiones que duermen 1 segundo, comparando un pool de plataforma pequeño con virtual threads.

@@ -225,11 +225,6 @@ hr {
 		opacity: 0;
 	}
 }
-@media (prefers-reduced-motion: reduce) {
-	.typing-cursor {
-		animation: none;
-	}
-}
 @media (max-width: 720px) {
 	body {
 		font-size: 16px;

@@ -6,7 +6,7 @@
 
 Un deep dive técnico al día. Para vibe coders que quieren entender qué pasa por debajo.
 
-Cada día laborable, un artículo en profundidad (~15 min, 2.500-3.500 palabras, con código ejecutable) sobre un tema propuesto y votado por el equipo. Desde cero hasta donde una newsletter generalista no llega.
+Cada día laborable, un artículo en profundidad (~15 min, 2.500-3.500 palabras, con ejemplos de código completos) sobre un tema propuesto y votado por el equipo. Desde cero hasta donde una newsletter generalista no llega.
 
 ## Cómo funciona
 

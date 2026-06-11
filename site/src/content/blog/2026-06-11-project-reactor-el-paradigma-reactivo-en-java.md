@@ -164,7 +164,7 @@ RxJava (versiones 2 y 3) también implementa Reactive Streams, pero con diferenc
 
 La naturaleza lazy y anidada de los operadores hace que los stacktraces por defecto sean crípticos: una excepción muestra una larga cadena de decoradores anónimos con poca información sobre dónde se declaró el ensamblaje. Reactor ofrece `Hooks.onOperatorDebug()`, que activa un modo de debugging en el que cada operador captura la traza de ensamblaje y la adjunta a los eventos. El coste en rendimiento es significativo (puede multiplicar por 5 o 10 el tiempo de ejecución), por lo que no debe usarse en producción. Como alternativa más ligera, se pueden usar checkpoints: `.checkpoint("después-consulta-bd")` añade una etiqueta que aparece en el stacktrace sin el overhead masivo de capturar toda la traza. En producción, las trazas de ensamblaje se pueden obtener con el agente Java de Reactor (`reactor-tools`), que las construye bajo demanda con un costo mucho menor.
 
-## Ejemplos de código ejecutables
+## Ejemplos de código completos
 
 **Ejemplo 1: Creación y suscripción básica**
 
