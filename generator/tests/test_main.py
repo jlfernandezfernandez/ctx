@@ -117,20 +117,6 @@ def test_run_strips_issue_form_artifacts_from_notes(issues_cls, llm_cls, prs_cls
     assert "### Notas de enfoque" not in outline_prompt
 
 
-@patch("article_generator.main.LLMClient")
-@patch("article_generator.main.IssuesClient")
-def test_run_skips_when_article_already_published_today(issues_cls, llm_cls, tmp_path):
-    from datetime import date
-
-    (tmp_path / f"{date.today().isoformat()}-cualquier-tema.md").write_text("x")
-    e = env()
-    e["OUTPUT_DIR"] = str(tmp_path)
-
-    assert run(e) == 0
-
-    issues_cls.return_value.next_topic.assert_not_called()
-
-
 @patch("article_generator.main.PRClient")
 @patch("article_generator.main.LLMClient")
 @patch("article_generator.main.IssuesClient")

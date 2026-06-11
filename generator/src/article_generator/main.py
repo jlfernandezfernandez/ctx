@@ -7,7 +7,6 @@ skipped, so a PR waiting for a human never blocks the queue.
 import os
 import sys
 from datetime import date
-from pathlib import Path
 
 from .article import (
     make_description,
@@ -55,14 +54,7 @@ def export_output(env: dict, name: str, value: str) -> None:
 
 
 def run(env: dict) -> int:
-    output_dir = env.get("OUTPUT_DIR", "site/src/content/blog")
     today = date.today()
-
-    existing = list(Path(output_dir).glob(f"{today.isoformat()}-*.md"))
-    if existing:
-        print(f"Already published today: {existing[0].name}. Nothing to do.")
-        return 0
-
     issues = IssuesClient(repo=env["GITHUB_REPOSITORY"], token=env["GITHUB_TOKEN"])
     prs = PRClient(repo=env["GITHUB_REPOSITORY"], token=env["GITHUB_TOKEN"])
 
