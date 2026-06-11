@@ -62,9 +62,9 @@ Este ejemplo crea un agente con dos tools: búsqueda web (Tavily) y una calculad
 ```python
 import os
 from langchain_openai import ChatOpenAI
-from langchain.agents import AgentExecutor, create_openai_tools_agent
+from langchain.agents import AgentExecutor, create_openai_tools_agent, Tool
 from langchain.tools import TavilySearchResults
-from langchain_community.tools import LLMMathChain  # Requiere langchain-experimental
+from langchain.chains import LLMMathChain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 # Configurar API keys (se asume que están en variables de entorno)
@@ -76,8 +76,9 @@ llm = ChatOpenAI(model="gpt-4o", temperature=0)
 
 # Definir tools
 search = TavilySearchResults(max_results=2)
-math_chain = LLMMathChain.from_llm(llm=llm)  # Tool que usa LLM para evaluar expresiones matemáticas
-tools = [search, math_chain]
+math_chain = LLMMathChain.from_llm(llm=llm)  # Chain que usa LLM para evaluar expresiones matemáticas
+math_tool = Tool(name="Calculator", func=math_chain.run, description="Useful for math calculations.")
+tools = [search, math_tool]
 
 # Prompt específico para OpenAI tools
 prompt = ChatPromptTemplate.from_messages([
@@ -125,7 +126,7 @@ def obtener_clima(ciudad: str) -> str:
     return climas_mock.get(ciudad.lower(), "Ciudad no encontrada")
 
 # Agregar al agente anterior
-tools = [search, math_chain, obtener_clima]
+tools = [search, math_tool, obtener_clima]
 # El resto del código es idéntico al ejemplo 1, reemplazando la lista de tools
 ```
 
