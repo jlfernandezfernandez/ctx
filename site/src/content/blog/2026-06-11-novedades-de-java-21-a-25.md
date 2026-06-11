@@ -1,14 +1,3 @@
----
-title: "Novedades de Java 21 a 25"
-description: "Los hilos virtuales permiten volver al modelo thread‑per‑request con bloqueos escalables, pero se anclan (pin) en bloques synchronized y no mejoran tareas CPU‑bound. El pattern matching en switch proporciona desestructuración exhaustiva de records y tipos sellados, eliminando casts y ramas olvidadas. La concurrencia estructurada y scoped values simplifican la cancelación segura y el contexto heredable en entornos con millones de hilos ligeros."
-pubDate: 2026-06-11
-tags: ["java", "virtual-threads", "pattern-matching", "structured-concurrency", "scoped-values"]
-summary: "Los hilos virtuales permiten volver al modelo thread‑per‑request con bloqueos escalables, pero se anclan (pin) en bloques synchronized y no mejoran tareas CPU‑bound. El pattern matching en switch proporciona desestructuración exhaustiva de records y tipos sellados, eliminando casts y ramas olvidadas. La concurrencia estructurada y scoped values simplifican la cancelación segura y el contexto heredable en entornos con millones de hilos ligeros."
-issue: 2
-requestedBy: "jlfernandezfernandez"
-model: "deepseek-v4-pro"
----
-
 ## Contexto: Los límites del modelo tradicional y la necesidad de evolución
 
 Durante años, el modelo de concurrencia en Java se basó en hilos del sistema operativo (platform threads). Cada petición entrante en un servidor se vinculaba a un hilo dedicado, lo que ofrecía un estilo de programación secuencial fácil de razonar. Sin embargo, estos hilos son recursos costosos: consumen alrededor de 1 MB de stack por defecto y requieren gestión del kernel. En aplicaciones cloud‑native que deben manejar decenas o cientos de miles de conexiones simultáneas, el modelo thread‑per‑request golpea los límites de escalabilidad. Dedicar un hilo a cada petición bloqueante (por ejemplo, esperando una respuesta de base de datos) agota la memoria y satura el planificador del sistema operativo, forzando a los equipos a migrar hacia frameworks reactivos y programación asíncrona con `CompletableFuture` o callbacks.
@@ -27,7 +16,7 @@ El resultado práctico es que podemos volver al modelo thread‑per‑request: c
 
 No obstante, los virtual threads no mejoran por sí solos el rendimiento de tareas intensivas en CPU. Su fortaleza está en las operaciones bloqueantes. Para tareas CPU‑bound, conviene limitar el paralelismo con semáforos o colas limitadas, evitando saturar el pool común de ForkJoin.
 
-El pattern matching en `switch` es la otra gran revolución. Desde Java 16, `instanceof` permite declarar una variable de patrón, ahorrando el cast. Java 21 lleva este concepto al `switch`, permitiendo patrones de tipo y, crucialmente, patrones de registro. Con una jerarquía sellada (sealed hierarchy), podemos escribir un `switch` sobre una variable de la interfaz base y el compilador verifica que todas las especializaciones estén cubiertas. Además, los patrones de registro desestructuran un record en sus componentes, evitando el acceso manual a campos. Por ejemplo, un `case Rectangle(var ancho, var alto) -> ...` extrae directamente los valores. Java 22 añade patrones sin nombre con `_`, para ignorar componentes que no interesan, y Java 23 refina la interoperabilidad con tipos primitivos. Todo esto transforma el código de manipulación de datos en un flujo declarativo, seguro y libre de boilerplate, donde el compilador asume la responsabilidad de la exhaustividad.
+El pattern matching en `switch` es la otra gran revolución. Desde Java 16, `instanceof` permite declarar una variable de patrón, ahorrando el cast. Java 21 lleva este concepto al `switch`, permitiendo patrones de tipo y, crucialmente, patrones de registro. Con una jerarquía sellada (sealed hierarchy), podemos escribir un `switch` sobre una variable de la interfaz base y el compilador verifica que todas las especializaciones estén cubiertas. Además, los patrones de registro desestructuran un record en sus componentes, evitando el acceso manual a campos. Por ejemplo, un `case Rectangle(var ancho, var alto) -> ...` extrae directamente los valores. Java 21 introdujo como preview los patrones sin nombre con `_`, que permiten ignorar componentes que no interesan (finalizados en Java 22). Java 23 refina la interoperabilidad con tipos primitivos. Todo esto transforma el código de manipulación de datos en un flujo declarativo, seguro y libre de boilerplate, donde el compilador asume la responsabilidad de la exhaustividad.
 
 Estas dos innovaciones, aunque distintas, convergen en un mismo objetivo: eliminar la fricción accidental. La concurrencia sencilla y la desestructuración de datos se convierten en recursos naturales del lenguaje, sin tener que recurrir a frameworks externos o patrones de diseño oscuros.
 
@@ -37,7 +26,7 @@ Para usar los virtual threads con confianza es necesario entender sus tripas. Ca
 
 Sin embargo, existe un escollo conocido como *pinning*. Si un virtual thread ejecuta un bloque `synchronized` o llama a una función nativa JNI, no puede ser desmontado y ocupa su carrier thread hasta que sale de esa sección crítica. Durante ese tiempo, el carrier queda anclado, reduciendo la capacidad de ejecutar otros virtual threads. Si muchas peticiones caen en secciones sincronizadas, la escalabilidad se degrada significativamente. La monitorización se puede realizar con comandos `jcmd` y con el nuevo sistema de logs de incidencias de pinning introducido en Java 22. La solución pasa por reemplazar `synchronized` con `ReentrantLock` siempre que sea posible, o aislar las secciones críticas en pools de hilos de plataforma.
 
-En cuanto al pattern matching, su evolución ha sido gradual. Java 16 introdujo los type patterns en `instanceof` con variable vinculada. Java 17 sentó las bases con las jerarquías selladas. Java 21 unificó todo en `switch`: patrones de tipo, patrones de registro y exhaustividad. El compilador no solo asegura la cobertura; también optimiza el código generado, omitiendo casts redundantes y minimizando las ramas condicionales. Java 22 añade patrones sin nombre, ideales para ignorar partes de un registro. La verificación de exhaustividad se apoya en las sealed hierarchies, por lo que para aprovecharla al máximo es recomendable modelar las estructuras de datos con `sealed interface` y records.
+En cuanto al pattern matching, su evolución ha sido gradual. Java 16 introdujo los type patterns en `instanceof` con variable vinculada. Java 17 sentó las bases con las jerarquías selladas. Java 21 unificó todo en `switch`: patrones de tipo, patrones de registro y exhaustividad. El compilador no solo asegura la cobertura; también optimiza el código generado, omitiendo casts redundantes y minimizando las ramas condicionales. Java 21 también trajo en preview los patrones sin nombre (`_`), ideales para ignorar partes de un registro, que fueron finalizados en la versión 22. La verificación de exhaustividad se apoya en las sealed hierarchies, por lo que para aprovecharla al máximo es recomendable modelar las estructuras de datos con `sealed interface` y records.
 
 Las APIs complementarias que llegan en estas versiones redondean la experiencia diaria. La concurrencia estructurada (`StructuredTaskScope`, en preview desde Java 21 y camino a ser final en 25) organiza las tareas concurrentes en bloques sintácticos: las tareas lanzadas dentro de un scope están vinculadas a la vida del bloque; si el scope se cierra (por ejemplo, al salir de un `try`‑with‑resources), todas las tareas pendientes se cancelan automáticamente. Esto contrasta con `CompletableFuture`, donde es fácil olvidar cancelar las ramas fallidas o perder la traza de errores. Aquí, una política como `ShutdownOnFailure` propaga las excepciones y cierra las tareas hermanas cuando una falla.
 
@@ -113,7 +102,7 @@ public class ShapeArea {
     public static void main(String[] args) {
         Shape shape = new Square(5);
         System.out.println("Área: " + area(shape));
-        // Patrón sin nombre (Java 22+):
+        // Patrón sin nombre (disponible desde Java 21 preview):
         // case Rectangle(_, var h) -> ...;
     }
 }
