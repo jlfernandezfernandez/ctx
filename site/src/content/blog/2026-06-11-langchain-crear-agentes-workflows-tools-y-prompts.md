@@ -7,6 +7,7 @@ summary: "LangChain proporciona abstracciones para construir agentes LLM que com
 issue: 10
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"
+reviewer: "minimax-m3"
 ---
 
 ## Por qué los LLMs necesitan agentes: el problema de la caja negra
