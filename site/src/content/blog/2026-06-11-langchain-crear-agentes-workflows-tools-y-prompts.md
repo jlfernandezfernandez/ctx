@@ -1,5 +1,5 @@
 ---
-title: "LangChain: crear agentes, workflows, tools y prompts"
+title: "LangChain desde cero: agentes, tools y prompts"
 description: "LangChain proporciona abstracciones para construir agentes LLM que combinan razonamiento con ejecución de herramientas mediante ReAct o function calling. LangGraph extiende esto a workflows stateful con branching, ciclos e intervención humana. Usa agentes cuando el LLM deba interactuar con sistemas externos; prefiere function calling por fiabilidad y LangGraph para orquestaciones complejas más allá de bucles simples."
 date: 2026-06-11
 tags: ["langchain", "llm", "agents"]

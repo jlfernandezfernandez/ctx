@@ -1,5 +1,5 @@
 ---
-title: "Novedades de Java 21 a 25"
+title: "Java 21 a 25: todo lo que necesitas saber"
 description: "Los hilos virtuales permiten volver al modelo thread‑per‑request con bloqueos escalables, pero se anclan (pin) en bloques synchronized y no mejoran tareas CPU‑bound. El pattern matching en switch proporciona desestructuración exhaustiva de records y tipos sellados, eliminando casts y ramas olvidadas. La concurrencia estructurada y scoped values simplifican la cancelación segura y el contexto heredable en entornos con millones de hilos ligeros."
 date: 2026-06-11
 tags: ["java", "virtual-threads"]

@@ -1,5 +1,5 @@
 ---
-title: "Pydantic AI"
+title: "Introducción a Pydantic AI: structured output para LLMs"
 description: "Pydantic AI garantiza salidas estructuradas y validadas de LLMs usando modelos Pydantic, con reintentos automáticos ante fallos de validación. Elimina el boilerplate de parsing y es adecuado para sistemas de producción donde la integridad de los datos es crítica, aunque esquemas muy estrictos pueden limitar la creatividad del LLM. Su enfoque narrow pero profundo contrasta con frameworks generalistas como LangChain."
 date: 2026-06-11
 tags: ["pydantic", "llm", "agents"]
