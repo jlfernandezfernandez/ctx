@@ -177,16 +177,12 @@ public class ReactorNettyDelayed {
     public static void main(String[] args) {
         DisposableServer server = HttpServer.create()
             .port(8080)
-            .handle((request, response) -> {
-                // Mono.delay no bloquea el event loop; usa scheduler paralelo
-                return Mono.delay(Duration.ofSeconds(5))
-                           .then(Mono.fromRunnable(() -> {
-                               response.status(200)
-                                       .header("Content-Type", "text/plain")
-                                       .sendString(Mono.just("OK después de 5s (no bloqueante)"))
-                                       .subscribe(); // necesario para iniciar la escritura
-                           }));
-            })
+            .handle((request, response) ->
+                Mono.delay(Duration.ofSeconds(5))
+                    .then(response.status(200)
+                                  .header("Content-Type", "text/plain")
+                                  .sendString(Mono.just("OK después de 5s (no bloqueante)")))
+            )
             .bindNow();
 
         System.out.println("Reactor Netty server en http://localhost:8080/");
