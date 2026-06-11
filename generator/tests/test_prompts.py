@@ -22,3 +22,29 @@ def test_article_prompt_includes_outline_topic_and_notes():
     assert "SSE" in p
     assert "lo usamos con agentes" in p
     assert "1. Intro" in p
+
+
+def test_reviewer_prompt_includes_article_and_json_contract():
+    from article_generator.prompts import reviewer_prompt
+
+    p = reviewer_prompt("Project Reactor", "cuerpo del articulo")
+    assert "cuerpo del articulo" in p
+    assert "Project Reactor" in p
+    assert '"approved"' in p
+    assert '"issues"' in p
+    assert '"category"' in p
+
+
+def test_rewrite_prompt_includes_outline_draft_and_feedback():
+    from article_generator.prompts import rewrite_prompt
+
+    p = rewrite_prompt(
+        "Project Reactor",
+        "el esquema",
+        "el borrador",
+        ["[codigo] falta import de Flux", "[rigor] URL inventada"],
+    )
+    assert "el esquema" in p
+    assert "el borrador" in p
+    assert "falta import de Flux" in p
+    assert "URL inventada" in p

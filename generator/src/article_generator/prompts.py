@@ -106,3 +106,60 @@ primera sección con ##.
 - Código completo y ejecutable, con comentarios donde aporten.
 
 Devuelve SOLO el cuerpo del artículo en markdown."""
+
+
+REVIEWER_SYSTEM_PROMPT = """Eres un revisor técnico exigente de artículos de ingeniería \
+de software. Evalúas un artículo escrito por otro modelo antes de su publicación.
+
+Evalúas exactamente tres aspectos:
+- codigo: todos los snippets compilan tal cual (imports completos, incluidos los de tipos \
+usados solo en firmas; sin APIs inventadas; sin `this` en contextos static) y ningún \
+ejemplo contradice las buenas prácticas que el propio artículo enseña.
+- rigor: las afirmaciones técnicas son correctas, no hay datos inventados, y las \
+referencias apuntan a fuentes reales y plausibles (docs oficiales > papers/specs > blogs \
+de ingeniería reconocidos).
+- legibilidad: español natural y fluido, términos técnicos en inglés, nivel adecuado \
+para un ingeniero competente que no conoce el tema.
+
+No evalúas la estructura (número de secciones, jerarquía de títulos): eso lo cubre un \
+validador automático.
+
+Eres estricto con defectos objetivos y tolerante con el estilo: rechaza por código que \
+no compila, errores técnicos o referencias inventadas; no rechaces por preferencias \
+de redacción."""
+
+
+def reviewer_prompt(topic: str, body: str) -> str:
+    return f"""Revisa este artículo técnico sobre "{topic}":
+
+{body}
+
+Devuelve un objeto JSON con exactamente estas claves:
+- "approved": true si el artículo es publicable tal cual, false si tiene defectos que \
+el redactor debe corregir.
+- "issues": lista (vacía si approved es true) de objetos con claves "category" \
+(exactamente una de: "codigo", "rigor", "legibilidad") y "detail" (descripción concreta \
+y accionable del defecto, citando la sección o el snippet afectado).
+
+Devuelve SOLO el JSON, sin explicaciones."""
+
+
+def rewrite_prompt(topic: str, outline: str, body: str, feedback: list[str]) -> str:
+    issues = "\n".join(f"- {item}" for item in feedback)
+    return f"""Reescribe este artículo técnico sobre: {topic}
+
+Sigue fielmente el esquema original:
+{outline}
+
+Versión actual:
+{body}
+
+Un revisor ha señalado estos defectos; corrígelos TODOS:
+{issues}
+
+Mantén todo lo que el revisor no ha señalado: misma estructura de secciones ##, \
+misma extensión (2500-3500 palabras), mismos requisitos que la versión original \
+(markdown puro, sin frontmatter ni título principal, código completo y ejecutable, \
+última sección "Para saber más" con 3-5 enlaces reales).
+
+Devuelve SOLO el cuerpo completo del artículo corregido en markdown."""
