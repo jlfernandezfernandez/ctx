@@ -36,7 +36,12 @@ ACTION|category|confidence|reason
 ACTION debe ser APPROVE, REJECT o REVIEW.
 Para APPROVE, category debe ser una categoría breve en minúsculas y kebab-case.
 Para REJECT o REVIEW, category debe ser none.
-confidence debe estar entre 0 y 1. reason debe ser breve y no contener el carácter |."""
+confidence debe estar entre 0 y 1. reason debe ser breve y no contener el carácter |.
+
+Ejemplos:
+APPROVE|postgresql|0.95|Tema de bases de datos con enfoque concreto
+REJECT|none|0.97|Promoción comercial sin contenido técnico
+REVIEW|none|0.55|El título es ambiguo y las notas no aclaran el enfoque"""
 
 
 class TriageError(Exception):

@@ -106,6 +106,42 @@ def test_validate_reference_urls_accepts_forbidden_but_reachable_source(monkeypa
     validate_reference_urls(valid_body())
 
 
+def test_validate_reference_urls_retries_transient_failures(monkeypatch):
+    import requests
+
+    calls = []
+
+    def flaky_head(*args, **kwargs):
+        calls.append(args[0])
+        if calls.count(args[0]) == 1:
+            raise requests.ConnectionError("transient")
+        return SimpleNamespace(status_code=200)
+
+    monkeypatch.setattr("article_generator.article.requests.head", flaky_head)
+    validate_reference_urls(valid_body())
+
+
+def test_validate_reference_urls_skips_persistent_timeouts(monkeypatch):
+    import requests
+
+    def always_timeout(*args, **kwargs):
+        raise requests.Timeout("slow source")
+
+    monkeypatch.setattr("article_generator.article.requests.head", always_timeout)
+    validate_reference_urls(valid_body())
+
+
+def test_validate_reference_urls_rejects_unreachable_host(monkeypatch):
+    import requests
+
+    def unreachable(*args, **kwargs):
+        raise requests.ConnectionError("no such host")
+
+    monkeypatch.setattr("article_generator.article.requests.head", unreachable)
+    with pytest.raises(ValidationError, match="unreachable"):
+        validate_reference_urls(valid_body())
+
+
 def test_make_description_uses_first_paragraph_stripped():
     body = "## Intro\n\nEl **paradigma** reactivo cambia el modelo.\n\nMás texto."
     assert make_description(body) == "El paradigma reactivo cambia el modelo."

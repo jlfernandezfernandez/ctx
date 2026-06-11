@@ -80,7 +80,7 @@ def run(env: dict) -> int:
     tags = [l["name"] for l in issue["labels"] if l["name"] not in SYSTEM_LABELS]
     summary = ""
     try:
-        meta = llm.generate_json(SYSTEM_PROMPT, metadata_prompt(topic, outline))
+        meta = llm.generate_json(SYSTEM_PROMPT, metadata_prompt(topic, body))
         if isinstance(meta.get("summary"), str):
             summary = meta["summary"].strip()
         if isinstance(meta.get("tags"), list):

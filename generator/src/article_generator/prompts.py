@@ -33,7 +33,7 @@ ARTICLE_STRUCTURE = """1. Contexto: qué problema existe y por qué este tema im
 6. Para saber más: 3-5 referencias reales y verificables, por orden de prioridad: \
 documentación oficial del proyecto/lenguaje, papers o specs relevantes, y blogs o \
 newsletters de ingeniería reconocidos (ByteByteGo, Martin Fowler, InfoQ, blogs de \
-ingeniería de empresas como Netflix/Uber/Cloudflare, artículos destacados de Medium). \
+ingeniería de empresas como Netflix/Uber/Cloudflare). \
 Nunca inventes URLs: usa solo enlaces estables que conozcas con certeza (la raíz de la \
 documentación oficial sirve); toda referencia lleva su enlace directo."""
 
@@ -52,10 +52,10 @@ Devuelve SOLO el esquema: las secciones con 2-4 bullets cada una indicando qué 
 cubrir, qué ejemplos de código concretos incluir y qué trampas mencionar."""
 
 
-def metadata_prompt(topic: str, outline: str) -> str:
-    return f"""Para un artículo técnico sobre "{topic}" con este esquema:
+def metadata_prompt(topic: str, body: str) -> str:
+    return f"""Para este artículo técnico sobre "{topic}":
 
-{outline}
+{body}
 
 Devuelve un objeto JSON con exactamente estas claves:
 - "summary": el TL;DR en 2-3 frases en español: los takeaways técnicos concretos \
@@ -92,14 +92,15 @@ Sigue fielmente este esquema:
 {outline}
 
 Requisitos:
-- Entre 2500 y 3500 palabras (~15 minutos de lectura).
+- Cada sección de contenido entre 400 y 600 palabras (la de referencias puede ser más \
+corta): en total 2500-3500 palabras, ~15 minutos de lectura.
 - Markdown puro: títulos con ##, código en bloques con su lenguaje (```java, ```python...).
 - Redacta títulos de sección propios, descriptivos y concretos para este tema. No copies \
 literalmente el texto del esquema ni incluyas su numeración ("1.", "2.") en los títulos.
 - Usa exactamente seis secciones ##, sin saltos en la jerarquía de encabezados.
-- La última sección ## debe llamarse "Para saber más" o incluir "Referencias" o "Fuentes", \
-y contener entre 3 y 5 enlaces Markdown directos a fuentes concretas. No indiques al lector \
-que busque un recurso ni menciones recursos sin URL.
+- La última sección ## se titula exactamente "Para saber más" y contiene entre 3 y 5 \
+enlaces Markdown directos a fuentes concretas. No indiques al lector que busque un recurso \
+ni menciones recursos sin URL.
 - NO incluyas frontmatter YAML ni el título principal: empieza directamente por la \
 primera sección con ##.
 - Código completo y ejecutable, con comentarios donde aporten.

@@ -23,7 +23,7 @@ const tags = [...tagCounts.entries()]
 
 <Page
 	title={`Artículos — ${SITE_TITLE}`}
-	description="Todos los deep dives publicados, filtrables por tema."
+	description="Todos los artículos publicados, filtrables por tema."
 >
 	<Fragment slot="head">
 		<link rel="stylesheet" href={`${BASE}/pagefind/pagefind-ui.css`} />
@@ -31,7 +31,7 @@ const tags = [...tagCounts.entries()]
 	</Fragment>
 	<p class="kicker">ls articles/</p>
 	<h1>Artículos</h1>
-	<p>{posts.length} deep dives publicados. Busca o filtra por tema:</p>
+	<p>{posts.length} artículos publicados. Busca o filtra por tema:</p>
 	<div id="search"></div>
 	<script is:inline>
 		window.addEventListener('DOMContentLoaded', () => {
