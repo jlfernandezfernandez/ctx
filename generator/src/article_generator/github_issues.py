@@ -11,8 +11,6 @@ PRIORITY_LABEL = "priority"
 PUBLISHED_LABEL = "published"
 REJECTED_LABEL = "rejected"
 RATE_LIMITED_LABEL = "rate-limited"
-NEEDS_REVIEW_LABEL = "needs-review"
-NEEDS_HUMAN_REVIEW_LABEL = "needs-human-review"
 
 SYSTEM_LABELS = {
     TOPIC_LABEL,
@@ -21,8 +19,6 @@ SYSTEM_LABELS = {
     PUBLISHED_LABEL,
     REJECTED_LABEL,
     RATE_LIMITED_LABEL,
-    NEEDS_REVIEW_LABEL,
-    NEEDS_HUMAN_REVIEW_LABEL,
 }
 
 GITHUB_DEFAULT_LABELS = {
@@ -39,8 +35,6 @@ GITHUB_DEFAULT_LABELS = {
 
 NON_CATEGORY_LABELS = SYSTEM_LABELS | GITHUB_DEFAULT_LABELS
 
-SKIP_LABELS = {NEEDS_REVIEW_LABEL, NEEDS_HUMAN_REVIEW_LABEL}
-
 SYSTEM_LABEL_DETAILS = {
     TOPIC_LABEL: ("0e8a16", "Tema aceptado y pendiente de publicación"),
     TRIAGE_LABEL: ("fbca04", "Propuesta pendiente de clasificación o revisión"),
@@ -48,8 +42,6 @@ SYSTEM_LABEL_DETAILS = {
     PUBLISHED_LABEL: ("5319e7", "Artículo publicado"),
     REJECTED_LABEL: ("d93f0b", "Propuesta descartada"),
     RATE_LIMITED_LABEL: ("6e7781", "Propuesta cerrada por límite diario"),
-    NEEDS_REVIEW_LABEL: ("1d76db", "Artículo generado, pendiente de revisión automática"),
-    NEEDS_HUMAN_REVIEW_LABEL: ("e99695", "El revisor IA no aprobó el borrador; pendiente de humano"),
 }
 
 
@@ -78,7 +70,8 @@ class IssuesClient:
                 f"{response.text[:500]}"
             )
 
-    def next_topic(self) -> dict | None:
+    def next_topic(self, skip: set[int] = frozenset()) -> dict | None:
+        """Next topic to publish; `skip` holds issues whose article PR is already open."""
         resp = self.session.get(
             f"{self.base}/issues",
             params={"state": "open", "labels": TOPIC_LABEL, "per_page": 100},
@@ -88,8 +81,7 @@ class IssuesClient:
         issues = [
             i
             for i in resp.json()
-            if "pull_request" not in i
-            and not any(l["name"] in SKIP_LABELS for l in i["labels"])
+            if "pull_request" not in i and i["number"] not in skip
         ]
         if not issues:
             return None
@@ -163,13 +155,6 @@ class IssuesClient:
             json={"labels": labels},
         )
         self._require(resp, (200,), f"set labels on issue #{number}")
-
-    def add_label(self, number: int, label: str) -> None:
-        resp = self.session.post(
-            f"{self.base}/issues/{number}/labels",
-            json={"labels": [label]},
-        )
-        self._require(resp, (200, 201), f"add label {label} to issue #{number}")
 
     def comment(self, number: int, body: str) -> None:
         resp = self.session.post(

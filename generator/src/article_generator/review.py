@@ -1,15 +1,18 @@
-"""Reviews an article PR: reads the draft, runs the reviewer model, and either
-pushes a fix and auto-merges or adds the 'needs-human-review' label.
+"""Reviewer step: read the article PR, judge it, and decide.
 
-Triggered by the 'needs-review' label on a pull request.
+Approve -> merge and close the topic issue with the published link.
+Reject -> rewrite once, re-review the fix; if it passes, push and merge.
+Otherwise push the best version, comment the remaining defects and leave
+the PR open: an open article PR is the signal that a human has to decide
+(merge = publish, close = discard).
 """
 import os
 import re
 import sys
 
 from .article import validate_body, ValidationError
-from .github_drafts import DraftsClient
-from .github_issues import NEEDS_HUMAN_REVIEW_LABEL, IssuesClient
+from .github_issues import IssuesClient
+from .github_prs import PRClient
 from .llm import LLMClient, LLMError
 from .prompts import REVIEWER_SYSTEM_PROMPT, rewrite_prompt, reviewer_prompt
 
@@ -40,6 +43,10 @@ def _review_report(reviewer: LLMClient, topic: str, draft: str) -> dict:
     return fallback
 
 
+def _format_issues(report: dict) -> list[str]:
+    return [f"[{i.get('category', 'general')}] {i.get('detail', '')}" for i in report["issues"]]
+
+
 def _article_link(site_url: str, path: str) -> str:
     blog_path = path.removeprefix(BLOG_PREFIX)
     return f"{site_url}/blog/{blog_path}" if site_url else blog_path
@@ -54,52 +61,56 @@ def run(env: dict) -> int:
     reviewer = LLMClient(base_url=env["LLM_BASE_URL"], api_key=env["LLM_API_KEY"], model=reviewer_model)
 
     issues = IssuesClient(repo=repo, token=token)
-    drafts = DraftsClient(repo=repo, token=token)
+    prs = PRClient(repo=repo, token=token)
 
-    pr = drafts.get_pr(pr_number)
+    pr = prs.get_pr(pr_number)
     issue_number = _parse_pr_body(pr.get("body") or "")
     branch = pr["head"]["ref"]
     topic = pr["title"].removeprefix("article: ").strip()
 
-    path = drafts.get_article_path(pr_number)
-    draft = drafts.read_file(branch, path)
+    path = prs.get_article_path(pr_number)
+    draft = prs.read_file(branch, path)
     print(f"Reviewing article for issue #{issue_number}: {topic}")
-
-    report = _review_report(reviewer, topic, draft)
 
     site_url = env.get("SITE_URL", "").rstrip("/")
 
-    if report["approved"]:
-        print("Reviewer approved. Auto-merging.")
-        drafts.merge_pr(pr_number)
+    def publish(note: str = "") -> int:
+        prs.merge_pr(pr_number, branch=branch)
         if issue_number:
-            issues.close_with_comment(issue_number, f"Publicado: {_article_link(site_url, path)}")
+            issues.close_with_comment(issue_number, f"Publicado{note}: {_article_link(site_url, path)}")
         return 0
 
-    issues_list = [f"[{i.get('category', 'general')}] {i.get('detail', '')}" for i in report["issues"]]
-    print(f"Rejected. Issues: {issues_list}")
+    report = _review_report(reviewer, topic, draft)
+    if report["approved"]:
+        print("Reviewer approved. Merging.")
+        return publish()
 
-    fixed = reviewer.generate(
-        REVIEWER_SYSTEM_PROMPT,
-        rewrite_prompt(topic, "", draft, issues_list),
-    )
+    defects = _format_issues(report)
+    print(f"Rejected. Issues: {defects}")
+
+    fixed = reviewer.generate(REVIEWER_SYSTEM_PROMPT, rewrite_prompt(topic, draft, defects))
+
+    def escalate(remaining: list[str]) -> int:
+        pending = "\n".join(f"- {item}" for item in remaining)
+        prs.comment_on_pr(
+            pr_number,
+            "El revisor no aprobó tras corregir. Defectos pendientes:\n\n"
+            f"{pending}\n\nMergear publica el artículo; cerrar la PR lo descarta.",
+        )
+        print("Could not approve after fixing. PR left open for a human.")
+        return 0
 
     try:
         validate_body(fixed)
     except ValidationError as exc:
-        print(f"Fixed version still has issues ({exc}). Needs human review.")
-        if issue_number:
-            issues.add_label(issue_number, NEEDS_HUMAN_REVIEW_LABEL)
-        comments = "\n".join(f"- {i}" for i in issues_list)
-        drafts.comment_on_pr(pr_number, f"Revisor no aprobó tras corrección. Defectos pendientes:\n\n{comments}")
-        return 0
+        return escalate(defects + [f"[estructura] {exc}"])
 
-    print("Fixed version passes validation. Pushing fix.")
-    drafts.update_file(branch, path, fixed, "fix: address review feedback")
-    drafts.merge_pr(pr_number)
-    if issue_number:
-        issues.close_with_comment(issue_number, f"Publicado (con correcciones): {_article_link(site_url, path)}")
-    return 0
+    second_report = _review_report(reviewer, topic, fixed)
+    prs.update_file(branch, path, fixed, "fix: address review feedback")
+    if second_report["approved"]:
+        print("Fix approved on second review. Merging.")
+        return publish(note=" (con correcciones)")
+    return escalate(_format_issues(second_report))
 
 
 def main() -> None:

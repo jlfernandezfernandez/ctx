@@ -21,7 +21,7 @@ const { tag } = Astro.params;
 const { posts } = Astro.props;
 ---
 
-<Page title={`#${tag} — ${SITE_TITLE}`} description={`Artículos sobre ${tag}.`}>
+<Page title={`${SITE_TITLE} — #${tag}`} description={`Artículos sobre ${tag}.`}>
 	<p class="kicker">ls articles/ | grep {tag}</p>
 	<h1>#{tag}</h1>
 	<p>{posts.length} {posts.length === 1 ? 'artículo' : 'artículos'} sobre este tema.</p>

@@ -126,12 +126,9 @@ y accionable del defecto, citando la sección o el snippet afectado).
 Devuelve SOLO el JSON, sin explicaciones."""
 
 
-def rewrite_prompt(topic: str, outline: str, body: str, feedback: list[str]) -> str:
+def rewrite_prompt(topic: str, body: str, feedback: list[str]) -> str:
     issues = "\n".join(f"- {item}" for item in feedback)
     return f"""Reescribe este artículo técnico sobre: {topic}
-
-Sigue fielmente el esquema original:
-{outline}
 
 Versión actual:
 {body}

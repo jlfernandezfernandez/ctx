@@ -5,9 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
   # Pushes made with GITHUB_TOKEN don't trigger `push` workflows, so the
-  # nightly generate run is picked up here instead.
+  # nightly publish run (which merges the article PR) is picked up here instead.
   workflow_run:
-    workflows: ["Generate daily article"]
+    workflows: ["Publish daily article"]
     types: [completed]
 
 permissions:

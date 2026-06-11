@@ -3,7 +3,7 @@ import type { CollectionEntry } from 'astro:content';
 import type { MarkdownHeading } from 'astro';
 import TopicQueue from '../components/TopicQueue.astro';
 import Page from './Page.astro';
-import { BASE, REPO_URL, TOPICS_URL } from '../consts';
+import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 
 type Props = CollectionEntry<'blog'>['data'] & { headings?: MarkdownHeading[] };
 
@@ -20,7 +20,7 @@ const {
 } = Astro.props;
 ---
 
-<Page title={title} description={description}>
+<Page title={`${SITE_TITLE} — ${title}`} description={description}>
 	<article>
 		<div class="prose" data-pagefind-body>
 			<div class="title">

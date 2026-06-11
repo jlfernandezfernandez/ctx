@@ -1,14 +1,14 @@
-"""Tests for the draft PR client."""
+"""Tests for the article PR client."""
 import base64
 from unittest.mock import MagicMock
 
 import pytest
 
-from article_generator.github_drafts import DraftsClient, DraftsError
+from article_generator.github_prs import PRClient, PRError
 
 
 def client():
-    c = DraftsClient(repo="owner/repo", token="tok")
+    c = PRClient(repo="owner/repo", token="tok")
     c.session = MagicMock()
     ref = MagicMock(status_code=200)
     ref.json.return_value = {"object": {"sha": "abc123"}}
@@ -21,9 +21,9 @@ def client():
     return c
 
 
-def test_create_draft_pr_creates_branch_file_and_pr():
+def test_open_pr_creates_branch_file_and_pr():
     c = client()
-    url, number = c.create_draft_pr(
+    url, number = c.open_pr(
         branch="article/issue-5",
         path="site/src/content/blog/2026-06-11-tema.md",
         content="---\ntitle: x\n---\n\ncuerpo\n",
@@ -58,11 +58,11 @@ def test_create_draft_pr_creates_branch_file_and_pr():
     }
 
 
-def test_create_draft_pr_fails_clearly_when_branch_exists():
+def test_open_pr_fails_clearly_when_branch_exists():
     c = client()
     c.session.post.side_effect = [MagicMock(status_code=422, text="Reference already exists")]
-    with pytest.raises(DraftsError, match="article/issue-5"):
-        c.create_draft_pr(
+    with pytest.raises(PRError, match="article/issue-5"):
+        c.open_pr(
             branch="article/issue-5",
             path="p.md",
             content="x",
@@ -71,15 +71,41 @@ def test_create_draft_pr_fails_clearly_when_branch_exists():
         )
 
 
-def test_create_draft_pr_raises_on_ref_lookup_error():
+def test_open_pr_raises_on_ref_lookup_error():
     c = client()
     c.session.get.return_value = MagicMock(status_code=404, text="nope")
-    with pytest.raises(DraftsError):
-        c.create_draft_pr(branch="b", path="p.md", content="x", title="t", body="b")
+    with pytest.raises(PRError):
+        c.open_pr(branch="b", path="p.md", content="x", title="t", body="b")
+
+
+def test_open_article_issue_numbers_parses_article_branches():
+    c = PRClient(repo="owner/repo", token="tok")
+    c.session = MagicMock()
+    resp = MagicMock(status_code=200)
+    resp.json.return_value = [
+        {"head": {"ref": "article/issue-5"}},
+        {"head": {"ref": "article/issue-12"}},
+        {"head": {"ref": "fix/typo"}},
+    ]
+    c.session.get.return_value = resp
+    assert c.open_article_issue_numbers() == {5, 12}
+    c.session.get.assert_called_once_with(
+        "https://api.github.com/repos/owner/repo/pulls",
+        params={"state": "open", "per_page": 100},
+    )
+
+
+def test_open_article_issue_numbers_empty_when_no_prs():
+    c = PRClient(repo="owner/repo", token="tok")
+    c.session = MagicMock()
+    resp = MagicMock(status_code=200)
+    resp.json.return_value = []
+    c.session.get.return_value = resp
+    assert c.open_article_issue_numbers() == set()
 
 
 def test_get_article_path_finds_md():
-    c = DraftsClient(repo="owner/repo", token="tok")
+    c = PRClient(repo="owner/repo", token="tok")
     c.session = MagicMock()
     files_resp = MagicMock(status_code=200)
     files_resp.json.return_value = [
@@ -91,17 +117,17 @@ def test_get_article_path_finds_md():
 
 
 def test_get_article_path_raises_when_no_md():
-    c = DraftsClient(repo="owner/repo", token="tok")
+    c = PRClient(repo="owner/repo", token="tok")
     c.session = MagicMock()
     files_resp = MagicMock(status_code=200)
     files_resp.json.return_value = [{"filename": "README.md", "status": "modified"}]
     c.session.get.return_value = files_resp
-    with pytest.raises(DraftsError, match="No article"):
+    with pytest.raises(PRError, match="No article"):
         c.get_article_path(9)
 
 
 def test_read_file_decodes_content():
-    c = DraftsClient(repo="owner/repo", token="tok")
+    c = PRClient(repo="owner/repo", token="tok")
     c.session = MagicMock()
     content = base64.b64encode(b"hello world").decode()
     resp = MagicMock(status_code=200)
@@ -111,7 +137,7 @@ def test_read_file_decodes_content():
 
 
 def test_merge_pr_sends_put():
-    c = DraftsClient(repo="owner/repo", token="tok")
+    c = PRClient(repo="owner/repo", token="tok")
     c.session = MagicMock()
     c.session.put.return_value = MagicMock(status_code=200)
     c.merge_pr(9)
@@ -119,10 +145,30 @@ def test_merge_pr_sends_put():
         "https://api.github.com/repos/owner/repo/pulls/9/merge",
         json={},
     )
+    c.session.delete.assert_not_called()
+
+
+def test_merge_pr_deletes_branch_after_merge():
+    c = PRClient(repo="owner/repo", token="tok")
+    c.session = MagicMock()
+    c.session.put.return_value = MagicMock(status_code=200)
+    c.merge_pr(9, branch="article/issue-5")
+    c.session.delete.assert_called_once_with(
+        "https://api.github.com/repos/owner/repo/git/refs/heads/article/issue-5"
+    )
+
+
+def test_merge_pr_failure_does_not_delete_branch():
+    c = PRClient(repo="owner/repo", token="tok")
+    c.session = MagicMock()
+    c.session.put.return_value = MagicMock(status_code=405, text="not mergeable")
+    with pytest.raises(PRError):
+        c.merge_pr(9, branch="article/issue-5")
+    c.session.delete.assert_not_called()
 
 
 def test_comment_on_pr_posts_comment():
-    c = DraftsClient(repo="owner/repo", token="tok")
+    c = PRClient(repo="owner/repo", token="tok")
     c.session = MagicMock()
     c.session.post.return_value = MagicMock(status_code=201)
     c.comment_on_pr(9, "review comment")
@@ -133,7 +179,7 @@ def test_comment_on_pr_posts_comment():
 
 
 def test_update_file_puts_new_content():
-    c = DraftsClient(repo="owner/repo", token="tok")
+    c = PRClient(repo="owner/repo", token="tok")
     c.session = MagicMock()
     get_resp = MagicMock(status_code=200)
     get_resp.json.return_value = {"sha": "oldsha"}

@@ -1,19 +1,23 @@
-"""Opens and manages pull requests for article generation.
+"""Opens and manages article pull requests.
 
 Uses the GitHub contents API instead of local git: the run must not leave
-uncommitted files behind for the publish step, and merging the PR is the
-human approval mechanism (merge = publish, close = discard).
+uncommitted files behind for the publish step, and the PR is the approval
+mechanism (merge = publish, close = discard). A PR left open means the
+reviewer could not approve it and a human has to decide.
 """
 import base64
+import re
 
 import requests
 
+BRANCH_PATTERN = re.compile(r"^article/issue-(\d+)$")
 
-class DraftsError(Exception):
+
+class PRError(Exception):
     pass
 
 
-class DraftsClient:
+class PRClient:
     def __init__(self, repo: str, token: str):
         self.base = f"https://api.github.com/repos/{repo}"
         self.session = requests.Session()
@@ -25,12 +29,12 @@ class DraftsClient:
 
     def _require(self, response, expected: tuple[int, ...], action: str) -> None:
         if response.status_code not in expected:
-            raise DraftsError(
+            raise PRError(
                 f"Failed to {action}: GitHub API error {response.status_code}: "
                 f"{response.text[:500]}"
             )
 
-    def create_draft_pr(
+    def open_pr(
         self, branch: str, path: str, content: str, title: str, body: str, base: str = "main"
     ) -> tuple[str, int]:
         ref = self.session.get(f"{self.base}/git/ref/heads/{base}")
@@ -42,8 +46,8 @@ class DraftsClient:
             json={"ref": f"refs/heads/{branch}", "sha": sha},
         )
         if created.status_code == 422:
-            raise DraftsError(
-                f"Branch {branch} already exists; close or delete the previous draft PR first"
+            raise PRError(
+                f"Branch {branch} already exists; close or delete the previous article PR first"
             )
         self._require(created, (201,), f"create branch {branch}")
 
@@ -58,8 +62,21 @@ class DraftsClient:
             f"{self.base}/pulls",
             json={"title": title, "head": branch, "base": base, "body": body},
         )
-        self._require(pr, (201,), "open draft pull request")
+        self._require(pr, (201,), "open pull request")
         return pr.json()["html_url"], pr.json()["number"]
+
+    def open_article_issue_numbers(self) -> set[int]:
+        """Issue numbers that already have an open article PR (pending review)."""
+        resp = self.session.get(
+            f"{self.base}/pulls", params={"state": "open", "per_page": 100}
+        )
+        self._require(resp, (200,), "list open pull requests")
+        numbers = set()
+        for pr in resp.json():
+            match = BRANCH_PATTERN.match(pr["head"]["ref"])
+            if match:
+                numbers.add(int(match.group(1)))
+        return numbers
 
     def get_pr(self, number: int) -> dict:
         resp = self.session.get(f"{self.base}/pulls/{number}")
@@ -73,7 +90,7 @@ class DraftsClient:
         for f in resp.json():
             if f["filename"].startswith("site/src/content/blog/") and f["filename"].endswith(".md"):
                 return f["filename"]
-        raise DraftsError(f"No article .md found in PR #{pr_number}")
+        raise PRError(f"No article .md found in PR #{pr_number}")
 
     def read_file(self, ref: str, path: str) -> str:
         """Read file content from a branch via the contents API."""
@@ -82,15 +99,15 @@ class DraftsClient:
             params={"ref": ref},
         )
         self._require(resp, (200,), f"read {path} at {ref}")
-        import base64 as b64
-        return b64.b64decode(resp.json()["content"]).decode("utf-8")
+        return base64.b64decode(resp.json()["content"]).decode("utf-8")
 
-    def merge_pr(self, number: int, commit_title: str = "") -> None:
-        resp = self.session.put(
-            f"{self.base}/pulls/{number}/merge",
-            json={"commit_title": commit_title} if commit_title else {},
-        )
+    def merge_pr(self, number: int, branch: str = "") -> None:
+        resp = self.session.put(f"{self.base}/pulls/{number}/merge", json={})
         self._require(resp, (200,), f"merge PR #{number}")
+        if branch:
+            # Best effort: a leftover branch only blocks a future rerun of the
+            # same issue, so don't fail the publish over it.
+            self.session.delete(f"{self.base}/git/refs/heads/{branch}")
 
     def update_file(self, branch: str, path: str, content: str, message: str) -> None:
         resp = self.session.get(

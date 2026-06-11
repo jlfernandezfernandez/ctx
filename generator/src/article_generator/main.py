@@ -1,8 +1,8 @@
-"""Orchestrates one generation run: pick topic -> write -> open draft PR.
+"""Writer step: pick topic -> write article -> open PR.
 
-The writer generates the article once and opens a PR with the 'needs-review'
-label. A separate reviewer workflow picks up the label, reviews, and auto-merges.
-If the reviewer can't approve after fixing, it adds 'needs-human-review'.
+Exports the PR number via GITHUB_OUTPUT so the reviewer step in the same
+workflow can pick it up. Topics that already have an open article PR are
+skipped, so a PR waiting for a human never blocks the queue.
 """
 import os
 import sys
@@ -16,8 +16,8 @@ from .article import (
     validate_body,
     ValidationError,
 )
-from .github_drafts import DraftsClient
-from .github_issues import NEEDS_REVIEW_LABEL, SYSTEM_LABELS, IssuesClient
+from .github_issues import SYSTEM_LABELS, IssuesClient
+from .github_prs import PRClient
 from .llm import LLMClient, LLMError
 from .prompts import SYSTEM_PROMPT, article_prompt, metadata_prompt, outline_prompt
 
@@ -47,6 +47,13 @@ def collect_metadata(llm: LLMClient, issue: dict, topic: str, body: str) -> tupl
     return summary, tags
 
 
+def export_output(env: dict, name: str, value: str) -> None:
+    output_path = env.get("GITHUB_OUTPUT")
+    if output_path:
+        with open(output_path, "a", encoding="utf-8") as fh:
+            fh.write(f"{name}={value}\n")
+
+
 def run(env: dict) -> int:
     output_dir = env.get("OUTPUT_DIR", "site/src/content/blog")
     today = date.today()
@@ -57,13 +64,12 @@ def run(env: dict) -> int:
         return 0
 
     issues = IssuesClient(repo=env["GITHUB_REPOSITORY"], token=env["GITHUB_TOKEN"])
-    drafts = DraftsClient(repo=env["GITHUB_REPOSITORY"], token=env["GITHUB_TOKEN"])
-    site_url = env.get("SITE_URL", "").rstrip("/")
+    prs = PRClient(repo=env["GITHUB_REPOSITORY"], token=env["GITHUB_TOKEN"])
 
     writer_model = env["LLM_WRITER_MODEL"]
     writer = LLMClient(base_url=env["LLM_BASE_URL"], api_key=env["LLM_API_KEY"], model=writer_model)
 
-    issue = issues.next_topic()
+    issue = issues.next_topic(skip=prs.open_article_issue_numbers())
     if issue is None:
         print("No pending topics; nothing to publish.")
         return 0
@@ -78,7 +84,7 @@ def run(env: dict) -> int:
     try:
         validate_body(draft)
     except ValidationError as exc:
-        print(f"Structure validation failed ({exc}); opening draft PR anyway.")
+        print(f"Structure validation failed ({exc}); opening PR anyway for the reviewer.")
 
     summary, tags = collect_metadata(writer, issue, topic, draft)
     slug = slugify(topic)
@@ -93,15 +99,14 @@ def run(env: dict) -> int:
         requested_by=(issue.get("user") or {}).get("login", ""),
         model=writer_model,
     )
-    url, pr_number = drafts.create_draft_pr(
+    url, pr_number = prs.open_pr(
         branch=f"article/issue-{issue['number']}",
         path=f"site/src/content/blog/{today.isoformat()}-{slug}.md",
         content=content,
         title=f"article: {topic}",
         body=f"Closes #{issue['number']}",
     )
-    issues.add_label(issue["number"], NEEDS_REVIEW_LABEL)
-    issues.add_label(pr_number, NEEDS_REVIEW_LABEL)
+    export_output(env, "pr_number", str(pr_number))
     print(f"PR #{pr_number} opened for issue #{issue['number']}: {url}")
     return 0
 
