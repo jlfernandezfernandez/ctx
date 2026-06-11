@@ -2,11 +2,12 @@
 
 Runs after the publish workflow merges an article. Reads tags.json plus
 recent article metadata (frontmatter only, not body) and uses the triage
-LLM to merge, rename or delete tags. Opens a PR when changes are needed.
+LLM to merge, rename or delete tags. Commits and pushes changes directly.
 """
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -116,6 +117,15 @@ def run(env: dict) -> int:
     if removed:
         msg_parts.append(f"-{len(removed)} tags ({', '.join(sorted(removed))})")
     print(f"Tag taxonomy updated: {'; '.join(msg_parts)}")
+
+    # Commit and push the change directly to main.
+    commit_msg = f"chore: curate tags ({'; '.join(msg_parts)})"
+    subprocess.run(["git", "config", "user.name", "github-actions[bot]"], check=True)
+    subprocess.run(["git", "config", "user.email", "github-actions[bot]@users.noreply.github.com"], check=True)
+    subprocess.run(["git", "pull", "origin", "main", "--rebase"], check=True)
+    subprocess.run(["git", "add", str(TAGS_FILE)], check=True)
+    subprocess.run(["git", "commit", "-m", commit_msg], check=True)
+    subprocess.run(["git", "push", "origin", "main"], check=True)
     return 0
 
 
