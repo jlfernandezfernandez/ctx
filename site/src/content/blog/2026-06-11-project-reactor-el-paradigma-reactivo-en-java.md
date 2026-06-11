@@ -5,6 +5,7 @@ pubDate: 2026-06-11
 tags: ["java", "reactive", "backpressure", "project-reactor", "non-blocking"]
 issue: 1
 requestedBy: "jlfernandezfernandez"
+model: "deepseek-v4-pro"
 summary: "Project Reactor es una librería para construir aplicaciones asíncronas y no bloqueantes en la JVM, implementando la especificación Reactive Streams. Resuelve el cuello de botella del modelo hilo-por-petición al usar un número reducido de hilos para manejar alta concurrencia I/O, gracias a flujos reactivos con backpressure. Usar cuando se requiera bajo consumo de recursos y alta escalabilidad, pero no si la lógica es inherentemente bloqueante o la depuración de pipelines reactivos añade una complejidad injustificada."
 ---
 

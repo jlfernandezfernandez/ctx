@@ -98,6 +98,7 @@ def run(env: dict) -> int:
         summary=summary,
         issue_number=issue["number"],
         requested_by=(issue.get("user") or {}).get("login", ""),
+        model=env["LLM_MODEL"],
     )
     print(f"Article written: {path}")
 

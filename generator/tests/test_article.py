@@ -84,10 +84,12 @@ def test_write_article_includes_issue_and_requester_when_given(tmp_path):
         body="palabra " * 1200,
         issue_number=7,
         requested_by="jordi",
+        model="deepseek-v4-pro",
     )
     content = Path(path).read_text(encoding="utf-8")
     assert "issue: 7" in content
     assert 'requestedBy: "jordi"' in content
+    assert 'model: "deepseek-v4-pro"' in content
 
 
 def test_write_article_omits_issue_and_requester_when_missing(tmp_path):

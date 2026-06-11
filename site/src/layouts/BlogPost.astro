@@ -1,12 +1,10 @@
 ---
-import { Image } from 'astro:assets';
 import type { CollectionEntry } from 'astro:content';
 import type { MarkdownHeading } from 'astro';
 import BaseHead from '../components/BaseHead.astro';
 import Footer from '../components/Footer.astro';
-import FormattedDate from '../components/FormattedDate.astro';
 import Header from '../components/Header.astro';
-import { REPO_URL } from '../consts';
+import { BASE, REPO_URL } from '../consts';
 
 type Props = CollectionEntry<'blog'>['data'] & { headings?: MarkdownHeading[] };
 
@@ -14,12 +12,11 @@ const {
 	title,
 	description,
 	pubDate,
-	updatedDate,
-	heroImage,
 	tags = [],
 	summary,
 	issue,
 	requestedBy,
+	model,
 	headings = [],
 } = Astro.props;
 ---
@@ -28,15 +25,6 @@ const {
 	<head>
 		<BaseHead title={title} description={description} />
 		<style>
-			.hero-image {
-				width: 100%;
-			}
-			.hero-image img {
-				display: block;
-				margin: 0 auto;
-				border-radius: 12px;
-				box-shadow: var(--box-shadow);
-			}
 			.prose {
 				color: rgb(var(--gray-dark));
 			}
@@ -46,43 +34,41 @@ const {
 				border-bottom: 1px solid rgb(var(--gray-light));
 			}
 			.title h1 {
-				margin: 0;
+				margin: 0 0 0.8em 0;
 				font-family: var(--font-sans);
 				font-weight: 700;
 				font-size: 2.1em;
 				letter-spacing: -0.02em;
 				line-height: 1.15;
 			}
-			.date {
-				margin-bottom: 0.8em;
+			/* Article metadata rendered as its own frontmatter */
+			.meta {
+				padding: 0.8em 1.25em;
+				border: 1px solid rgb(var(--gray-light));
+				border-radius: 6px;
+				background: var(--bg-raise);
 				font-family: var(--font-mono);
 				font-size: 0.8em;
-				text-transform: uppercase;
-				letter-spacing: 0.06em;
-				color: var(--accent);
+				line-height: 1.9;
+				overflow-x: auto;
 			}
-			.last-updated-on {
-				font-style: italic;
+			.meta .fence,
+			.meta .key {
 				color: rgb(var(--gray));
 			}
-			.tags {
-				margin-top: 0.8em;
-				font-family: var(--font-mono);
-				font-size: 0.8em;
-				color: rgb(var(--gray));
+			.meta .fence {
+				display: block;
 			}
-			.origin {
-				margin-top: 0.4em;
-				font-family: var(--font-mono);
-				font-size: 0.8em;
-				color: rgb(var(--gray));
-			}
-			.origin a {
+			.meta .value {
 				color: rgb(var(--gray-dark));
 			}
-			.origin a:hover {
+			.meta a {
 				color: var(--accent);
 				text-decoration: none;
+			}
+			.meta a:hover {
+				text-decoration: underline;
+				text-underline-offset: 3px;
 			}
 			.tldr {
 				margin: 0 0 1.5em 0;
@@ -142,43 +128,50 @@ const {
 		<Header />
 		<main>
 			<article>
-				<div class="hero-image">
-					{heroImage && <Image width={1020} height={510} src={heroImage} alt="" />}
-				</div>
 				<div class="prose" data-pagefind-body>
 					<div class="title">
-						<div class="date">
-							<FormattedDate date={pubDate} />
+						<h1>{title}</h1>
+						<div class="meta">
+							<span class="fence">---</span>
+							<div>
+								<span class="key">pubDate:</span>
+								<span class="value">{pubDate.toISOString().slice(0, 10)}</span>
+							</div>
 							{
-								updatedDate && (
-									<div class="last-updated-on">
-										Actualizado el <FormattedDate date={updatedDate} />
+								tags.length > 0 && (
+									<div>
+										<span class="key">tags:</span>
+										<span class="value">
+											[{tags.map((tag, i) => (
+												<><a href={`${BASE}/tags/${tag}/`}>{tag}</a>{i < tags.length - 1 ? ', ' : ''}</>
+											))}]
+										</span>
 									</div>
 								)
 							}
+							{
+								issue && (
+									<div>
+										<span class="key">issue:</span>
+										<a href={`${REPO_URL}/issues/${issue}`} target="_blank">#{issue}</a>
+										{requestedBy && (
+											<span class="value">
+												(<a href={`https://github.com/${requestedBy}`} target="_blank">@{requestedBy}</a>)
+											</span>
+										)}
+									</div>
+								)
+							}
+							{
+								model && (
+									<div>
+										<span class="key">model:</span>
+										<span class="value">{model}</span>
+									</div>
+								)
+							}
+							<span class="fence">---</span>
 						</div>
-						<h1>{title}</h1>
-						{tags.length > 0 && <div class="tags">{tags.join(' · ')}</div>}
-						{
-							(issue || requestedBy) && (
-								<div class="origin">
-									{issue && (
-										<a href={`${REPO_URL}/issues/${issue}`} target="_blank">
-											#{issue}
-										</a>
-									)}
-									{issue && requestedBy && ' · '}
-									{requestedBy && (
-										<>
-											pedido por{' '}
-											<a href={`https://github.com/${requestedBy}`} target="_blank">
-												@{requestedBy}
-											</a>
-										</>
-									)}
-								</div>
-							)
-						}
 					</div>
 					{
 						summary && (

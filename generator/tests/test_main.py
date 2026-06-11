@@ -50,6 +50,7 @@ def test_run_generates_validates_writes_and_closes(issues_cls, llm_cls, validate
     assert kwargs["tags"] == ["java", "reactive"]  # issue labels first, LLM tags appended, deduped
     assert kwargs["issue_number"] == 5
     assert kwargs["requested_by"] == "jordi"
+    assert kwargs["model"] == "m"
     issues.close_with_comment.assert_called_once()
     comment = issues.close_with_comment.call_args.args[1]
     assert "https://owner.github.io/repo/blog/" in comment

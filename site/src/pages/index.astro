@@ -1,5 +1,6 @@
 ---
 import { getCollection } from 'astro:content';
+import ArticleList from '../components/ArticleList.astro';
 import BaseHead from '../components/BaseHead.astro';
 import Footer from '../components/Footer.astro';
 import FormattedDate from '../components/FormattedDate.astro';
@@ -20,16 +21,6 @@ const recent = rest.slice(0, RECENT_COUNT);
 	<head>
 		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
 		<style>
-			.kicker {
-				margin: 0 0 0.8em 0;
-				font-family: var(--font-mono);
-				font-size: 0.85em;
-				color: var(--accent);
-			}
-			.kicker::before {
-				content: '$ ';
-				color: rgb(var(--gray));
-			}
 			.hero {
 				padding: 2.5em 0 0 0;
 			}
@@ -41,13 +32,55 @@ const recent = rest.slice(0, RECENT_COUNT);
 				letter-spacing: -0.02em;
 				line-height: 1.1;
 			}
-			.hero .sub {
-				margin: 0.6em 0 0 0;
-				font-size: 1.15em;
-				color: rgb(var(--gray-dark));
-				max-width: 36em;
+			.terminal {
+				margin-top: 1.8em;
+				border: 1px solid rgb(var(--gray-light));
+				border-radius: 8px;
+				background: var(--bg-raise);
+				overflow: hidden;
 			}
-			.hero .propose {
+			.term-bar {
+				display: flex;
+				align-items: center;
+				gap: 0.45em;
+				padding: 0.6em 1em;
+				border-bottom: 1px solid rgb(var(--gray-light));
+				font-family: var(--font-mono);
+				font-size: 0.75em;
+				color: rgb(var(--gray));
+			}
+			.term-bar i {
+				width: 10px;
+				height: 10px;
+				border-radius: 50%;
+				background: rgb(var(--gray-light));
+			}
+			.term-bar span {
+				margin-left: 0.6em;
+			}
+			.term-body {
+				padding: 1.25em 1.5em;
+				font-family: var(--font-mono);
+				font-size: 0.9em;
+				line-height: 1.7;
+			}
+			.cmd {
+				margin: 0;
+				color: var(--accent);
+			}
+			.cmd::before {
+				content: '$ ';
+				color: rgb(var(--gray));
+			}
+			.out {
+				margin: 0.2em 0 1.2em 0;
+				color: rgb(var(--gray-dark));
+				max-width: 40em;
+			}
+			.out:last-child {
+				margin-bottom: 0;
+			}
+			.propose {
 				display: inline-block;
 				margin-top: 1.4em;
 				font-family: var(--font-mono);
@@ -56,7 +89,7 @@ const recent = rest.slice(0, RECENT_COUNT);
 				border: 1px solid var(--accent);
 				border-radius: 6px;
 			}
-			.hero .propose:hover {
+			.propose:hover {
 				background: var(--accent);
 				color: var(--bg);
 				text-decoration: none;
@@ -92,8 +125,7 @@ const recent = rest.slice(0, RECENT_COUNT);
 			.today h2 a:hover {
 				color: var(--accent);
 			}
-			.date,
-			.tags {
+			.date {
 				font-family: var(--font-mono);
 				font-size: 0.8em;
 				text-transform: uppercase;
@@ -121,29 +153,6 @@ const recent = rest.slice(0, RECENT_COUNT);
 				letter-spacing: 0.08em;
 				color: rgb(var(--gray));
 			}
-			.recent ul {
-				list-style: none;
-				margin: 0;
-				padding: 0;
-			}
-			.recent li {
-				display: flex;
-				align-items: baseline;
-				gap: 1.5em;
-				padding: 0.55em 0;
-				border-bottom: 1px solid rgb(var(--gray-light));
-			}
-			.recent .date {
-				flex-shrink: 0;
-				width: 7.5em;
-			}
-			.recent li a {
-				color: rgb(var(--black));
-				text-decoration: none;
-			}
-			.recent li a:hover {
-				color: var(--accent);
-			}
 			.all {
 				display: inline-block;
 				margin-top: 1em;
@@ -157,10 +166,6 @@ const recent = rest.slice(0, RECENT_COUNT);
 				.today h2 {
 					font-size: 1.4em;
 				}
-				.recent li {
-					flex-direction: column;
-					gap: 0.1em;
-				}
 			}
 		</style>
 	</head>
@@ -168,12 +173,25 @@ const recent = rest.slice(0, RECENT_COUNT);
 		<Header />
 		<main>
 			<section class="hero">
-				<p class="kicker">ctx --help</p>
 				<h1 class="cursor">Un deep dive técnico al día.</h1>
-				<p class="sub">
-					Para vibe coders que quieren entender qué pasa por debajo. Tú propones el tema, el
-					equipo vota, y cada mañana (L–V) hay un artículo en profundidad esperándote.
-				</p>
+				<div class="terminal">
+					<div class="term-bar">
+						<i></i><i></i><i></i>
+						<span>ctx — zsh</span>
+					</div>
+					<div class="term-body">
+						<p class="cmd">ctx --why</p>
+						<p class="out">
+							Hacemos vibe coding: la IA escribe el código a una velocidad absurda. Entender qué
+							hace por debajo sigue siendo nuestro trabajo — y nuestra ventaja.
+						</p>
+						<p class="cmd">ctx --how</p>
+						<p class="out">
+							Propones un tema → el equipo vota con 👍 → cada mañana (L–V) un LLM publica aquí un
+							deep dive de ~15 min: desde cero hasta internals, con código ejecutable.
+						</p>
+					</div>
+				</div>
 				<a class="propose" href={`${REPO_URL}/issues/new/choose`} target="_blank">
 					proponer tema →
 				</a>
@@ -187,7 +205,7 @@ const recent = rest.slice(0, RECENT_COUNT);
 						</h2>
 						<p class="date">
 							<FormattedDate date={latest.data.pubDate} />
-							{latest.data.tags.length > 0 && <span class="tags"> · {latest.data.tags.join(' · ')}</span>}
+							{latest.data.tags.length > 0 && <span> · {latest.data.tags.join(' · ')}</span>}
 						</p>
 						<p class="description">{latest.data.description}</p>
 						<a class="read" href={`${BASE}/blog/${latest.id}/`}>
@@ -200,16 +218,7 @@ const recent = rest.slice(0, RECENT_COUNT);
 				recent.length > 0 && (
 					<section class="recent">
 						<h2>Anteriores</h2>
-						<ul>
-							{recent.map((post) => (
-								<li>
-									<span class="date">
-										<FormattedDate date={post.data.pubDate} />
-									</span>
-									<a href={`${BASE}/blog/${post.id}/`}>{post.data.title}</a>
-								</li>
-							))}
-						</ul>
+						<ArticleList posts={recent} />
 					</section>
 				)
 			}

@@ -1,0 +1,36 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+import { BASE, SITE_TITLE } from '../consts';
+---
+
+<!doctype html>
+<html lang="es">
+	<head>
+		<BaseHead title={`404 — ${SITE_TITLE}`} description="Página no encontrada." />
+		<style>
+			.error {
+				font-family: var(--font-mono);
+				color: rgb(var(--gray-dark));
+			}
+			.home {
+				display: inline-block;
+				margin-top: 1.5em;
+				font-family: var(--font-mono);
+				font-weight: 500;
+			}
+		</style>
+	</head>
+	<body>
+		<Header />
+		<main>
+			<p class="kicker">cat pagina-perdida.md</p>
+			<h1>404</h1>
+			<p class="error">cat: pagina-perdida.md: No such file or directory</p>
+			<p>Esta página no existe — o el agente la borró sin avisar.</p>
+			<a class="home" href={`${BASE}/`}>cd ~ →</a>
+		</main>
+		<Footer />
+	</body>
+</html>
