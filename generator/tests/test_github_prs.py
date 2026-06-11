@@ -1,6 +1,6 @@
 """Tests for the article PR client."""
 import base64
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -192,9 +192,10 @@ def test_merge_pr_deletes_branch_after_merge():
 def test_merge_pr_failure_does_not_delete_branch():
     c = PRClient(repo="owner/repo", token="tok")
     c.session = MagicMock()
-    c.session.put.return_value = MagicMock(status_code=405, text="not mergeable")
-    with pytest.raises(PRError):
-        c.merge_pr(9, branch="article/issue-5")
+    c.session.put.return_value = MagicMock(status_code=404)
+    with patch("article_generator.github_prs.time.sleep"):
+        with pytest.raises(PRError):
+            c.merge_pr(9)
     c.session.delete.assert_not_called()
 
 

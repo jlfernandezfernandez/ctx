@@ -7,6 +7,7 @@ reviewer could not approve it and a human has to decide.
 """
 import base64
 import re
+import time
 
 import requests
 
@@ -121,6 +122,15 @@ class PRClient:
                 json={},
             )
             resp = self.session.put(f"{self.base}/pulls/{number}/merge", json={"merge_method": "squash"})
+        # 405: not mergeable (CI pending, etc). Retry a few times.
+        for _ in range(5):
+            if resp.status_code == 405:
+                time.sleep(15)
+                resp = self.session.put(
+                    f"{self.base}/pulls/{number}/merge", json={"merge_method": "squash"}
+                )
+            else:
+                break
         self._require(resp, (200,), f"merge PR #{number}")
         if branch:
             # Best effort: a leftover branch only blocks a future rerun of the
