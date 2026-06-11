@@ -4,6 +4,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+import requests
 
 from article_generator.article import (
     ValidationError,
@@ -107,8 +108,6 @@ def test_validate_reference_urls_accepts_forbidden_but_reachable_source(monkeypa
 
 
 def test_validate_reference_urls_retries_transient_failures(monkeypatch):
-    import requests
-
     calls = []
 
     def flaky_head(*args, **kwargs):
@@ -122,8 +121,6 @@ def test_validate_reference_urls_retries_transient_failures(monkeypatch):
 
 
 def test_validate_reference_urls_skips_persistent_timeouts(monkeypatch):
-    import requests
-
     def always_timeout(*args, **kwargs):
         raise requests.Timeout("slow source")
 
@@ -132,8 +129,6 @@ def test_validate_reference_urls_skips_persistent_timeouts(monkeypatch):
 
 
 def test_validate_reference_urls_rejects_unreachable_host(monkeypatch):
-    import requests
-
     def unreachable(*args, **kwargs):
         raise requests.ConnectionError("no such host")
 

@@ -19,13 +19,10 @@ class LLMClient:
         self.model = model
         self.timeout = timeout
 
-    def generate(self, system: str, user: str, **extra) -> str:
-        return self._chat(system, user, **extra)
-
     def generate_json(self, system: str, user: str) -> dict:
         """For metadata extraction. Falls back gracefully at call sites:
         providers without json_object support usually still return JSON text."""
-        content = self._chat(system, user, response_format={"type": "json_object"})
+        content = self.generate(system, user, response_format={"type": "json_object"})
         text = content.strip()
         if text.startswith("```"):
             text = text.strip("`")
@@ -39,7 +36,7 @@ class LLMClient:
             raise LLMError(f"LLM JSON is not an object: {content[:300]}")
         return data
 
-    def _chat(self, system: str, user: str, **extra) -> str:
+    def generate(self, system: str, user: str, **extra) -> str:
         resp = requests.post(
             f"{self.base_url}/chat/completions",
             headers={"Authorization": f"Bearer {self.api_key}"},

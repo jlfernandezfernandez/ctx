@@ -101,7 +101,6 @@ const { limit = 4, compact = false } = Astro.props;
 
 	function updateQueueCount(count) {
 		document.querySelectorAll('[data-queue-count]').forEach((counter) => {
-			counter.dataset.count = count;
 			counter.textContent = String(count);
 		});
 	}
