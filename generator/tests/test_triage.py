@@ -44,12 +44,26 @@ def test_parse_classification_accepts_strict_valid_line():
 @pytest.mark.parametrize(
     "output",
     [
+        "APPROVE|sql|0.96|Tema técnico válido\nNota extra del modelo",
+        "Aquí tienes la clasificación:\nAPPROVE|sql|0.96|Tema técnico válido",
+        "```\nAPPROVE|sql|0.96|Tema técnico válido\n```",
+        "```APPROVE|sql|0.96|Tema técnico válido```",
+    ],
+)
+def test_parse_classification_recovers_answer_from_noisy_output(output):
+    result = parse_classification(output)
+    assert result == classification(confidence=0.96, reason="Tema técnico válido")
+
+
+@pytest.mark.parametrize(
+    "output",
+    [
         "APPROVE|sql|0.9",
         "APPROVE|SQL avanzado|0.9|bad slug",
         "REJECT|sql|0.9|wrong category",
         "APPROVE|sql|1.2|bad confidence",
-        "APPROVE|sql|0.9|ok\nextra",
-        "```APPROVE|sql|0.9|markdown```",
+        "APPROVE|sql|0.9|ok\nREVIEW|none|0.5|two answer lines",
+        "El tema parece técnico pero no estoy seguro.",
     ],
 )
 def test_parse_classification_rejects_unexpected_output(output):
