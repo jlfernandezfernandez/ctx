@@ -133,6 +133,13 @@ def run(env: dict) -> int:
             issues.close_with_comment(
                 issue_number, f"Publicado{note}: {_article_link(site_url, path)}"
             )
+        # Quality log: traceable per-article stats for prompt tuning.
+        log = (
+            f"quality_log: issue=#{issue_number or '?'} topic={topic} "
+            f"writer={env['LLM_WRITER_MODEL']} reviewer={reviewer_model} "
+            f"rounds={fixes} approved=true\n"
+        )
+        print(log)
         return 0
 
     def escalate(reason: str, pending: list[str]) -> int:
@@ -162,14 +169,22 @@ def run(env: dict) -> int:
             pr_number, f"Cambios solicitados (ronda {round_number}):\n\n{_bullets(blocking)}"
         )
 
-        fixed = writer.generate(SYSTEM_PROMPT, rewrite_prompt(topic, draft, blocking))
-        try:
-            validate_body(fixed)
-        except ValidationError as exc:
-            return escalate(
-                "La corrección del writer rompió la estructura del artículo.",
-                blocking + [f"[estructura] {exc}"],
+        fixed = None
+        for rewrite_attempt in range(3):
+            fixed = writer.generate(
+                SYSTEM_PROMPT, rewrite_prompt(topic, draft, blocking, attempt=rewrite_attempt + 1)
             )
+            try:
+                validate_body(fixed)
+                break
+            except ValidationError as exc:
+                if rewrite_attempt == 2:
+                    return escalate(
+                        f"La corrección del writer rompió la estructura del artículo tras 3 intentos.",
+                        blocking + [f"[estructura] {exc}"],
+                    )
+                print(f"  Rewrite attempt {rewrite_attempt + 1} broke structure ({exc}), retrying...")
+
         prs.update_file(
             branch, path, frontmatter + fixed, f"fix: review feedback (round {round_number})"
         )

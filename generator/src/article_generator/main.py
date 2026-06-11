@@ -4,9 +4,11 @@ Exports the PR number via GITHUB_OUTPUT so the reviewer step in the same
 workflow can pick it up. Topics that already have an open article PR are
 skipped, so a PR waiting for a human never blocks the queue.
 """
+import json
 import os
 import sys
 from datetime import date
+from pathlib import Path
 
 from .article import (
     make_description,
@@ -21,6 +23,30 @@ from .llm import LLMClient, LLMError
 from .prompts import SYSTEM_PROMPT, article_prompt, metadata_prompt, outline_prompt
 
 FORM_ARTIFACTS = ("### Notas de enfoque", "_No response_")
+TAGS_FILE = "site/src/data/tags.json"
+MAX_TAGS = 5
+
+
+def load_canonical_tags() -> list[str]:
+    try:
+        data = json.loads(Path(TAGS_FILE).read_text())
+        return [t for t in data if isinstance(t, str)]
+    except (OSError, ValueError):
+        return []
+
+
+def normalize_tags(raw: list[str]) -> list[str]:
+    seen = set()
+    result = []
+    for tag in raw:
+        tag = slugify(tag)
+        if not tag or tag in seen:
+            continue
+        result.append(tag)
+        seen.add(tag)
+        if len(result) >= MAX_TAGS:
+            break
+    return result
 
 
 def clean_notes(body: str) -> str:
@@ -29,11 +55,11 @@ def clean_notes(body: str) -> str:
     return body.strip()
 
 
-def collect_metadata(llm: LLMClient, topic: str, body: str) -> tuple[str, list[str]]:
+def collect_metadata(llm: LLMClient, topic: str, body: str, existing_tags: list[str]) -> tuple[str, list[str]]:
     tags = []
     summary = ""
     try:
-        meta = llm.generate_json(SYSTEM_PROMPT, metadata_prompt(topic, body))
+        meta = llm.generate_json(SYSTEM_PROMPT, metadata_prompt(topic, body, existing_tags))
         if isinstance(meta.get("summary"), str):
             summary = meta["summary"].strip()
         if isinstance(meta.get("tags"), list):
@@ -78,7 +104,9 @@ def run(env: dict) -> int:
     except ValidationError as exc:
         print(f"Structure validation failed ({exc}); opening PR anyway for the reviewer.")
 
-    summary, tags = collect_metadata(writer, topic, draft)
+    canonical_tags = load_canonical_tags()
+    summary, raw_tags = collect_metadata(writer, topic, draft, canonical_tags)
+    tags = normalize_tags(raw_tags)
     slug = slugify(topic)
     content = render_article(
         pub_date=today,
@@ -100,6 +128,7 @@ def run(env: dict) -> int:
     )
     export_output(env, "pr_number", str(pr_number))
     print(f"PR #{pr_number} opened for issue #{issue['number']}: {url}")
+    print(f"quality_log: issue=#{issue['number']} topic={topic} writer={writer_model} tags={tags}")
     return 0
 
 

@@ -56,10 +56,17 @@ Devuelve SOLO el esquema: las secciones con 2-4 bullets cada una indicando qué 
 cubrir, qué ejemplos de código concretos incluir y qué trampas mencionar."""
 
 
-def metadata_prompt(topic: str, body: str) -> str:
+def metadata_prompt(topic: str, body: str, existing_tags: list[str] | None = None) -> str:
+    tag_hint = ""
+    if existing_tags:
+        tag_list = ", ".join(existing_tags)
+        tag_hint = (
+            f"\n\nTags existentes en el blog (reutilízalas si encajan; solo añade una nueva "
+            f"si es necesario): {tag_list}"
+        )
     return f"""Para este artículo técnico sobre "{topic}":
 
-{body}
+{body}{tag_hint}
 
 Devuelve un objeto JSON con exactamente estas claves:
 - "summary": el TL;DR en 2-3 frases en español: los takeaways técnicos concretos \
@@ -147,8 +154,15 @@ concreta y accionable, citando la sección o el snippet afectado).
 Devuelve SOLO el JSON, sin explicaciones."""
 
 
-def rewrite_prompt(topic: str, body: str, feedback: list[str]) -> str:
+def rewrite_prompt(topic: str, body: str, feedback: list[str], attempt: int = 1) -> str:
     issues = "\n".join(f"- {item}" for item in feedback)
+    structure_warning = ""
+    if attempt >= 2:
+        structure_warning = (
+            "\n\n⚠️ ATENCIÓN: en el intento anterior rompiste la estructura del artículo. "
+            "Esta vez copia la versión actual y modifica SOLO las líneas afectadas por los defectos. "
+            "No reescribas, edita quirúrgicamente. Conserva los mismos títulos ## y enlaces."
+        )
     return f"""Reescribe este artículo técnico sobre: {topic}
 
 Versión actual:
@@ -165,9 +179,9 @@ la última titulada "Para saber más".
 - La sección "Para saber más" debe conservar al menos 3 enlaces reales y verificables; \
 si el reviewer señala un enlace roto o inventado, reemplázalo por uno que conozcas con certeza, \
 o elimínalo si no encuentras uno confiable, pero nunca inventes URLs.
-- Si elReviewer señala un error de código, corrige ese snippet y verifica que sigue compilando \
+- Si el reviewer señala un error de código, corrige ese snippet y verifica que sigue compilando \
 con todos sus imports. No cambies snippets que no fueron objetados.
 - Misma infraestructura: markdown puro, sin frontmatter ni título principal, código completo \
-y autocontenido.
+y autocontenido.{structure_warning}
 
 Devuelve SOLO el cuerpo completo del artículo corregido en markdown."""

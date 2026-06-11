@@ -12,6 +12,7 @@ dev = ["pytest>=8"]
 generate-article = "article_generator.main:main"
 review-article = "article_generator.review:main"
 triage-topic = "article_generator.triage:main"
+curate-tags = "article_generator.tag_curator:main"
 
 [build-system]
 requires = ["setuptools>=68"]

@@ -59,3 +59,11 @@ jobs:
           PR_NUMBER: ${{ inputs.pr_number || steps.writer.outputs.pr_number }}
           SITE_URL: https://${{ github.repository_owner }}.github.io/ctx
         run: review-article
+
+      - name: Curate tag taxonomy
+        if: always()
+        env:
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_TRIAGE_MODEL: ${{ vars.LLM_TRIAGE_MODEL }}
+        run: curate-tags

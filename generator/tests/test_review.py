@@ -172,7 +172,7 @@ def test_fix_breaking_structure_escalates(issues_cls, llm_cls, prs_cls):
     setup_llms(
         llm_cls,
         reports=[{"approved": False, "issues": [blocking_issue("URL inventada")]}],
-        fixes=["too short"],
+        fixes=["too short"] * 3,
     )
 
     with patch("article_generator.review.validate_body", side_effect=ValidationError("Body too short")):
@@ -183,6 +183,7 @@ def test_fix_breaking_structure_escalates(issues_cls, llm_cls, prs_cls):
     final_comment = prs.comment_on_pr.call_args_list[-1].args[1]
     assert "URL inventada" in final_comment
     assert "Body too short" in final_comment
+    assert "3 intentos" in final_comment
 
 
 @patch("article_generator.review.PRClient")

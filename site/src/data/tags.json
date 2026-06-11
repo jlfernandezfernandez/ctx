@@ -1,0 +1,21 @@
+[
+  "backpressure",
+  "controller",
+  "dynamic-tables",
+  "incremental-refresh",
+  "java",
+  "kafka",
+  "kraft",
+  "materialized-views",
+  "metadata",
+  "non-blocking",
+  "pattern-matching",
+  "project-reactor",
+  "query-rewrite",
+  "raft",
+  "reactive",
+  "scoped-values",
+  "snowflake",
+  "structured-concurrency",
+  "virtual-threads"
+]

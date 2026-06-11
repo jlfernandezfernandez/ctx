@@ -58,17 +58,33 @@ def test_open_pr_creates_branch_file_and_pr():
     }
 
 
-def test_open_pr_fails_clearly_when_branch_exists():
+def test_open_pr_returns_existing_when_branch_exists():
     c = client()
     c.session.post.side_effect = [MagicMock(status_code=422, text="Reference already exists")]
-    with pytest.raises(PRError, match="article/issue-5"):
-        c.open_pr(
-            branch="article/issue-5",
-            path="p.md",
-            content="x",
-            title="t",
-            body="b",
-        )
+    existing_pr = MagicMock(status_code=200)
+    existing_pr.json.return_value = [{"html_url": "https://github.com/owner/repo/pull/9", "number": 9}]
+    c.session.get.side_effect = [
+        MagicMock(status_code=200, json=lambda: {"object": {"sha": "abc"}}),  # ref lookup
+        existing_pr,  # find existing PR
+    ]
+    url, number = c.open_pr(
+        branch="article/issue-5", path="p.md", content="x", title="t", body="b"
+    )
+    assert url == "https://github.com/owner/repo/pull/9"
+    assert number == 9
+
+
+def test_open_pr_raises_when_branch_exists_but_no_pr_found():
+    c = client()
+    c.session.post.side_effect = [MagicMock(status_code=422, text="Reference already exists")]
+    no_pr = MagicMock(status_code=200)
+    no_pr.json.return_value = []
+    c.session.get.side_effect = [
+        MagicMock(status_code=200, json=lambda: {"object": {"sha": "abc"}}),
+        no_pr,
+    ]
+    with pytest.raises(PRError, match="no open PR found"):
+        c.open_pr(branch="article/issue-5", path="p.md", content="x", title="t", body="b")
 
 
 def test_open_pr_raises_on_ref_lookup_error():

@@ -46,8 +46,20 @@ class PRClient:
             json={"ref": f"refs/heads/{branch}", "sha": sha},
         )
         if created.status_code == 422:
+            # Branch already exists (likely a re-run). Return the existing PR.
+            owner = self.base.rsplit("/", 2)[-2]
+            repo = self.base.rsplit("/", 1)[-1]
+            existing = self.session.get(
+                f"{self.base}/pulls",
+                params={"state": "open", "head": f"{owner}/{repo}:{branch}"},
+            )
+            self._require(existing, (200,), f"find existing PR for branch {branch}")
+            prs_list = existing.json()
+            if prs_list:
+                pr = prs_list[0]
+                return pr["html_url"], pr["number"]
             raise PRError(
-                f"Branch {branch} already exists; close or delete the previous article PR first"
+                f"Branch {branch} exists but no open PR found; close or delete it first"
             )
         self._require(created, (201,), f"create branch {branch}")
 
