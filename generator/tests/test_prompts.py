@@ -35,16 +35,14 @@ def test_reviewer_prompt_includes_article_and_json_contract():
     assert '"category"' in p
 
 
-def test_rewrite_prompt_includes_outline_draft_and_feedback():
+def test_rewrite_prompt_includes_draft_and_feedback():
     from article_generator.prompts import rewrite_prompt
 
     p = rewrite_prompt(
         "Project Reactor",
-        "el esquema",
         "el borrador",
         ["[codigo] falta import de Flux", "[rigor] URL inventada"],
     )
-    assert "el esquema" in p
     assert "el borrador" in p
     assert "falta import de Flux" in p
     assert "URL inventada" in p

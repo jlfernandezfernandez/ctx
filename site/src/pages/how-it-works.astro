@@ -53,16 +53,16 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 		<ol>
 			<li>issue + votos</li>
 			<li>writer: esquema y artículo</li>
-			<li>PR con label <code>needs-review</code></li>
+			<li>abre una PR</li>
 			<li>reviewer: evalúa código, rigor y legibilidad</li>
-			<li>si aprueba → merge automático</li>
-			<li>si rechaza → corrige y merge, o label <code>needs-human-review</code></li>
+			<li>aprueba → merge y deploy</li>
+			<li>no aprueba → corrige y re-revisa, o deja la PR abierta</li>
 		</ol>
 		<p>
-			Dos agentes LLM con modelos distintos: el <strong>writer</strong> genera, el <strong>reviewer</strong>
-		_evalúa y corrige_. Si el reviewer no logra aprobar tras corregir, la PR queda abierta para
-			revisión humana. Los enlaces en las referencias no bloquean publicación: es documentación, más
-			es mejor siempre que sea válido.
+			Dos agentes LLM con modelos distintos, replicando el flujo de PR de un equipo humano: el
+			<strong>writer</strong> escribe y abre la PR, el <strong>reviewer</strong> la evalúa y corrige.
+			Si tras corregir sigue sin aprobar, comenta los defectos y deja la PR abierta: ahí decide un
+			humano (mergear publica, cerrar descarta).
 		</p>
 	</div>
 

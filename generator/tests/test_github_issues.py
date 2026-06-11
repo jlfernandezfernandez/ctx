@@ -149,38 +149,14 @@ def test_set_labels_replaces_all_issue_labels():
     )
 
 
-def test_next_topic_skips_needs_human_review():
+def test_next_topic_skips_issues_with_open_article_pr():
     c = client_with([
-        issue(1, "2026-06-01T00:00:00Z", ["topic", "needs-human-review"]),
+        issue(1, "2026-06-01T00:00:00Z", ["topic"]),
         issue(2, "2026-06-02T00:00:00Z", ["topic"]),
     ])
-    assert c.next_topic()["number"] == 2
+    assert c.next_topic(skip={1})["number"] == 2
 
 
-def test_next_topic_none_when_all_need_human_review():
-    c = client_with([issue(1, "2026-06-01T00:00:00Z", ["topic", "needs-human-review"])])
-    assert c.next_topic() is None
-
-
-def test_next_topic_skips_needs_review():
-    c = client_with([
-        issue(1, "2026-06-01T00:00:00Z", ["topic", "needs-review"]),
-        issue(2, "2026-06-02T00:00:00Z", ["topic"]),
-    ])
-    assert c.next_topic()["number"] == 2
-
-
-def test_add_label_posts_single_label():
-    c = client_with([])
-    c.add_label(7, "needs-human-review")
-    c.session.post.assert_called_once_with(
-        "https://api.github.com/repos/owner/repo/issues/7/labels",
-        json={"labels": ["needs-human-review"]},
-    )
-
-
-def test_ensure_system_labels_creates_needs_human_review():
-    c = client_with([{"name": "topic"}, {"name": "triage"}])
-    c.ensure_system_labels()
-    created = [call.kwargs["json"]["name"] for call in c.session.post.call_args_list]
-    assert "needs-human-review" in created
+def test_next_topic_none_when_all_have_open_article_pr():
+    c = client_with([issue(1, "2026-06-01T00:00:00Z", ["topic"])])
+    assert c.next_topic(skip={1}) is None

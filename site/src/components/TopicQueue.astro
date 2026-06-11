@@ -29,8 +29,7 @@ const { limit = 4, compact = false } = Astro.props;
 <script is:inline define:vars={{ topicsApiUrl: TOPICS_API_URL }}>
 	const CACHE_KEY = 'ctx-topic-queue';
 	const CACHE_TTL = 5 * 60 * 1000;
-	const EXCLUDED_LABELS = new Set(['topic', 'priority', 'needs-review', 'needs-human-review']);
-	const SKIP_LABELS = new Set(['needs-review', 'needs-human-review']);
+	const EXCLUDED_LABELS = new Set(['topic', 'priority']);
 
 	function escapeHtml(value) {
 		return String(value)
@@ -132,7 +131,6 @@ const { limit = 4, compact = false } = Astro.props;
 			const issues = await loadIssues();
 			const topics = issues
 				.filter((issue) => !issue.pull_request)
-				.filter((issue) => !issue.labels.some((label) => SKIP_LABELS.has(label.name)))
 				.sort(compareTopics);
 			updateQueueCount(topics.length);
 			queues.forEach((queue) => renderQueue(queue, topics));

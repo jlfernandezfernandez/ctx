@@ -28,8 +28,10 @@ Abre una issue con la plantilla **"Proponer tema"**:
 
 ```
 Issue (triage) → clasificador LLM → label topic + categoría → votos 👍
-  → Action nocturna (L-V) → writer genera artículo → PR con label needs-review
-  → reviewer evalúa y corrige → merge → deploy a GitHub Pages → issue cerrada
+  → Action nocturna (L-V): writer genera artículo y abre PR
+    → reviewer evalúa (y corrige si hace falta)
+      → aprueba: merge → deploy a GitHub Pages → issue cerrada con link
+      → no aprueba: PR queda abierta con los defectos comentados → decide un humano
 ```
 
 Detalles en `README.md`.

@@ -10,10 +10,14 @@ Cada día laborable, un artículo en profundidad (~15 min, 2.500-3.500 palabras,
 
 ## Cómo funciona
 
-1. Propón un tema con la plantilla de issue ["Proponer tema"](../../issues/new/choose). Nace en `triage`; un modelo pequeño valida que sea técnico y le asigna una categoría.
-2. **Vota con 👍**: cada noche (L-V, ~6:30 Madrid) se publica el tema aceptado más votado (empate → el más antiguo). El label `priority` salta la cola.
-3. El **writer** genera el artículo y abre una PR con label `needs-review`.
-4. El **reviewer** evalúa código, rigor y legibilidad. Si aprueba → merge. Si no → corrige y vuelve a intentar. Si sigue sin aprobar → label `needs-human-review`.
+1. Propón un tema con la plantilla de issue ["Proponer tema"](../../issues/new/choose). Un modelo pequeño valida que sea técnico y le asigna una categoría.
+2. **Vota con 👍**: cada noche (L-V, ~6:30 Madrid) se elige el tema aceptado más votado (empate → el más antiguo; el label `priority` salta la cola).
+3. El **writer** genera el artículo y abre una PR, igual que lo haría un compañero.
+4. El **reviewer** evalúa código, rigor y legibilidad sobre esa PR:
+   - Aprueba → merge automático, la issue se cierra con el link y la web se despliega.
+   - Rechaza → corrige el artículo y lo vuelve a revisar. Si la corrección tampoco pasa, comenta los defectos pendientes y **deja la PR abierta**: una PR de artículo abierta significa "decide un humano" (mergear publica, cerrar descarta). Mientras tanto la cola no se bloquea: al día siguiente toca el siguiente tema.
+
+Todo el flujo vive en un único workflow ([`publish.yml`](.github/workflows/publish.yml)): writer y reviewer son dos pasos del mismo run, así que no hay coreografía entre workflows ni labels de control.
 
 ## Agentes
 
@@ -21,15 +25,15 @@ Cada día laborable, un artículo en profundidad (~15 min, 2.500-3.500 palabras,
 |---|---|---|
 | **Triaje** | `LLM_TRIAGE_MODEL` | Valida que la propuesta sea técnica, asigna categoría |
 | **Writer** | `LLM_WRITER_MODEL` | Genera esquema + artículo completo, abre PR |
-| **Reviewer** | `LLM_REVIEWER_MODEL` | Evalúa el artículo, corrige si puede, merge o escalar |
+| **Reviewer** | `LLM_REVIEWER_MODEL` | Evalúa la PR, corrige si puede, mergea o escala a humano |
 
-El writer y reviewer usan modelos distintos para evitar sesgo. El triaje limita cada autor a 5 propuestas por día UTC.
+El writer y el reviewer usan modelos distintos para evitar que un modelo apruebe sus propios vicios. El triaje limita cada autor a 5 propuestas por día UTC.
 
 ## Estructura
 
 - `generator/` — generador Python (LLM agnóstico vía API OpenAI-compatible)
 - `site/` — web Astro (GitHub Pages)
-- `.github/workflows/` — triaje, generación, revisión y despliegue
+- `.github/workflows/` — `triage-topic` (clasifica propuestas), `publish` (writer + reviewer), `deploy` (Pages), `ci` (tests y build)
 
 ## Configuración (Actions)
 

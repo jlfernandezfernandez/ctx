@@ -1,4 +1,4 @@
-"""Tests for the review orchestration."""
+"""Tests for the reviewer orchestration."""
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -33,75 +33,66 @@ ARTICLE_BODY = (
 PATH = "site/src/content/blog/2026-06-11-vistas-materializadas-en-snowflake.md"
 
 
-@patch("article_generator.review.DraftsClient")
-@patch("article_generator.review.LLMClient")
-@patch("article_generator.review.IssuesClient")
-def test_approved_auto_merges(issues_cls, llm_cls, drafts_cls):
-    pr = {
+def article_pr():
+    return {
         "body": "Closes #5",
         "head": {"ref": "article/issue-5"},
         "title": "article: Vistas materializadas en Snowflake",
     }
-    drafts = drafts_cls.return_value
-    drafts.get_pr.return_value = pr
-    drafts.get_article_path.return_value = PATH
-    drafts.read_file.return_value = ARTICLE_BODY
 
+
+def clients(prs_cls, issue_pr=None):
+    prs = prs_cls.return_value
+    prs.get_pr.return_value = issue_pr or article_pr()
+    prs.get_article_path.return_value = PATH
+    prs.read_file.return_value = ARTICLE_BODY
+    return prs
+
+
+@patch("article_generator.review.PRClient")
+@patch("article_generator.review.LLMClient")
+@patch("article_generator.review.IssuesClient")
+def test_approved_merges_and_closes_issue(issues_cls, llm_cls, prs_cls):
+    prs = clients(prs_cls)
     reviewer = llm_cls.return_value
     reviewer.generate_json.return_value = {"approved": True, "issues": []}
 
     assert run(env()) == 0
 
-    drafts.merge_pr.assert_called_once_with(9)
+    prs.merge_pr.assert_called_once_with(9, branch="article/issue-5")
     issues_cls.return_value.close_with_comment.assert_called_once()
 
 
-@patch("article_generator.review.DraftsClient")
+@patch("article_generator.review.PRClient")
 @patch("article_generator.review.LLMClient")
 @patch("article_generator.review.IssuesClient")
-def test_rejected_then_fixed_auto_merges(issues_cls, llm_cls, drafts_cls):
-    pr = {
-        "body": "Closes #5",
-        "head": {"ref": "article/issue-5"},
-        "title": "article: Vistas materializadas en Snowflake",
-    }
-    drafts = drafts_cls.return_value
-    drafts.get_pr.return_value = pr
-    drafts.get_article_path.return_value = PATH
-    drafts.read_file.return_value = ARTICLE_BODY
-
+def test_rejected_then_fix_approved_pushes_and_merges(issues_cls, llm_cls, prs_cls):
+    prs = clients(prs_cls)
     reviewer = llm_cls.return_value
-    reviewer.generate_json.return_value = {
-        "approved": False,
-        "issues": [{"category": "codigo", "detail": "falta import de Flux"}],
-    }
+    reviewer.generate_json.side_effect = [
+        {"approved": False, "issues": [{"category": "codigo", "detail": "falta import de Flux"}]},
+        {"approved": True, "issues": []},
+    ]
     reviewer.generate.return_value = ARTICLE_BODY
 
     with patch("article_generator.review.validate_body"):
         assert run(env()) == 0
 
-    drafts.update_file.assert_called_once_with(
+    prs.update_file.assert_called_once_with(
         "article/issue-5", PATH, ARTICLE_BODY, "fix: address review feedback"
     )
-    drafts.merge_pr.assert_called_once_with(9)
+    prs.merge_pr.assert_called_once_with(9, branch="article/issue-5")
+    comment = issues_cls.return_value.close_with_comment.call_args.args[1]
+    assert "con correcciones" in comment
 
 
-@patch("article_generator.review.DraftsClient")
+@patch("article_generator.review.PRClient")
 @patch("article_generator.review.LLMClient")
 @patch("article_generator.review.IssuesClient")
-def test_rejected_fix_fails_validation_needs_human(issues_cls, llm_cls, drafts_cls):
+def test_fix_fails_validation_leaves_pr_open_with_comment(issues_cls, llm_cls, prs_cls):
     from article_generator.article import ValidationError
 
-    pr = {
-        "body": "Closes #5",
-        "head": {"ref": "article/issue-5"},
-        "title": "article: Vistas materializadas en Snowflake",
-    }
-    drafts = drafts_cls.return_value
-    drafts.get_pr.return_value = pr
-    drafts.get_article_path.return_value = PATH
-    drafts.read_file.return_value = ARTICLE_BODY
-
+    prs = clients(prs_cls)
     reviewer = llm_cls.return_value
     reviewer.generate_json.return_value = {
         "approved": False,
@@ -112,29 +103,46 @@ def test_rejected_fix_fails_validation_needs_human(issues_cls, llm_cls, drafts_c
     with patch("article_generator.review.validate_body", side_effect=ValidationError("Body too short")):
         assert run(env()) == 0
 
-    drafts.merge_pr.assert_not_called()
-    issues_cls.return_value.add_label.assert_called_once_with(5, "needs-human-review")
-    drafts.comment_on_pr.assert_called_once()
+    prs.merge_pr.assert_not_called()
+    prs.update_file.assert_not_called()
+    issues_cls.return_value.close_with_comment.assert_not_called()
+    comment = prs.comment_on_pr.call_args.args[1]
+    assert "URL inventada" in comment
+    assert "Body too short" in comment
 
 
-@patch("article_generator.review.DraftsClient")
+@patch("article_generator.review.PRClient")
 @patch("article_generator.review.LLMClient")
 @patch("article_generator.review.IssuesClient")
-def test_no_issue_number_still_merges(issues_cls, llm_cls, drafts_cls):
-    pr = {
-        "body": "Some description without Closes",
-        "head": {"ref": "article/issue-5"},
-        "title": "article: Vistas materializadas en Snowflake",
-    }
-    drafts = drafts_cls.return_value
-    drafts.get_pr.return_value = pr
-    drafts.get_article_path.return_value = PATH
-    drafts.read_file.return_value = ARTICLE_BODY
+def test_fix_rejected_on_second_review_pushes_and_leaves_pr_open(issues_cls, llm_cls, prs_cls):
+    prs = clients(prs_cls)
+    reviewer = llm_cls.return_value
+    reviewer.generate_json.side_effect = [
+        {"approved": False, "issues": [{"category": "codigo", "detail": "falta import de Flux"}]},
+        {"approved": False, "issues": [{"category": "rigor", "detail": "sigue citando una API inexistente"}]},
+    ]
+    reviewer.generate.return_value = ARTICLE_BODY
 
+    with patch("article_generator.review.validate_body"):
+        assert run(env()) == 0
+
+    prs.update_file.assert_called_once()  # the human sees the best version
+    prs.merge_pr.assert_not_called()
+    comment = prs.comment_on_pr.call_args.args[1]
+    assert "API inexistente" in comment
+
+
+@patch("article_generator.review.PRClient")
+@patch("article_generator.review.LLMClient")
+@patch("article_generator.review.IssuesClient")
+def test_no_issue_number_still_merges(issues_cls, llm_cls, prs_cls):
+    pr = article_pr()
+    pr["body"] = "Some description without Closes"
+    prs = clients(prs_cls, issue_pr=pr)
     reviewer = llm_cls.return_value
     reviewer.generate_json.return_value = {"approved": True, "issues": []}
 
     assert run(env()) == 0
 
-    drafts.merge_pr.assert_called_once_with(9)
+    prs.merge_pr.assert_called_once_with(9, branch="article/issue-5")
     issues_cls.return_value.close_with_comment.assert_not_called()
