@@ -36,7 +36,7 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           OUTPUT_DIR: site/src/content/blog
           SITE_URL: https://${{ github.repository_owner }}.github.io/ctx
-        run: ctx-generate
+        run: generate-article
 
       - name: Commit and push article
         run: |

@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ctx_generator.github_issues import IssuesClient, GitHubError
+from article_generator.github_issues import IssuesClient, GitHubError
 
 
 def issue(number, created, labels, title="t", votes=0):

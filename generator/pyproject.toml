@@ -1,5 +1,5 @@
 [project]
-name = "ctx-generator"
+name = "article-generator"
 version = "0.1.0"
 description = "Generates the daily deep-dive article from the topic queue"
 requires-python = ">=3.11"
@@ -9,7 +9,7 @@ dependencies = ["requests>=2.31"]
 dev = ["pytest>=8"]
 
 [project.scripts]
-ctx-generate = "ctx_generator.main:main"
+generate-article = "article_generator.main:main"
 
 [build-system]
 requires = ["setuptools>=68"]
