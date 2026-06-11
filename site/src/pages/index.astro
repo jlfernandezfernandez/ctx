@@ -1,12 +1,10 @@
 ---
 import { getCollection } from 'astro:content';
 import ArticleList from '../components/ArticleList.astro';
-import BaseHead from '../components/BaseHead.astro';
-import Footer from '../components/Footer.astro';
 import FormattedDate from '../components/FormattedDate.astro';
-import Header from '../components/Header.astro';
 import HomeActivity from '../components/HomeActivity.astro';
 import TopicQueue from '../components/TopicQueue.astro';
+import Page from '../layouts/Page.astro';
 import { BASE, REPO_URL, SITE_DESCRIPTION, SITE_TITLE, TOPICS_URL } from '../consts';
 
 const RECENT_COUNT = 4;
@@ -18,264 +16,255 @@ const [latest, ...rest] = posts;
 const recent = rest.slice(0, RECENT_COUNT);
 ---
 
-<!doctype html>
-<html lang="es">
-	<head>
-		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
-		<style>
-			.hero {
-				padding: 2.5em 0 0 0;
+<Page title={SITE_TITLE} description={SITE_DESCRIPTION}>
+	<section class="hero">
+		<h1 class="typing" aria-label="Un deep dive técnico al día.">
+			<span class="typing-text" aria-hidden="true">Un deep dive técnico al día.</span><span
+				class="typing-cursor"
+				aria-hidden="true">▍</span
+			>
+		</h1>
+		<script is:inline>
+			const typingText = document.querySelector('.typing-text');
+			if (typingText && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+				const text = typingText.textContent;
+				const characters = Array.from(text);
+				typingText.textContent = '';
+				characters.forEach((character, index) => {
+					window.setTimeout(() => {
+						typingText.textContent += character;
+					}, 70 * index);
+				});
 			}
-			.hero h1 {
-				margin: 0;
-				font-family: var(--font-sans);
-				font-weight: 700;
-				font-size: 2.6em;
-				letter-spacing: -0.02em;
-				line-height: 1.1;
-			}
-			.terminal {
-				margin-top: 1.8em;
-				border: 1px solid rgb(var(--gray-light));
-				border-radius: 8px;
-				background: var(--bg-raise);
-				overflow: hidden;
-			}
-			.term-bar {
-				display: flex;
-				align-items: center;
-				gap: 0.45em;
-				padding: 0.6em 1em;
-				border-bottom: 1px solid rgb(var(--gray-light));
-				font-family: var(--font-mono);
-				font-size: 0.75em;
-				color: rgb(var(--gray));
-			}
-			.term-bar i {
-				width: 10px;
-				height: 10px;
-				border-radius: 50%;
-				background: rgb(var(--gray-light));
-			}
-			.term-bar span {
-				margin-left: 0.6em;
-			}
-			.term-body {
-				padding: 1.25em 1.5em;
-				font-family: var(--font-mono);
-				font-size: 0.9em;
-				line-height: 1.7;
-			}
-			.cmd {
-				margin: 0;
-				color: var(--accent);
-			}
-			.cmd::before {
-				content: '$ ';
-				color: rgb(var(--gray));
-			}
-			.out {
-				margin: 0.2em 0 1.2em 0;
-				color: rgb(var(--gray-dark));
-				max-width: 40em;
-			}
-			.out:last-child {
-				margin-bottom: 0;
-			}
-			.propose {
-				display: inline-block;
-				margin-top: 1.4em;
-				font-family: var(--font-mono);
-				font-weight: 500;
-				padding: 0.5em 1em;
-				border: 1px solid var(--accent);
-				border-radius: 6px;
-			}
-			.propose:hover {
-				background: var(--accent);
-				color: var(--bg);
-				text-decoration: none;
-			}
-			.hero-actions {
-				display: flex;
-				flex-wrap: wrap;
-				align-items: center;
-				gap: 0.75em 1.5em;
-			}
-			.vote-link {
-				margin-top: 1.4em;
-				font-family: var(--font-mono);
-				font-size: 0.85em;
-			}
-			.today {
-				margin-top: 3em;
-				padding: 1.5em 1.75em;
-				border: 1px solid rgb(var(--gray-light));
-				border-left: 3px solid var(--accent);
-				border-radius: 6px;
-				background: var(--bg-raise);
-			}
-			.label {
-				margin: 0 0 0.8em 0;
-				font-family: var(--font-mono);
-				font-size: 0.8em;
-				text-transform: uppercase;
-				letter-spacing: 0.08em;
-				color: rgb(var(--gray));
-			}
-			.today h2 {
-				margin: 0 0 0.3em 0;
-				font-family: var(--font-sans);
-				font-weight: 700;
-				font-size: 1.8em;
-				letter-spacing: -0.02em;
-				line-height: 1.2;
-			}
-			.today h2 a {
-				color: rgb(var(--black));
-				text-decoration: none;
-			}
-			.today h2 a:hover {
-				color: var(--accent);
-			}
-			.date {
-				font-family: var(--font-mono);
-				font-size: 0.8em;
-				text-transform: uppercase;
-				letter-spacing: 0.06em;
-				color: rgb(var(--gray));
-			}
-			.description {
-				margin: 0.8em 0 0 0;
-				color: rgb(var(--gray-dark));
-				max-width: 44em;
-				display: -webkit-box;
-				-webkit-box-orient: vertical;
-				-webkit-line-clamp: 3;
-				overflow: hidden;
-			}
-			.read {
-				display: inline-block;
-				margin-top: 1em;
-				font-family: var(--font-mono);
-				font-weight: 500;
-			}
-			.recent {
-				margin-top: 3em;
-			}
-			.recent h2 {
-				margin: 0 0 1em 0;
-				font-size: 0.85em;
-				text-transform: uppercase;
-				letter-spacing: 0.08em;
-				color: rgb(var(--gray));
-			}
-			.all {
-				display: inline-block;
-				margin-top: 1em;
-				font-family: var(--font-mono);
-				font-weight: 500;
-			}
-			@media (max-width: 720px) {
-				.hero h1 {
-					font-size: 1.9em;
-				}
-				.today h2 {
-					font-size: 1.4em;
-				}
-				.today {
-					padding: 1.25em 1.35em;
-				}
-				.description {
-					-webkit-line-clamp: 4;
-				}
-			}
-		</style>
-	</head>
-	<body>
-		<Header />
-		<main>
-			<section class="hero">
-				<h1 class="typing" aria-label="Un deep dive técnico al día.">
-					<span class="typing-text" aria-hidden="true">Un deep dive técnico al día.</span><span
-						class="typing-cursor"
-						aria-hidden="true">▍</span
-					>
-				</h1>
-				<script is:inline>
-					const typingText = document.querySelector('.typing-text');
-					if (typingText && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-						const text = typingText.textContent;
-						const characters = Array.from(text);
-						typingText.textContent = '';
-						characters.forEach((character, index) => {
-							window.setTimeout(() => {
-								typingText.textContent += character;
-							}, 70 * index);
-						});
-					}
-				</script>
-				<div class="terminal">
-					<div class="term-bar">
-						<i></i><i></i><i></i>
-						<span>ctx — zsh</span>
-					</div>
-					<div class="term-body">
-						<p class="cmd">ctx --why</p>
-						<p class="out">
-							Hacemos vibe coding: la IA escribe el código a una velocidad absurda. Entender qué
-							hace por debajo sigue siendo nuestro trabajo — y nuestra ventaja.
-						</p>
-						<p class="cmd">ctx --how</p>
-						<p class="out">
-							Propones un tema → el equipo vota con 👍 → cada mañana (L–V) un LLM publica aquí un
-							deep dive de ~15 min: desde cero hasta internals, con código ejecutable.
-						</p>
-					</div>
-				</div>
-				<div class="hero-actions">
-					<a class="propose" href={`${REPO_URL}/issues/new/choose`} target="_blank">
-						proponer tema →
-					</a>
-					<a class="vote-link" href={TOPICS_URL} target="_blank">ver y votar próximos temas →</a>
-				</div>
+		</script>
+		<div class="terminal">
+			<div class="term-bar">
+				<i></i><i></i><i></i>
+				<span>ctx — zsh</span>
+			</div>
+			<div class="term-body">
+				<p class="cmd">ctx --why</p>
+				<p class="out">
+					Hacemos vibe coding: la IA escribe el código a una velocidad absurda. Entender qué
+					hace por debajo sigue siendo nuestro trabajo — y nuestra ventaja.
+				</p>
+				<p class="cmd">ctx --how</p>
+				<p class="out">
+					Propones un tema → el equipo vota con 👍 → cada mañana (L–V) un LLM publica aquí un
+					deep dive de ~15 min: desde cero hasta internals, con código ejecutable.
+				</p>
+			</div>
+		</div>
+		<div class="hero-actions">
+			<a class="propose" href={`${REPO_URL}/issues/new/choose`} target="_blank">
+				proponer tema →
+			</a>
+			<a class="vote-link" href={TOPICS_URL} target="_blank">ver y votar próximos temas →</a>
+		</div>
+	</section>
+	<HomeActivity posts={posts} />
+	{
+		latest && (
+			<section class="today">
+				<p class="label">Último artículo</p>
+				<h2>
+					<a href={`${BASE}/blog/${latest.id}/`}>{latest.data.title}</a>
+				</h2>
+				<p class="date">
+					<FormattedDate date={latest.data.pubDate} />
+					{latest.data.tags.length > 0 && <span> · {latest.data.tags.join(' · ')}</span>}
+				</p>
+				<p class="description">{latest.data.description}</p>
+				<a class="read" href={`${BASE}/blog/${latest.id}/`}>
+					leer artículo →
+				</a>
 			</section>
-			<HomeActivity posts={posts} />
-			{
-				latest && (
-					<section class="today">
-						<p class="label">Último artículo</p>
-						<h2>
-							<a href={`${BASE}/blog/${latest.id}/`}>{latest.data.title}</a>
-						</h2>
-						<p class="date">
-							<FormattedDate date={latest.data.pubDate} />
-							{latest.data.tags.length > 0 && <span> · {latest.data.tags.join(' · ')}</span>}
-						</p>
-						<p class="description">{latest.data.description}</p>
-						<a class="read" href={`${BASE}/blog/${latest.id}/`}>
-							leer artículo →
-						</a>
-					</section>
-				)
-			}
-			<TopicQueue />
-			{
-				recent.length > 0 && (
-					<section class="recent">
-						<h2>Anteriores</h2>
-						<ArticleList posts={recent} />
-					</section>
-				)
-			}
-			{
-				rest.length > 0 && (
-					<a class="all" href={`${BASE}/articles/`}>
-						ver todos los artículos →
-					</a>
-				)
-			}
-		</main>
-		<Footer />
-	</body>
-</html>
+		)
+	}
+	<TopicQueue />
+	{
+		recent.length > 0 && (
+			<section class="recent">
+				<h2>Anteriores</h2>
+				<ArticleList posts={recent} />
+			</section>
+		)
+	}
+	{
+		rest.length > 0 && (
+			<a class="all" href={`${BASE}/articles/`}>
+				ver todos los artículos →
+			</a>
+		)
+	}
+</Page>
+
+<style>
+	.hero {
+		padding: 2.5em 0 0 0;
+	}
+	.hero h1 {
+		margin: 0;
+		font-family: var(--font-sans);
+		font-weight: 700;
+		font-size: 2.6em;
+		letter-spacing: -0.02em;
+		line-height: 1.1;
+	}
+	.terminal {
+		margin-top: 1.8em;
+		border: 1px solid rgb(var(--gray-light));
+		border-radius: 8px;
+		background: var(--bg-raise);
+		overflow: hidden;
+	}
+	.term-bar {
+		display: flex;
+		align-items: center;
+		gap: 0.45em;
+		padding: 0.6em 1em;
+		border-bottom: 1px solid rgb(var(--gray-light));
+		font-family: var(--font-mono);
+		font-size: 0.75em;
+		color: rgb(var(--gray));
+	}
+	.term-bar i {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		background: rgb(var(--gray-light));
+	}
+	.term-bar span {
+		margin-left: 0.6em;
+	}
+	.term-body {
+		padding: 1.25em 1.5em;
+		font-family: var(--font-mono);
+		font-size: 0.9em;
+		line-height: 1.7;
+	}
+	.cmd {
+		margin: 0;
+		color: var(--accent);
+	}
+	.cmd::before {
+		content: '$ ';
+		color: rgb(var(--gray));
+	}
+	.out {
+		margin: 0.2em 0 1.2em 0;
+		color: rgb(var(--gray-dark));
+		max-width: 40em;
+	}
+	.out:last-child {
+		margin-bottom: 0;
+	}
+	.propose {
+		display: inline-block;
+		margin-top: 1.4em;
+		font-family: var(--font-mono);
+		font-weight: 500;
+		padding: 0.5em 1em;
+		border: 1px solid var(--accent);
+		border-radius: 6px;
+	}
+	.propose:hover {
+		background: var(--accent);
+		color: var(--bg);
+		text-decoration: none;
+	}
+	.hero-actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.75em 1.5em;
+	}
+	.vote-link {
+		margin-top: 1.4em;
+		font-family: var(--font-mono);
+		font-size: 0.85em;
+	}
+	.today {
+		margin-top: 3em;
+		padding: 1.5em 1.75em;
+		border: 1px solid rgb(var(--gray-light));
+		border-left: 3px solid var(--accent);
+		border-radius: 6px;
+		background: var(--bg-raise);
+	}
+	.label {
+		margin: 0 0 0.8em 0;
+		font-family: var(--font-mono);
+		font-size: 0.8em;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: rgb(var(--gray));
+	}
+	.today h2 {
+		margin: 0 0 0.3em 0;
+		font-family: var(--font-sans);
+		font-weight: 700;
+		font-size: 1.8em;
+		letter-spacing: -0.02em;
+		line-height: 1.2;
+	}
+	.today h2 a {
+		color: rgb(var(--black));
+		text-decoration: none;
+	}
+	.today h2 a:hover {
+		color: var(--accent);
+	}
+	.date {
+		font-family: var(--font-mono);
+		font-size: 0.8em;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: rgb(var(--gray));
+	}
+	.description {
+		margin: 0.8em 0 0 0;
+		color: rgb(var(--gray-dark));
+		max-width: 44em;
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 3;
+		overflow: hidden;
+	}
+	.read {
+		display: inline-block;
+		margin-top: 1em;
+		font-family: var(--font-mono);
+		font-weight: 500;
+	}
+	.recent {
+		margin-top: 3em;
+	}
+	.recent h2 {
+		margin: 0 0 1em 0;
+		font-size: 0.85em;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: rgb(var(--gray));
+	}
+	.all {
+		display: inline-block;
+		margin-top: 1em;
+		font-family: var(--font-mono);
+		font-weight: 500;
+	}
+	@media (max-width: 720px) {
+		.hero h1 {
+			font-size: 1.9em;
+		}
+		.today h2 {
+			font-size: 1.4em;
+		}
+		.today {
+			padding: 1.25em 1.35em;
+		}
+		.description {
+			-webkit-line-clamp: 4;
+		}
+	}
+</style>

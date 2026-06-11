@@ -118,10 +118,7 @@ def effective_action(classification: Classification, categories: set[str]) -> st
 
 
 def start_of_today_utc() -> str:
-    now = datetime.now(timezone.utc)
-    return now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat().replace(
-        "+00:00", "Z"
-    )
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT00:00:00Z")
 
 
 def load_issue(event_path: str) -> dict:

@@ -6,10 +6,10 @@ Abre una issue con la plantilla **"Proponer tema"**:
 
 - El **título de la issue** es el tema del artículo. Sé concreto: mejor "Kafka sin ZooKeeper: KRaft" que "Kafka".
 - Las **notas de enfoque** (opcionales) se inyectan al prompt del generador: qué no entiendes, con qué compararlo, qué casos cubrir.
-- El label `topic` se aplica solo. Añade `priority` si debe saltar la cola.
-- Labels extra (`java`, `sql`, ...) se convierten en tags del artículo publicado (el LLM añade más).
+- La issue nace con el label `triage`: un clasificador automático valida que sea técnica y le asigna una categoría (`java`, `sql`, ...), que se convierte en tag del artículo publicado. Si duda, queda en `triage` para revisión manual; si claramente no es técnica, se cierra como `rejected`.
+- Máximo 5 propuestas por persona y día. Un colaborador puede añadir `priority` para saltar la cola.
 
-**Vota con 👍** las issues que te interesen: cada día laborable se publica el tema más votado (empate → el más antiguo; `priority` siempre primero). Al publicarse, la issue se cierra con el link.
+**Vota con 👍** las issues aceptadas (label `topic`): cada día laborable se publica la más votada (empate → la más antigua; `priority` siempre primero). Al publicarse, la issue se cierra con el link.
 
 ## Contribuir código
 
@@ -27,8 +27,9 @@ Abre una issue con la plantilla **"Proponer tema"**:
 ## Arquitectura en 30 segundos
 
 ```
-Issue (label topic) → Action nocturna (L-V) → generador Python (LLM, 2 pasadas)
+Issue (triage) → clasificador LLM → label topic + categoría → votos 👍
+  → Action nocturna (L-V) → generador Python (esquema → artículo → revisión → validaciones)
   → markdown en site/src/content/blog/ → commit → deploy a GitHub Pages → issue cerrada
 ```
 
-Detalles en `docs/superpowers/specs/` y `README.md`.
+Detalles en `README.md`.

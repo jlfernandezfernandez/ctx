@@ -12,11 +12,9 @@ from .article import (
     validate_reference_urls,
     write_article,
 )
-from .github_issues import PRIORITY_LABEL, TOPIC_LABEL, IssuesClient
+from .github_issues import SYSTEM_LABELS, IssuesClient
 from .llm import LLMClient, LLMError
 from .prompts import SYSTEM_PROMPT, article_prompt, metadata_prompt, outline_prompt, review_prompt
-
-QUEUE_LABELS = {TOPIC_LABEL, PRIORITY_LABEL}
 
 # Artifacts that GitHub issue forms inject into the body.
 FORM_ARTIFACTS = ("### Notas de enfoque", "_No response_")
@@ -79,7 +77,7 @@ def run(env: dict) -> int:
     body = review_code(llm, body)
     validate_reference_urls(body)
 
-    tags = [l["name"] for l in issue["labels"] if l["name"] not in QUEUE_LABELS]
+    tags = [l["name"] for l in issue["labels"] if l["name"] not in SYSTEM_LABELS]
     summary = ""
     try:
         meta = llm.generate_json(SYSTEM_PROMPT, metadata_prompt(topic, outline))

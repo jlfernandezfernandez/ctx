@@ -34,8 +34,8 @@ ARTICLE_STRUCTURE = """1. Contexto: qué problema existe y por qué este tema im
 documentación oficial del proyecto/lenguaje, papers o specs relevantes, y blogs o \
 newsletters de ingeniería reconocidos (ByteByteGo, Martin Fowler, InfoQ, blogs de \
 ingeniería de empresas como Netflix/Uber/Cloudflare, artículos destacados de Medium). \
-Nunca inventes URLs: si no estás seguro del enlace exacto, da el nombre de la fuente \
-y el título del recurso."""
+Nunca inventes URLs: usa solo enlaces estables que conozcas con certeza (la raíz de la \
+documentación oficial sirve); toda referencia lleva su enlace directo."""
 
 
 def _notes_block(notes: str) -> str:

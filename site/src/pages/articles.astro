@@ -1,9 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import ArticleList from '../components/ArticleList.astro';
-import BaseHead from '../components/BaseHead.astro';
-import Footer from '../components/Footer.astro';
-import Header from '../components/Header.astro';
+import Page from '../layouts/Page.astro';
 import { BASE, SITE_TITLE } from '../consts';
 
 const posts = (await getCollection('blog')).sort(
@@ -23,95 +21,88 @@ const tags = [...tagCounts.entries()]
 	.slice(0, TAG_LIMIT);
 ---
 
-<!doctype html>
-<html lang="es">
-	<head>
-		<BaseHead
-			title={`Artículos — ${SITE_TITLE}`}
-			description="Todos los deep dives publicados, filtrables por tema."
-		/>
+<Page
+	title={`Artículos — ${SITE_TITLE}`}
+	description="Todos los deep dives publicados, filtrables por tema."
+>
+	<Fragment slot="head">
 		<link rel="stylesheet" href={`${BASE}/pagefind/pagefind-ui.css`} />
 		<script is:inline src={`${BASE}/pagefind/pagefind-ui.js`}></script>
-		<style>
-			.tagcloud {
-				display: flex;
-				flex-wrap: wrap;
-				gap: 0.5em;
-				margin: 1.5em 0 0 0;
-				padding: 0;
-				list-style: none;
-			}
-			.tagcloud a {
-				display: inline-block;
-				font-family: var(--font-mono);
-				font-size: 0.8em;
-				padding: 0.2em 0.7em;
-				border: 1px solid rgb(var(--gray-light));
-				border-radius: 999px;
-				color: rgb(var(--gray-dark));
-			}
-			.tagcloud a:hover {
-				border-color: var(--accent);
-				color: var(--accent);
-				text-decoration: none;
-			}
-			.tagcloud .count {
-				color: rgb(var(--gray));
-			}
-			#search {
-				margin-top: 1.5em;
-				--pagefind-ui-scale: 0.85;
-				--pagefind-ui-primary: var(--accent);
-				--pagefind-ui-text: rgb(var(--gray-dark));
-				--pagefind-ui-background: var(--bg-raise);
-				--pagefind-ui-border: rgb(var(--gray-light));
-				--pagefind-ui-tag: rgb(var(--gray-light));
-				--pagefind-ui-border-width: 1px;
-				--pagefind-ui-border-radius: 6px;
-				--pagefind-ui-font: var(--font-mono);
-			}
-			.list {
-				margin-top: 2em;
-			}
-		</style>
-	</head>
-	<body>
-		<Header />
-		<main>
-			<p class="kicker">ls articles/</p>
-			<h1>Artículos</h1>
-			<p>{posts.length} deep dives publicados. Busca o filtra por tema:</p>
-			<div id="search"></div>
-			<script is:inline>
-				window.addEventListener('DOMContentLoaded', () => {
-					if (typeof PagefindUI !== 'undefined') {
-						new PagefindUI({
-							element: '#search',
-							showImages: false,
-							showSubResults: true,
-							translations: {
-								placeholder: 'grep -r "tema" articles/',
-								zero_results: 'Sin resultados para [SEARCH_TERM]',
-							},
-						});
-					}
+	</Fragment>
+	<p class="kicker">ls articles/</p>
+	<h1>Artículos</h1>
+	<p>{posts.length} deep dives publicados. Busca o filtra por tema:</p>
+	<div id="search"></div>
+	<script is:inline>
+		window.addEventListener('DOMContentLoaded', () => {
+			if (typeof PagefindUI !== 'undefined') {
+				new PagefindUI({
+					element: '#search',
+					showImages: false,
+					showSubResults: true,
+					translations: {
+						placeholder: 'grep -r "tema" articles/',
+						zero_results: 'Sin resultados para [SEARCH_TERM]',
+					},
 				});
-			</script>
-			<ul class="tagcloud">
-				{
-					tags.map(([tag, count]) => (
-						<li>
-							<a href={`${BASE}/tags/${tag}/`}>
-								#{tag} <span class="count">({count})</span>
-							</a>
-						</li>
-					))
-				}
-			</ul>
-			<div class="list">
-				<ArticleList posts={posts} />
-			</div>
-		</main>
-		<Footer />
-	</body>
-</html>
+			}
+		});
+	</script>
+	<ul class="tagcloud">
+		{
+			tags.map(([tag, count]) => (
+				<li>
+					<a href={`${BASE}/tags/${tag}/`}>
+						#{tag} <span class="count">({count})</span>
+					</a>
+				</li>
+			))
+		}
+	</ul>
+	<div class="list">
+		<ArticleList posts={posts} />
+	</div>
+</Page>
+
+<style>
+	.tagcloud {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5em;
+		margin: 1.5em 0 0 0;
+		padding: 0;
+		list-style: none;
+	}
+	.tagcloud a {
+		display: inline-block;
+		font-family: var(--font-mono);
+		font-size: 0.8em;
+		padding: 0.2em 0.7em;
+		border: 1px solid rgb(var(--gray-light));
+		border-radius: 999px;
+		color: rgb(var(--gray-dark));
+	}
+	.tagcloud a:hover {
+		border-color: var(--accent);
+		color: var(--accent);
+		text-decoration: none;
+	}
+	.tagcloud .count {
+		color: rgb(var(--gray));
+	}
+	#search {
+		margin-top: 1.5em;
+		--pagefind-ui-scale: 0.85;
+		--pagefind-ui-primary: var(--accent);
+		--pagefind-ui-text: rgb(var(--gray-dark));
+		--pagefind-ui-background: var(--bg-raise);
+		--pagefind-ui-border: rgb(var(--gray-light));
+		--pagefind-ui-tag: rgb(var(--gray-light));
+		--pagefind-ui-border-width: 1px;
+		--pagefind-ui-border-radius: 6px;
+		--pagefind-ui-font: var(--font-mono);
+	}
+	.list {
+		margin-top: 2em;
+	}
+</style>

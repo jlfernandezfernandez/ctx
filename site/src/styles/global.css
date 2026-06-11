@@ -27,8 +27,6 @@
 	--gray-dark: 190, 200, 211;
 	--bg: #0b0e13;
 	--bg-raise: #11151c;
-	--gray-gradient: rgba(17, 21, 28, 0), var(--bg);
-	--box-shadow: 0 0 0 1px rgb(var(--gray-light)), 0 12px 32px rgba(0, 0, 0, 0.45);
 	--font-sans: 'IBM Plex Sans', system-ui, sans-serif;
 	--font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }

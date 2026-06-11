@@ -90,11 +90,13 @@ const maxModelCount = Math.max(...models.map(([, count]) => count), 1);
 			return;
 		}
 
+		// Keep the count-up under ~1.2s no matter how many articles exist.
+		const delay = Math.min(90, 1200 / target);
 		let value = 0;
 		function step() {
 			value += 1;
 			counter.textContent = String(value);
-			if (value < target) window.setTimeout(step, 90);
+			if (value < target) window.setTimeout(step, delay);
 		}
 		if (target > 0) window.setTimeout(step, 250);
 	}

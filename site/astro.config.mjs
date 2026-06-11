@@ -1,6 +1,5 @@
 // @ts-check
 
-import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
 import { defineConfig } from 'astro/config';
 
@@ -12,7 +11,7 @@ export default defineConfig({
 		// Astro does not prepend `base` to redirect destinations.
 		'/como-funciona': '/ctx/how-it-works',
 	},
-	integrations: [mdx(), sitemap()],
+	integrations: [sitemap()],
 	markdown: {
 		shikiConfig: {
 			theme: 'github-dark-default',

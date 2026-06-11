@@ -1,191 +1,180 @@
 ---
-import BaseHead from '../components/BaseHead.astro';
-import Footer from '../components/Footer.astro';
-import Header from '../components/Header.astro';
+import Page from '../layouts/Page.astro';
 import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 ---
 
-<!doctype html>
-<html lang="es">
-	<head>
-		<BaseHead
-			title={`Cómo funciona — ${SITE_TITLE}`}
-			description="Un artículo técnico en profundidad cada día laborable, con temas propuestos y votados por el equipo."
-		/>
-		<style>
-			.step {
-				display: flex;
-				gap: 1.25em;
-				padding: 1.25em 0;
-				border-bottom: 1px solid rgb(var(--gray-light));
-			}
-			.step:last-of-type {
-				border-bottom: none;
-			}
-			.num {
-				flex-shrink: 0;
-				font-family: var(--font-mono);
-				font-weight: 700;
-				color: var(--accent);
-			}
-			.step h2 {
-				margin: 0 0 0.3em 0;
-				font-size: 1.05em;
-			}
-			.step p {
-				margin: 0;
-				color: rgb(var(--gray-dark));
-			}
-			.structure {
-				margin-top: 2.5em;
-				padding: 1.25em 1.5em;
-				border: 1px solid rgb(var(--gray-light));
-				border-radius: 6px;
-				background: var(--bg-raise);
-			}
-			.structure h2 {
-				margin: 0 0 0.8em 0;
-				font-size: 0.85em;
-				text-transform: uppercase;
-				letter-spacing: 0.08em;
-				color: rgb(var(--gray));
-			}
-			.structure ol {
-				margin: 0;
-				padding-left: 1.4em;
-			}
-			.structure li {
-				margin: 0.35em 0;
-			}
-			code {
-				font-size: 0.85em;
-			}
-			.pipeline {
-				margin-top: 2.5em;
-				padding: 1.25em 1.5em;
-				border: 1px solid rgb(var(--gray-light));
-				border-radius: 6px;
-				background: var(--bg-raise);
-			}
-			.pipeline h2 {
-				margin: 0 0 1em;
-				font-size: 0.85em;
-				text-transform: uppercase;
-				letter-spacing: 0.08em;
-				color: rgb(var(--gray));
-			}
-			.pipeline ol {
-				display: flex;
-				flex-wrap: wrap;
-				gap: 0.6em;
-				margin: 0;
-				padding: 0;
-				list-style: none;
-				font-family: var(--font-mono);
-				font-size: 0.76em;
-			}
-			.pipeline li {
-				display: flex;
-				align-items: center;
-				gap: 0.6em;
-				color: rgb(var(--gray-dark));
-			}
-			.pipeline li:not(:last-child)::after {
-				content: '→';
-				color: var(--accent);
-			}
-			.pipeline p {
-				margin: 1em 0 0;
-				font-size: 0.9em;
-				color: rgb(var(--gray));
-			}
-			.participate {
-				display: flex;
-				flex-wrap: wrap;
-				gap: 0.5em 1.5em;
-				margin-top: 2em;
-				font-family: var(--font-mono);
-				font-weight: 500;
-			}
-		</style>
-	</head>
-	<body>
-		<Header />
-		<main>
-			<p class="kicker">man ctx</p>
-			<h1>Cómo funciona</h1>
+<Page
+	title={`Cómo funciona — ${SITE_TITLE}`}
+	description="Un artículo técnico en profundidad cada día laborable, con temas propuestos y votados por el equipo."
+>
+	<p class="kicker">man ctx</p>
+	<h1>Cómo funciona</h1>
+	<p>
+		Hacemos vibe coding, pero queremos entender qué pasa por debajo. Cada día laborable se
+		publica aquí un deep dive técnico (~15 minutos de lectura): desde cero hasta los detalles
+		que una newsletter generalista no cuenta, con ejemplos de código ejecutables.
+	</p>
+
+	<div class="step">
+		<span class="num">01</span>
+		<div>
+			<h2>Propón un tema</h2>
 			<p>
-				Hacemos vibe coding, pero queremos entender qué pasa por debajo. Cada día laborable se
-				publica aquí un deep dive técnico (~15 minutos de lectura): desde cero hasta los detalles
-				que una newsletter generalista no cuenta, con ejemplos de código ejecutables.
+				Abre una <a href={`${REPO_URL}/issues/new/choose`}>issue con la plantilla "Proponer tema"</a>.
+				El título es el tema; las notas de enfoque ("no entendemos X, compáralo con Y") se
+				inyectan al prompt del generador.
 			</p>
+		</div>
+	</div>
+	<div class="step">
+		<span class="num">02</span>
+		<div>
+			<h2>Vota con 👍</h2>
+			<p>
+				La reacción 👍 en una issue es un voto. Cada noche se publica el tema más votado (los
+				empates van al más antiguo). El label <code>priority</code> salta la cola directamente.
+			</p>
+		</div>
+	</div>
+	<div class="step">
+		<span class="num">03</span>
+		<div>
+			<h2>Lee el artículo</h2>
+			<p>
+				A primera hora (L–V) el artículo está publicado y la issue se cierra con el link.
+				También hay <a href={`${BASE}/rss.xml`}>RSS</a> para
+				leerlo donde quieras.
+			</p>
+		</div>
+	</div>
 
-			<div class="step">
-				<span class="num">01</span>
-				<div>
-					<h2>Propón un tema</h2>
-					<p>
-						Abre una <a href={`${REPO_URL}/issues/new/choose`}>issue con la plantilla "Proponer tema"</a>.
-						El título es el tema; las notas de enfoque ("no entendemos X, compáralo con Y") se
-						inyectan al prompt del generador.
-					</p>
-				</div>
-			</div>
-			<div class="step">
-				<span class="num">02</span>
-				<div>
-					<h2>Vota con 👍</h2>
-					<p>
-						La reacción 👍 en una issue es un voto. Cada noche se publica el tema más votado (los
-						empates van al más antiguo). El label <code>priority</code> salta la cola directamente.
-					</p>
-				</div>
-			</div>
-			<div class="step">
-				<span class="num">03</span>
-				<div>
-					<h2>Lee el artículo</h2>
-					<p>
-						A primera hora (L–V) el artículo está publicado y la issue se cierra con el link.
-						También hay <a href={`${BASE}/rss.xml`}>RSS</a> para
-						leerlo donde quieras.
-					</p>
-				</div>
-			</div>
+	<div class="pipeline">
+		<h2>Pipeline real de publicación</h2>
+		<ol>
+			<li>issue + votos</li>
+			<li>esquema generado</li>
+			<li>artículo generado</li>
+			<li>segunda revisión del código</li>
+			<li>validaciones automáticas</li>
+			<li>Markdown publicado</li>
+		</ol>
+		<p>
+			No hay revisión humana antes de publicar ni se compilan los ejemplos: la segunda pasada
+			busca defectos objetivos en el código y las validaciones bloquean errores estructurales.
+		</p>
+	</div>
 
-			<div class="pipeline">
-				<h2>Pipeline real de publicación</h2>
-				<ol>
-					<li>issue + votos</li>
-					<li>esquema generado</li>
-					<li>artículo generado</li>
-					<li>segunda revisión del código</li>
-					<li>validaciones automáticas</li>
-					<li>Markdown publicado</li>
-				</ol>
-				<p>
-					No hay revisión humana antes de publicar ni se compilan los ejemplos: la segunda pasada
-					busca defectos objetivos en el código y las validaciones bloquean errores estructurales.
-				</p>
-			</div>
+	<div class="structure">
+		<h2>La estructura de cada artículo</h2>
+		<ol>
+			<li><strong>TL;DR</strong> — el resumen en 3 frases.</li>
+			<li><strong>Contexto</strong> — qué problema existe, desde cero.</li>
+			<li><strong>Concepto central</strong> — la idea clave con precisión.</li>
+			<li><strong>En profundidad</strong> — internals, trade-offs, comparativas.</li>
+			<li><strong>Código</strong> — ejemplos completos y ejecutables.</li>
+			<li><strong>Trampas comunes</strong> — errores reales y cómo evitarlos.</li>
+			<li><strong>Para saber más</strong> — referencias para seguir profundizando.</li>
+		</ol>
+	</div>
+	<div class="participate">
+		<a href={TOPICS_URL} target="_blank">ver y votar próximos temas →</a>
+		<a href={`${REPO_URL}/issues/new/choose`} target="_blank">proponer tema →</a>
+	</div>
+</Page>
 
-			<div class="structure">
-				<h2>La estructura de cada artículo</h2>
-				<ol>
-					<li><strong>TL;DR</strong> — el resumen en 3 frases.</li>
-					<li><strong>Contexto</strong> — qué problema existe, desde cero.</li>
-					<li><strong>Concepto central</strong> — la idea clave con precisión.</li>
-					<li><strong>En profundidad</strong> — internals, trade-offs, comparativas.</li>
-					<li><strong>Código</strong> — ejemplos completos y ejecutables.</li>
-					<li><strong>Trampas comunes</strong> — errores reales y cómo evitarlos.</li>
-					<li><strong>Para saber más</strong> — referencias para seguir profundizando.</li>
-				</ol>
-			</div>
-			<div class="participate">
-				<a href={TOPICS_URL} target="_blank">ver y votar próximos temas →</a>
-				<a href={`${REPO_URL}/issues/new/choose`} target="_blank">proponer tema →</a>
-			</div>
-		</main>
-		<Footer />
-	</body>
-</html>
+<style>
+	.step {
+		display: flex;
+		gap: 1.25em;
+		padding: 1.25em 0;
+		border-bottom: 1px solid rgb(var(--gray-light));
+	}
+	.step:last-of-type {
+		border-bottom: none;
+	}
+	.num {
+		flex-shrink: 0;
+		font-family: var(--font-mono);
+		font-weight: 700;
+		color: var(--accent);
+	}
+	.step h2 {
+		margin: 0 0 0.3em 0;
+		font-size: 1.05em;
+	}
+	.step p {
+		margin: 0;
+		color: rgb(var(--gray-dark));
+	}
+	.structure {
+		margin-top: 2.5em;
+		padding: 1.25em 1.5em;
+		border: 1px solid rgb(var(--gray-light));
+		border-radius: 6px;
+		background: var(--bg-raise);
+	}
+	.structure h2 {
+		margin: 0 0 0.8em 0;
+		font-size: 0.85em;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: rgb(var(--gray));
+	}
+	.structure ol {
+		margin: 0;
+		padding-left: 1.4em;
+	}
+	.structure li {
+		margin: 0.35em 0;
+	}
+	code {
+		font-size: 0.85em;
+	}
+	.pipeline {
+		margin-top: 2.5em;
+		padding: 1.25em 1.5em;
+		border: 1px solid rgb(var(--gray-light));
+		border-radius: 6px;
+		background: var(--bg-raise);
+	}
+	.pipeline h2 {
+		margin: 0 0 1em;
+		font-size: 0.85em;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: rgb(var(--gray));
+	}
+	.pipeline ol {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.6em;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		font-family: var(--font-mono);
+		font-size: 0.76em;
+	}
+	.pipeline li {
+		display: flex;
+		align-items: center;
+		gap: 0.6em;
+		color: rgb(var(--gray-dark));
+	}
+	.pipeline li:not(:last-child)::after {
+		content: '→';
+		color: var(--accent);
+	}
+	.pipeline p {
+		margin: 1em 0 0;
+		font-size: 0.9em;
+		color: rgb(var(--gray));
+	}
+	.participate {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5em 1.5em;
+		margin-top: 2em;
+		font-family: var(--font-mono);
+		font-weight: 500;
+	}
+</style>

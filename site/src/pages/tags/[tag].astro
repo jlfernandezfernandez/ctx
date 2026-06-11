@@ -1,9 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import ArticleList from '../../components/ArticleList.astro';
-import BaseHead from '../../components/BaseHead.astro';
-import Footer from '../../components/Footer.astro';
-import Header from '../../components/Header.astro';
+import Page from '../../layouts/Page.astro';
 import { BASE, SITE_TITLE } from '../../consts';
 
 export async function getStaticPaths() {
@@ -23,33 +21,24 @@ const { tag } = Astro.params;
 const { posts } = Astro.props;
 ---
 
-<!doctype html>
-<html lang="es">
-	<head>
-		<BaseHead title={`#${tag} — ${SITE_TITLE}`} description={`Deep dives sobre ${tag}.`} />
-		<style>
-			.list {
-				margin-top: 2em;
-			}
-			.all {
-				display: inline-block;
-				margin-top: 1.5em;
-				font-family: var(--font-mono);
-				font-weight: 500;
-			}
-		</style>
-	</head>
-	<body>
-		<Header />
-		<main>
-			<p class="kicker">ls articles/ | grep {tag}</p>
-			<h1>#{tag}</h1>
-			<p>{posts.length} {posts.length === 1 ? 'artículo' : 'artículos'} sobre este tema.</p>
-			<div class="list">
-				<ArticleList posts={posts} />
-			</div>
-			<a class="all" href={`${BASE}/articles/`}>todos los artículos →</a>
-		</main>
-		<Footer />
-	</body>
-</html>
+<Page title={`#${tag} — ${SITE_TITLE}`} description={`Deep dives sobre ${tag}.`}>
+	<p class="kicker">ls articles/ | grep {tag}</p>
+	<h1>#{tag}</h1>
+	<p>{posts.length} {posts.length === 1 ? 'artículo' : 'artículos'} sobre este tema.</p>
+	<div class="list">
+		<ArticleList posts={posts} />
+	</div>
+	<a class="all" href={`${BASE}/articles/`}>todos los artículos →</a>
+</Page>
+
+<style>
+	.list {
+		margin-top: 2em;
+	}
+	.all {
+		display: inline-block;
+		margin-top: 1.5em;
+		font-family: var(--font-mono);
+		font-weight: 500;
+	}
+</style>
