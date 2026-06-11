@@ -9,99 +9,136 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 >
 	<p class="kicker">man ctx</p>
 	<h1>Cómo funciona</h1>
-	<p>
+	<p class="intro">
 		Hacemos vibe coding, pero queremos entender qué pasa por debajo. Cada día laborable se
 		publica aquí un deep dive técnico (~15 minutos de lectura): desde cero hasta los detalles
 		que una newsletter generalista no cuenta, con ejemplos de código ejecutables.
 	</p>
 
-	<div class="step">
-		<span class="num">01</span>
-		<div>
-			<h2>Propón un tema</h2>
-			<p>
-				Abre una <a href={`${REPO_URL}/issues/new/choose`}>issue con la plantilla "Proponer tema"</a>.
-				El título es el tema; las notas de enfoque ("no entendemos X, compáralo con Y") se
-				inyectan al prompt del generador.
-			</p>
+	<div class="steps">
+		<div class="step">
+			<span class="num">01</span>
+			<div>
+				<h2>Propón un tema</h2>
+				<p>
+					Abre una <a href={`${REPO_URL}/issues/new/choose`}>issue con la plantilla "Proponer tema"</a>.
+					El título es el tema; las notas de enfoque se usan para orientar el artículo.
+				</p>
+			</div>
 		</div>
-	</div>
-	<div class="step">
-		<span class="num">02</span>
-		<div>
-			<h2>Vota con 👍</h2>
-			<p>
-				La reacción 👍 en una issue es un voto. Cada noche se publica el tema más votado (los
-				empates van al más antiguo). El label <code>priority</code> salta la cola directamente.
-			</p>
+		<div class="step">
+			<span class="num">02</span>
+			<div>
+				<h2>Vota con 👍</h2>
+				<p>
+					La reacción 👍 en una issue es un voto. Cada noche se elige el tema más votado; el label
+					<code>priority</code> salta la cola directamente.
+				</p>
+			</div>
 		</div>
-	</div>
-	<div class="step">
-		<span class="num">03</span>
-		<div>
-			<h2>Lee el artículo</h2>
-			<p>
-				A primera hora (L–V) el artículo está publicado y la issue se cierra con el link.
-				También hay <a href={`${BASE}/rss.xml`}>RSS</a> para
-				leerlo donde quieras.
-			</p>
+		<div class="step">
+			<span class="num">03</span>
+			<div>
+				<h2>Lee el artículo</h2>
+				<p>
+					A primera hora (L–V) el artículo está publicado y la issue se cierra con el link. También
+					hay <a href={`${BASE}/rss.xml`}>RSS</a> para leerlo donde quieras.
+				</p>
+			</div>
 		</div>
 	</div>
 
-	<div class="pipeline">
-		<h2>Pipeline real de publicación</h2>
-		<ol>
-			<li>issue + votos</li>
-			<li>writer: esquema y artículo</li>
-			<li>abre una PR</li>
-			<li>reviewer: evalúa código, rigor y legibilidad</li>
-			<li>sin defectos bloqueantes → merge y deploy</li>
-			<li>con bloqueantes → writer corrige y vuelve a revisión (rondas limitadas)</li>
-		</ol>
-		<p>
-			Dos agentes LLM con modelos distintos, replicando el flujo de PR de un equipo humano: el
-			<strong>writer</strong> escribe y abre la PR, el <strong>reviewer</strong> la evalúa como un
-			senior pragmático — solo bloquea por defectos objetivos (código que no compila, datos falsos,
-			referencias inventadas); las sugerencias de estilo se quedan en comentario y no frenan el merge.
-			Si agota las rondas de corrección sin aprobar, la PR queda abierta con los defectos comentados:
-			ahí decide un humano (mergear publica, cerrar descarta).
+	<section class="pipeline" aria-labelledby="pipeline-title">
+		<div class="pipeline-heading">
+			<div>
+				<p class="section-label">pipeline editorial</p>
+				<h2 id="pipeline-title">La IA redacta. Otra IA revisa.</h2>
+			</div>
+			<span class="live"><i></i> automático</span>
+		</div>
+		<p class="pipeline-intro">
+			Los agentes hacen el trabajo pesado, pero no publicamos la primera respuesta de un modelo.
+			Separamos categorización, redacción y revisión, y dejamos todo el proceso visible en GitHub.
 		</p>
-	</div>
 
-	<div class="agents">
-		<h2>Los agentes, en una PR real</h2>
+		<div class="intake" aria-label="Entrada a la cola editorial">
+			<span><small>propuesta</small><strong>issue + votos</strong></span>
+			<i>→</i>
+			<span class="agent"><small>agente de triage</small><strong>categoriza</strong></span>
+			<i>→</i>
+			<span><small>orden editorial</small><strong>cola de temas</strong></span>
+		</div>
+
+		<div class="review-loop" aria-label="Bucle de redacción y revisión">
+			<div class="loop-main">
+				<div class="agent-box writer">
+					<span>writer</span>
+					<strong>esquema + artículo</strong>
+					<small>abre una PR</small>
+				</div>
+				<div class="forward">
+					<span>PR lista</span>
+					<i>→</i>
+				</div>
+				<div class="agent-box reviewer">
+					<span>reviewer</span>
+					<strong>código + rigor + legibilidad</strong>
+					<small>modelo distinto</small>
+				</div>
+			</div>
+			<div class="loop-back">
+				<span>↳</span>
+				<p>
+					<strong>Si hay defectos bloqueantes:</strong>
+					el writer corrige y vuelve a revisión.
+				</p>
+				<code>repetir ↺</code>
+			</div>
+		</div>
+
+		<div class="outcomes">
+			<span><strong>✓ aprobado</strong> → merge y publicación</span>
+			<span><strong>rondas agotadas</strong> → decide una persona</span>
+		</div>
+		<p class="pipeline-note">
+			El reviewer solo bloquea por defectos objetivos: código que no compila, datos falsos,
+			contradicciones o referencias inventadas. Las sugerencias de estilo no frenan la publicación.
+		</p>
+	</section>
+
+	<section class="agents" aria-labelledby="agents-title">
+		<h2 id="agents-title">Los agentes, en una PR real</h2>
 		<div class="thread" role="log" aria-label="Conversación entre writer y reviewer en una pull request">
-			<div class="msg writer">
+			<div class="msg writer-msg">
 				<span class="who">writer <i>deepseek-v4-pro</i></span>
 				<p>abre la PR <strong>article: Novedades de Java 21 a 25</strong> — ~3.000 palabras, código ejecutable, referencias.</p>
 			</div>
-			<div class="msg reviewer">
+			<div class="msg reviewer-msg">
 				<span class="who">reviewer <i>minimax-m3</i></span>
 				<p>
 					Cambios solicitados (ronda 1): <code>[rigor]</code> los patrones sin nombre con
-					<code>_</code> son JEP 443, preview en Java 21 — el artículo los atribuye a Java 22.
+					<code>_</code> son preview en Java 21 — el artículo los atribuye a Java 22.
 				</p>
 			</div>
-			<div class="msg writer">
+			<div class="msg writer-msg">
 				<span class="who">writer</span>
 				<p>corrige y pushea <code>fix: review feedback (round 1)</code>.</p>
 			</div>
-			<div class="msg reviewer approve">
+			<div class="msg reviewer-msg approve">
 				<span class="who">reviewer</span>
 				<p>
-					Aprobado con sugerencias no bloqueantes: <code>[legibilidad]</code> es "Helidon Nima",
-					sin tilde. <strong class="merged">✓ merged</strong>
+					Aprobado con sugerencias no bloqueantes. <strong class="merged">✓ merged</strong>
 				</p>
 			</div>
 		</div>
 		<p class="thread-note">
 			Conversación real de la <a href={`${REPO_URL}/pull/9`} target="_blank">PR #9</a>. Cada artículo
-			deja este rastro público: quién lo escribió, qué se le objetó y qué se corrigió.
+			deja rastro público de quién lo escribió, qué se objetó y qué se corrigió.
 		</p>
-	</div>
+	</section>
 
-	<div class="structure">
-		<h2>La estructura de cada artículo</h2>
+	<section class="structure" aria-labelledby="structure-title">
+		<h2 id="structure-title">La estructura de cada artículo</h2>
 		<ol>
 			<li><strong>TL;DR</strong> — el resumen en 3 frases.</li>
 			<li><strong>Contexto</strong> — qué problema existe, desde cero.</li>
@@ -111,7 +148,8 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 			<li><strong>Trampas comunes</strong> — errores reales y cómo evitarlos.</li>
 			<li><strong>Para saber más</strong> — referencias para seguir profundizando.</li>
 		</ol>
-	</div>
+	</section>
+
 	<div class="participate">
 		<a href={TOPICS_URL} target="_blank">ver y votar próximos temas →</a>
 		<a href={`${REPO_URL}/issues/new/choose`} target="_blank">proponer tema →</a>
@@ -119,14 +157,17 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 </Page>
 
 <style>
+	.intro {
+		max-width: 48em;
+	}
+	.steps {
+		margin-top: 1.5em;
+	}
 	.step {
 		display: flex;
 		gap: 1.25em;
 		padding: 1.25em 0;
 		border-bottom: 1px solid rgb(var(--gray-light));
-	}
-	.step:last-of-type {
-		border-bottom: none;
 	}
 	.num {
 		flex-shrink: 0;
@@ -135,13 +176,15 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 		color: var(--accent);
 	}
 	.step h2 {
-		margin: 0 0 0.3em 0;
+		margin: 0 0 0.3em;
 		font-size: 1.05em;
 	}
 	.step p {
 		margin: 0;
 		color: rgb(var(--gray-dark));
 	}
+	.pipeline,
+	.agents,
 	.structure {
 		margin-top: 2.5em;
 		padding: 1.25em 1.5em;
@@ -149,78 +192,198 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 		border-radius: 6px;
 		background: var(--bg-raise);
 	}
-	.structure h2 {
-		margin: 0 0 0.8em 0;
-		font-size: 0.85em;
-		text-transform: uppercase;
-		letter-spacing: 0.08em;
-		color: rgb(var(--gray));
-	}
-	.structure ol {
-		margin: 0;
-		padding-left: 1.4em;
-	}
-	.structure li {
-		margin: 0.35em 0;
-	}
-	code {
-		font-size: 0.85em;
-	}
 	.pipeline {
-		margin-top: 2.5em;
-		padding: 1.25em 1.5em;
-		border: 1px solid rgb(var(--gray-light));
-		border-radius: 6px;
-		background: var(--bg-raise);
+		position: relative;
+		background-image:
+			linear-gradient(rgba(255, 180, 84, 0.018) 1px, transparent 1px),
+			linear-gradient(90deg, rgba(255, 180, 84, 0.018) 1px, transparent 1px);
+		background-size: 22px 22px;
+		overflow: hidden;
+	}
+	.pipeline-heading {
+		display: flex;
+		align-items: start;
+		justify-content: space-between;
+		gap: 1em;
+	}
+	.section-label {
+		margin: 0 0 0.2em;
+		font-family: var(--font-mono);
+		font-size: 0.68em;
+		color: var(--accent);
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+	}
+	.section-label::before {
+		content: '$ ctx ';
+		color: rgb(var(--gray));
 	}
 	.pipeline h2 {
-		margin: 0 0 1em;
-		font-size: 0.85em;
-		text-transform: uppercase;
-		letter-spacing: 0.08em;
-		color: rgb(var(--gray));
-	}
-	.pipeline ol {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.6em;
 		margin: 0;
-		padding: 0;
-		list-style: none;
-		font-family: var(--font-mono);
-		font-size: 0.76em;
+		font-size: 1.15em;
 	}
-	.pipeline li {
+	.live {
 		display: flex;
 		align-items: center;
-		gap: 0.6em;
-		color: rgb(var(--gray-dark));
+		gap: 0.55em;
+		margin-top: 0.25em;
+		font-family: var(--font-mono);
+		font-size: 0.62em;
+		color: #55d187;
+		text-transform: uppercase;
 	}
-	.pipeline li:not(:last-child)::after {
-		content: '→';
-		color: var(--accent);
+	.live i {
+		width: 0.5em;
+		height: 0.5em;
+		border-radius: 50%;
+		background: #55d187;
+		box-shadow: 0 0 0.7em #55d187;
 	}
-	.pipeline p {
-		margin: 1em 0 0;
-		font-size: 0.9em;
+	.pipeline-intro,
+	.pipeline-note {
+		margin: 0.8em 0 0;
+		font-size: 0.88em;
 		color: rgb(var(--gray));
 	}
-	.participate {
+	.intake {
+		display: grid;
+		grid-template-columns: 1fr auto 1fr auto 1fr;
+		align-items: center;
+		gap: 0.55em;
+		margin-top: 1.25em;
+		padding-bottom: 1.25em;
+		border-bottom: 1px solid rgb(var(--gray-light));
+	}
+	.intake span {
+		min-width: 0;
+		padding: 0.65em 0.75em;
+		border: 1px solid rgb(var(--gray-light));
+		border-radius: 4px;
+		background: rgba(11, 14, 19, 0.72);
+	}
+	.intake span.agent {
+		border-color: rgba(255, 180, 84, 0.4);
+	}
+	.intake small,
+	.intake strong {
+		display: block;
+		overflow: hidden;
+		font-family: var(--font-mono);
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.intake small {
+		font-size: 0.55em;
+		color: rgb(var(--gray));
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+	.intake strong {
+		font-size: 0.7em;
+		font-weight: 500;
+		color: rgb(var(--black));
+	}
+	.intake > i {
+		color: var(--accent);
+		font-style: normal;
+	}
+	.review-loop {
+		margin-top: 1.25em;
+		padding: 1em;
+		border: 1px solid rgba(255, 180, 84, 0.3);
+		border-radius: 5px;
+		background: rgba(11, 14, 19, 0.65);
+	}
+	.loop-main {
+		display: grid;
+		grid-template-columns: 1fr auto 1fr;
+		align-items: center;
+		gap: 0.8em;
+	}
+	.agent-box {
+		padding: 0.8em;
+		border: 1px solid rgb(var(--gray-light));
+		border-radius: 4px;
+		background: var(--bg-raise);
+	}
+	.agent-box span,
+	.agent-box strong,
+	.agent-box small {
+		display: block;
+	}
+	.agent-box span {
+		font-family: var(--font-mono);
+		font-size: 0.62em;
+		color: var(--accent);
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+	}
+	.agent-box strong {
+		margin-top: 0.15em;
+		font-size: 0.82em;
+	}
+	.agent-box small {
+		margin-top: 0.15em;
+		font-family: var(--font-mono);
+		font-size: 0.6em;
+		color: rgb(var(--gray));
+	}
+	.forward {
+		text-align: center;
+	}
+	.forward span {
+		display: block;
+		font-family: var(--font-mono);
+		font-size: 0.55em;
+		color: rgb(var(--gray));
+		text-transform: uppercase;
+	}
+	.forward i {
+		color: var(--accent);
+		font-style: normal;
+	}
+	.loop-back {
+		display: flex;
+		align-items: center;
+		gap: 0.7em;
+		margin-top: 0.8em;
+		padding: 0.65em 0.8em;
+		border: 1px dashed rgba(255, 180, 84, 0.35);
+		border-radius: 4px;
+	}
+	.loop-back > span {
+		color: var(--accent);
+		font-family: var(--font-mono);
+	}
+	.loop-back p {
+		flex: 1;
+		margin: 0;
+		font-size: 0.7em;
+		line-height: 1.5;
+		color: rgb(var(--gray));
+	}
+	.loop-back code {
+		font-size: 0.58em;
+		color: var(--accent);
+		white-space: nowrap;
+	}
+	.outcomes {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.5em 1.5em;
-		margin-top: 2em;
+		margin-top: 1em;
 		font-family: var(--font-mono);
-		font-weight: 500;
+		font-size: 0.65em;
+		color: rgb(var(--gray));
 	}
-	.agents {
-		margin-top: 2.5em;
-		padding: 1.25em 1.5em;
-		border: 1px solid rgb(var(--gray-light));
-		border-radius: 6px;
-		background: var(--bg-raise);
+	.outcomes strong {
+		color: #55d187;
 	}
-	.agents h2 {
+	.outcomes span + span strong {
+		color: var(--accent);
+	}
+	.agents h2,
+	.structure h2 {
 		margin: 0 0 1em;
 		font-size: 0.85em;
 		text-transform: uppercase;
@@ -243,16 +406,15 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 		margin: 0.3em 0 0;
 		color: rgb(var(--gray-dark));
 	}
-	.msg.writer {
+	.writer-msg {
 		align-self: flex-start;
 		border-left: 2px solid var(--accent);
 	}
-	.msg.reviewer {
+	.reviewer-msg {
 		align-self: flex-end;
 		border-right: 2px solid rgb(var(--gray));
-		text-align: left;
 	}
-	.msg.approve {
+	.approve {
 		border-right-color: #3fb950;
 	}
 	.who {
@@ -266,7 +428,7 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 		font-weight: 400;
 		color: rgb(var(--gray));
 	}
-	.msg.writer .who {
+	.writer-msg .who {
 		color: var(--accent);
 	}
 	.merged {
@@ -276,5 +438,58 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 		margin: 1.1em 0 0;
 		font-size: 0.85em;
 		color: rgb(var(--gray));
+	}
+	.structure ol {
+		margin: 0;
+		padding-left: 1.4em;
+	}
+	.structure li {
+		margin: 0.35em 0;
+	}
+	.participate {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5em 1.5em;
+		margin-top: 2em;
+		font-family: var(--font-mono);
+		font-weight: 500;
+	}
+	code {
+		font-size: 0.85em;
+	}
+	@media (max-width: 620px) {
+		.pipeline,
+		.agents,
+		.structure {
+			padding: 1em;
+		}
+		.pipeline-heading {
+			display: block;
+		}
+		.live {
+			margin-top: 0.7em;
+		}
+		.intake,
+		.loop-main {
+			grid-template-columns: 1fr;
+		}
+		.intake > i {
+			justify-self: center;
+			line-height: 0.8;
+			transform: rotate(90deg);
+		}
+		.forward i {
+			display: block;
+			transform: rotate(90deg);
+		}
+		.loop-back {
+			align-items: start;
+		}
+		.loop-back code {
+			display: none;
+		}
+		.msg {
+			max-width: 100%;
+		}
 	}
 </style>
