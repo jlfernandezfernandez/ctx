@@ -65,12 +65,19 @@ class IssuesClient:
         self._require(resp, (200,), f"get issue #{number}")
         return resp.json()
 
-    def update_title(self, number: int, title: str) -> None:
+    def update_issue(self, number: int, *, title: str = None, body: str = None) -> None:
+        data = {}
+        if title is not None:
+            data["title"] = title
+        if body is not None:
+            data["body"] = body
+        if not data:
+            return
         resp = self.session.patch(
             f"{self.base}/issues/{number}",
-            json={"title": title},
+            json=data,
         )
-        self._require(resp, (200,), f"update title on issue #{number}")
+        self._require(resp, (200,), f"update issue #{number}")
 
     def set_labels(self, number: int, labels: list[str]) -> None:
         resp = self.session.put(

@@ -31,8 +31,18 @@ def test_parse_classification_accepts_valid_response():
     assert parse_classification({
         "action": "approve",
         "title": " Pydantic AI ",
+        "description": "Cómo crear agentes tipados con Pydantic.",
         "reason": " Tema técnico válido ",
-    }) == Classification("APPROVE", "Pydantic AI", "Tema técnico válido")
+    }) == Classification("APPROVE", "Pydantic AI", "Cómo crear agentes tipados con Pydantic.", "Tema técnico válido")
+
+
+def test_parse_classification_accepts_missing_description():
+    result = parse_classification({
+        "action": "REJECT",
+        "title": "Spam",
+        "reason": "No técnico",
+    })
+    assert result.description == ""
 
 
 @pytest.mark.parametrize(
@@ -51,20 +61,45 @@ def test_parse_classification_rejects_invalid_response(data):
 
 @patch("article_generator.triage.LLMClient")
 @patch("article_generator.triage.IssuesClient")
-def test_run_approves_and_normalizes_title(issues_cls, llm_cls, tmp_path):
+def test_run_approves_and_updates_title_and_description(issues_cls, llm_cls, tmp_path):
     issues = issues_cls.return_value
     llm_cls.return_value.generate_json.return_value = {
         "action": "APPROVE",
         "title": "Pydantic AI",
+        "description": "Cómo crear agentes tipados con Pydantic AI.",
         "reason": "Tema técnico válido",
     }
 
     assert run(env(tmp_path)) == 0
 
-    issues.update_title.assert_called_once_with(17, "Pydantic AI")
+    issues.update_issue.assert_called_once_with(17, title="Pydantic AI", body="Cómo crear agentes tipados con Pydantic AI.")
     issues.set_labels.assert_called_once_with(17, ["topic"])
     issues.close.assert_not_called()
     assert llm_cls.call_args.kwargs["model"] == "curator-model"
+
+
+@patch("article_generator.triage.LLMClient")
+@patch("article_generator.triage.IssuesClient")
+def test_run_approves_without_changes_when_identical(issues_cls, llm_cls, tmp_path):
+    issue = {
+        "number": 17,
+        "title": "Pydantic AI",
+        "body": "Cómo crear agentes tipados.",
+        "user": {"login": "jordi"},
+        "labels": [{"name": "triage"}],
+    }
+    issues = issues_cls.return_value
+    llm_cls.return_value.generate_json.return_value = {
+        "action": "APPROVE",
+        "title": "Pydantic AI",
+        "description": "Cómo crear agentes tipados.",
+        "reason": "Tema técnico",
+    }
+
+    assert run(env(tmp_path, issue=issue)) == 0
+
+    issues.update_issue.assert_not_called()
+    issues.set_labels.assert_called_once_with(17, ["topic"])
 
 
 @patch("article_generator.triage.LLMClient")
@@ -131,10 +166,12 @@ def test_manual_run_fetches_requested_issue(issues_cls, llm_cls, tmp_path):
     llm_cls.return_value.generate_json.return_value = {
         "action": "APPROVE",
         "title": issue["title"],
+        "description": "",
         "reason": "Tema técnico",
     }
 
     run({**env(tmp_path), "TRIAGE_ISSUE_NUMBER": "3"})
 
     issues.get_issue.assert_called_once_with(3)
+    issues.update_issue.assert_not_called()
     issues.set_labels.assert_called_once_with(3, ["topic", "priority"])

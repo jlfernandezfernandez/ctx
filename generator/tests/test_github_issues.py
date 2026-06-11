@@ -119,13 +119,37 @@ def test_get_issue_returns_issue():
     )
 
 
-def test_update_title_updates_issue():
+def test_update_issue_updates_title():
     c = client_with([])
-    c.update_title(7, "Pydantic AI")
+    c.update_issue(7, title="Pydantic AI")
     c.session.patch.assert_called_once_with(
         "https://api.github.com/repos/owner/repo/issues/7",
         json={"title": "Pydantic AI"},
     )
+
+
+def test_update_issue_updates_body():
+    c = client_with([])
+    c.update_issue(7, body="Mejor descripción")
+    c.session.patch.assert_called_once_with(
+        "https://api.github.com/repos/owner/repo/issues/7",
+        json={"body": "Mejor descripción"},
+    )
+
+
+def test_update_issue_updates_both():
+    c = client_with([])
+    c.update_issue(7, title="Pydantic AI", body="Mejor descripción")
+    c.session.patch.assert_called_once_with(
+        "https://api.github.com/repos/owner/repo/issues/7",
+        json={"title": "Pydantic AI", "body": "Mejor descripción"},
+    )
+
+
+def test_update_issue_no_op_when_no_changes():
+    c = client_with([])
+    c.update_issue(7)
+    c.session.patch.assert_not_called()
 
 
 def test_set_labels_replaces_all_issue_labels():

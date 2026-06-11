@@ -22,13 +22,16 @@ Decide una acción:
 - REJECT: únicamente spam, promoción o contenido claramente no técnico.
 - REVIEW: cualquier caso dudoso o ambiguo.
 
-Normaliza el título solamente para corregir capitalización, puntuación y errores obvios.
+Si el tema es técnico y válido (APPROVE), normaliza título y descripción para que el writer
+reciba el mejor input posible: corrije errores, mejora la redacción, aclara el enfoque y añade
+contexto técnico útil. Si la descripción original ya es buena, devuélvela sin cambios.
 Preserva siempre la intención, el significado y los términos técnicos de la propuesta.
 Ante cualquier duda, elige REVIEW.
 
 Responde únicamente con un objeto JSON con estas claves:
 - action: APPROVE, REJECT o REVIEW
 - title: título normalizado
+- description: descripción normalizada (máximo 1000 caracteres)
 - reason: motivo breve, máximo 160 caracteres"""
 
 
@@ -40,12 +43,14 @@ class TriageError(Exception):
 class Classification:
     action: str
     title: str
+    description: str
     reason: str
 
 
 def parse_classification(data: dict) -> Classification:
     action = data.get("action")
     title = data.get("title")
+    description = data.get("description")
     reason = data.get("reason")
     if not isinstance(action, str) or action.upper() not in {"APPROVE", "REJECT", "REVIEW"}:
         raise TriageError("curator action must be APPROVE, REJECT or REVIEW")
@@ -53,7 +58,9 @@ def parse_classification(data: dict) -> Classification:
         raise TriageError("curator title is empty")
     if not isinstance(reason, str) or not reason.strip():
         raise TriageError("curator reason is empty")
-    return Classification(action.upper(), title.strip()[:300], reason.strip()[:160])
+    if description is None or not isinstance(description, str):
+        description = ""
+    return Classification(action.upper(), title.strip()[:300], description.strip()[:1000], reason.strip()[:160])
 
 
 def classification_prompt(title: str, body: str) -> str:
@@ -106,8 +113,13 @@ def apply_classification(
 ) -> None:
     number = issue["number"]
     if classification.action == "APPROVE":
+        updates = {}
         if classification.title != issue["title"]:
-            issues.update_title(number, classification.title)
+            updates["title"] = classification.title
+        if classification.description and classification.description != (issue.get("body") or ""):
+            updates["body"] = classification.description
+        if updates:
+            issues.update_issue(number, **updates)
         issues.set_labels(number, state_labels(issue, TOPIC_LABEL))
     elif classification.action == "REJECT":
         issues.set_labels(number, [REJECTED_LABEL])
