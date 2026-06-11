@@ -102,7 +102,13 @@ class PRClient:
         return base64.b64decode(resp.json()["content"]).decode("utf-8")
 
     def merge_pr(self, number: int, branch: str = "") -> None:
-        resp = self.session.put(f"{self.base}/pulls/{number}/merge", json={})
+        resp = self.session.put(f"{self.base}/pulls/{number}/merge", json={"merge_method": "squash"})
+        if resp.status_code == 409:
+            self.session.put(
+                f"{self.base}/pulls/{number}/update-branch",
+                json={},
+            )
+            resp = self.session.put(f"{self.base}/pulls/{number}/merge", json={"merge_method": "squash"})
         self._require(resp, (200,), f"merge PR #{number}")
         if branch:
             # Best effort: a leftover branch only blocks a future rerun of the

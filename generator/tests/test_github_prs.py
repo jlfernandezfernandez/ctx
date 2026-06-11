@@ -143,9 +143,24 @@ def test_merge_pr_sends_put():
     c.merge_pr(9)
     c.session.put.assert_called_once_with(
         "https://api.github.com/repos/owner/repo/pulls/9/merge",
-        json={},
+        json={"merge_method": "squash"},
     )
     c.session.delete.assert_not_called()
+
+
+def test_merge_pr_updates_branch_on_conflict():
+    c = PRClient(repo="owner/repo", token="tok")
+    c.session = MagicMock()
+    conflict = MagicMock(status_code=409)
+    ok = MagicMock(status_code=200)
+    update_ok = MagicMock(status_code=202)
+    c.session.put.side_effect = [conflict, update_ok, ok]
+    c.merge_pr(9)
+    assert c.session.put.call_count == 3
+    c.session.put.assert_any_call(
+        "https://api.github.com/repos/owner/repo/pulls/9/update-branch",
+        json={},
+    )
 
 
 def test_merge_pr_deletes_branch_after_merge():
