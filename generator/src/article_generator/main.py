@@ -10,6 +10,7 @@ from datetime import date
 from pathlib import Path
 
 from .article import (
+    ValidationError,
     make_description,
     render_article,
     slugify,
@@ -146,10 +147,14 @@ def run(env: dict) -> int:
         state = graph.invoke(initial_state(topic, notes))
 
         if state["approved"]:
-            publish(issues, writer, issue, state["draft"], output_dir, site_url, today, model_stamp)
-            return 0
+            try:
+                publish(issues, writer, issue, state["draft"], output_dir, site_url, today, model_stamp)
+                return 0
+            except ValidationError as exc:
+                print(f"Reference URL validation failed ({exc}); opening draft PR.")
+                state["feedback"] = state["feedback"] + [f"[referencias] {exc}"]
 
-        print(f"Reviewer did not approve issue #{issue['number']}; opening draft PR.")
+        print(f"Opening draft PR for issue #{issue['number']}.")
         open_draft_pr(drafts, issues, writer, issue, state["draft"], state["feedback"], today, model_stamp)
 
     print("No topic was approved this run.")
