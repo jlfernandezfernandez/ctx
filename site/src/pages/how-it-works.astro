@@ -56,15 +56,47 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 			<li>abre una PR</li>
 			<li>reviewer: evalúa código, rigor y legibilidad</li>
 			<li>sin defectos bloqueantes → merge y deploy</li>
-			<li>con bloqueantes → writer corrige y vuelve a revisión (máx 2 rondas)</li>
+			<li>con bloqueantes → writer corrige y vuelve a revisión (rondas limitadas)</li>
 		</ol>
 		<p>
 			Dos agentes LLM con modelos distintos, replicando el flujo de PR de un equipo humano: el
 			<strong>writer</strong> escribe y abre la PR, el <strong>reviewer</strong> la evalúa como un
 			senior pragmático — solo bloquea por defectos objetivos (código que no compila, datos falsos,
 			referencias inventadas); las sugerencias de estilo se quedan en comentario y no frenan el merge.
-			Si tras dos correcciones sigue sin aprobar, la PR queda abierta con los defectos comentados:
+			Si agota las rondas de corrección sin aprobar, la PR queda abierta con los defectos comentados:
 			ahí decide un humano (mergear publica, cerrar descarta).
+		</p>
+	</div>
+
+	<div class="agents">
+		<h2>Los agentes, en una PR real</h2>
+		<div class="thread" role="log" aria-label="Conversación entre writer y reviewer en una pull request">
+			<div class="msg writer">
+				<span class="who">writer <i>deepseek-v4-pro</i></span>
+				<p>abre la PR <strong>article: Novedades de Java 21 a 25</strong> — ~3.000 palabras, código ejecutable, referencias.</p>
+			</div>
+			<div class="msg reviewer">
+				<span class="who">reviewer <i>minimax-m3</i></span>
+				<p>
+					Cambios solicitados (ronda 1): <code>[rigor]</code> los patrones sin nombre con
+					<code>_</code> son JEP 443, preview en Java 21 — el artículo los atribuye a Java 22.
+				</p>
+			</div>
+			<div class="msg writer">
+				<span class="who">writer</span>
+				<p>corrige y pushea <code>fix: review feedback (round 1)</code>.</p>
+			</div>
+			<div class="msg reviewer approve">
+				<span class="who">reviewer</span>
+				<p>
+					Aprobado con sugerencias no bloqueantes: <code>[legibilidad]</code> es "Helidon Nima",
+					sin tilde. <strong class="merged">✓ merged</strong>
+				</p>
+			</div>
+		</div>
+		<p class="thread-note">
+			Conversación real de la <a href={`${REPO_URL}/pull/9`} target="_blank">PR #9</a>. Cada artículo
+			deja este rastro público: quién lo escribió, qué se le objetó y qué se corrigió.
 		</p>
 	</div>
 
@@ -180,5 +212,69 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 		margin-top: 2em;
 		font-family: var(--font-mono);
 		font-weight: 500;
+	}
+	.agents {
+		margin-top: 2.5em;
+		padding: 1.25em 1.5em;
+		border: 1px solid rgb(var(--gray-light));
+		border-radius: 6px;
+		background: var(--bg-raise);
+	}
+	.agents h2 {
+		margin: 0 0 1em;
+		font-size: 0.85em;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: rgb(var(--gray));
+	}
+	.thread {
+		display: flex;
+		flex-direction: column;
+		gap: 0.9em;
+	}
+	.msg {
+		max-width: 88%;
+		padding: 0.7em 0.9em;
+		border: 1px solid rgb(var(--gray-light));
+		border-radius: 6px;
+		font-size: 0.88em;
+	}
+	.msg p {
+		margin: 0.3em 0 0;
+		color: rgb(var(--gray-dark));
+	}
+	.msg.writer {
+		align-self: flex-start;
+		border-left: 2px solid var(--accent);
+	}
+	.msg.reviewer {
+		align-self: flex-end;
+		border-right: 2px solid rgb(var(--gray));
+		text-align: left;
+	}
+	.msg.approve {
+		border-right-color: #3fb950;
+	}
+	.who {
+		font-family: var(--font-mono);
+		font-size: 0.8em;
+		font-weight: 700;
+		letter-spacing: 0.05em;
+	}
+	.who i {
+		font-style: normal;
+		font-weight: 400;
+		color: rgb(var(--gray));
+	}
+	.msg.writer .who {
+		color: var(--accent);
+	}
+	.merged {
+		color: #3fb950;
+	}
+	.thread-note {
+		margin: 1.1em 0 0;
+		font-size: 0.85em;
+		color: rgb(var(--gray));
 	}
 </style>

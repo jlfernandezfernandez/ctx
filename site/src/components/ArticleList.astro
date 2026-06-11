@@ -15,7 +15,7 @@ const { posts } = Astro.props;
 		posts.map((post) => (
 			<li>
 				<span class="date">
-					<FormattedDate date={post.data.pubDate} />
+					<FormattedDate date={post.data.date} />
 				</span>
 				<a href={`${BASE}/blog/${post.id}/`}>{post.data.title}</a>
 			</li>

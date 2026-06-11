@@ -15,7 +15,7 @@ Cada día laborable, un artículo en profundidad (~15 min, 2.500-3.500 palabras,
 3. El **writer** genera el artículo y abre una PR, igual que lo haría un compañero.
 4. El **reviewer** evalúa código, rigor y legibilidad sobre esa PR, como un compañero senior: cada defecto es **bloqueante** (código que no compila, dato falso, referencia inventada) o **sugerencia** (estilo, matices — no impiden publicar).
    - Sin bloqueantes → merge automático (las sugerencias quedan como comentario), la issue se cierra con el link y la web se despliega.
-   - Con bloqueantes → comenta "cambios solicitados" en la PR y se los devuelve al **writer**, que corrige y vuelve a revisión. Máximo `MAX_REVIEW_ROUNDS` correcciones (2 por defecto) para que el reviewer no saque pegas indefinidamente.
+   - Con bloqueantes → comenta "cambios solicitados" en la PR y se los devuelve al **writer**, que corrige y vuelve a revisión. Máximo `MAX_REVIEW_ROUNDS` correcciones para que el reviewer no saque pegas indefinidamente.
    - Si tras agotar las rondas siguen los bloqueantes, **la PR queda abierta** con la mejor versión y los defectos comentados: una PR de artículo abierta significa "decide un humano" (mergear publica, cerrar descarta). La cola no se bloquea: al día siguiente toca el siguiente tema.
 
 Todo el flujo vive en un único workflow ([`publish.yml`](.github/workflows/publish.yml)): writer y reviewer son pasos del mismo run y la conversación entre ambos ocurre en proceso; los comentarios y commits de la PR son el rastro visible, no el mecanismo (ni labels ni coreografía entre workflows).
@@ -45,6 +45,7 @@ El writer y el reviewer usan modelos distintos para evitar que un modelo apruebe
 | Variable | `LLM_WRITER_MODEL` | `deepseek-v4-pro` |
 | Variable | `LLM_REVIEWER_MODEL` | `minimax-m3` |
 | Variable | `LLM_TRIAGE_MODEL` | `deepseek-v4-flash` |
+| Variable | `MAX_REVIEW_ROUNDS` | `2` |
 
 Cambiar de proveedor o modelo = cambiar esas variables, cero código.
 

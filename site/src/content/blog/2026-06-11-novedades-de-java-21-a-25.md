@@ -1,3 +1,15 @@
+---
+title: "Novedades de Java 21 a 25"
+description: "Los hilos virtuales permiten volver al modelo thread‑per‑request con bloqueos escalables, pero se anclan (pin) en bloques synchronized y no mejoran tareas CPU‑bound. El pattern matching en switch proporciona desestructuración exhaustiva de records y tipos sellados, eliminando casts y ramas olvidadas. La concurrencia estructurada y scoped values simplifican la cancelación segura y el contexto heredable en entornos con millones de hilos ligeros."
+date: 2026-06-11
+tags: ["java", "virtual-threads", "pattern-matching", "structured-concurrency", "scoped-values"]
+summary: "Los hilos virtuales permiten volver al modelo thread‑per‑request con bloqueos escalables, pero se anclan (pin) en bloques synchronized y no mejoran tareas CPU‑bound. El pattern matching en switch proporciona desestructuración exhaustiva de records y tipos sellados, eliminando casts y ramas olvidadas. La concurrencia estructurada y scoped values simplifican la cancelación segura y el contexto heredable en entornos con millones de hilos ligeros."
+issue: 2
+requestedBy: "jlfernandezfernandez"
+writer: "deepseek-v4-pro"
+reviewer: "minimax-m3"
+---
+
 ## Contexto: Los límites del modelo tradicional y la necesidad de evolución
 
 Durante años, el modelo de concurrencia en Java se basó en hilos del sistema operativo (platform threads). Cada petición entrante en un servidor se vinculaba a un hilo dedicado, lo que ofrecía un estilo de programación secuencial fácil de razonar. Sin embargo, estos hilos son recursos costosos: consumen alrededor de 1 MB de stack por defecto y requieren gestión del kernel. En aplicaciones cloud‑native que deben manejar decenas o cientos de miles de conexiones simultáneas, el modelo thread‑per‑request golpea los límites de escalabilidad. Dedicar un hilo a cada petición bloqueante (por ejemplo, esperando una respuesta de base de datos) agota la memoria y satura el planificador del sistema operativo, forzando a los equipos a migrar hacia frameworks reactivos y programación asíncrona con `CompletableFuture` o callbacks.

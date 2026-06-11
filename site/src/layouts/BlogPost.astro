@@ -10,12 +10,13 @@ type Props = CollectionEntry<'blog'>['data'] & { headings?: MarkdownHeading[] };
 const {
 	title,
 	description,
-	pubDate,
+	date,
 	tags = [],
 	summary,
 	issue,
 	requestedBy,
-	model,
+	writer,
+	reviewer,
 	headings = [],
 } = Astro.props;
 ---
@@ -28,8 +29,8 @@ const {
 				<div class="meta">
 					<span class="fence">---</span>
 					<div>
-						<span class="key">pubDate:</span>
-						<span class="value">{pubDate.toISOString().slice(0, 10)}</span>
+						<span class="key">date:</span>
+						<span class="value">{date.toISOString().slice(0, 10)}</span>
 					</div>
 					{
 						tags.length > 0 && (
@@ -57,10 +58,18 @@ const {
 						)
 					}
 					{
-						model && (
+						writer && (
 							<div>
-								<span class="key">model:</span>
-								<span class="value">{model}</span>
+								<span class="key">writer:</span>
+								<span class="value">{writer}</span>
+							</div>
+						)
+					}
+					{
+						reviewer && (
+							<div>
+								<span class="key">reviewer:</span>
+								<span class="value">{reviewer}</span>
 							</div>
 						)
 					}

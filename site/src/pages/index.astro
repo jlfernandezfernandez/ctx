@@ -10,7 +10,7 @@ import { BASE, REPO_URL, SITE_DESCRIPTION, SITE_TITLE, TOPICS_URL } from '../con
 const RECENT_COUNT = 4;
 
 const posts = (await getCollection('blog')).sort(
-	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+	(a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
 );
 const [latest, ...rest] = posts;
 const recent = rest.slice(0, RECENT_COUNT);
@@ -76,7 +76,7 @@ const recent = rest.slice(0, RECENT_COUNT);
 					<a href={`${BASE}/blog/${latest.id}/`}>{latest.data.title}</a>
 				</h2>
 				<p class="date">
-					<FormattedDate date={latest.data.pubDate} />
+					<FormattedDate date={latest.data.date} />
 					{latest.data.tags.length > 0 && <span> · {latest.data.tags.join(' · ')}</span>}
 				</p>
 				<p class="description">{latest.data.description}</p>

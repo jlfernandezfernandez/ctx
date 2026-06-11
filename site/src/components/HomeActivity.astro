@@ -17,7 +17,7 @@ function countValues(values: (string | undefined)[]): [string, number][] {
 }
 
 const { posts } = Astro.props;
-const models = countValues(posts.map((post) => post.data.model));
+const models = countValues(posts.map((post) => post.data.writer));
 const requesters = countValues(posts.map((post) => post.data.requestedBy));
 const visibleModels = models.slice(0, MODEL_LIMIT);
 const visibleRequesters = requesters.slice(0, REQUESTER_LIMIT);

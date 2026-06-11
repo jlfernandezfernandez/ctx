@@ -97,7 +97,7 @@ def run(env: dict) -> int:
         summary=summary,
         issue_number=issue["number"],
         requested_by=(issue.get("user") or {}).get("login", ""),
-        model=writer_model,
+        writer=writer_model,
     )
     url, pr_number = prs.open_pr(
         branch=f"article/issue-{issue['number']}",

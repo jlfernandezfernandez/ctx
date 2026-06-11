@@ -134,12 +134,12 @@ def test_write_article_includes_issue_and_requester_when_given(tmp_path):
         body="palabra " * 1200,
         issue_number=7,
         requested_by="jordi",
-        model="deepseek-v4-pro",
+        writer="deepseek-v4-pro",
     )
     content = Path(path).read_text(encoding="utf-8")
     assert "issue: 7" in content
     assert 'requestedBy: "jordi"' in content
-    assert 'model: "deepseek-v4-pro"' in content
+    assert 'writer: "deepseek-v4-pro"' in content
 
 
 def test_write_article_omits_issue_and_requester_when_missing(tmp_path):
@@ -172,7 +172,7 @@ def test_write_article_creates_file_with_frontmatter(tmp_path):
     assert Path(path).name == "2026-06-10-project-reactor.md"
     assert content.startswith("---\n")
     assert 'title: "El \\"paradigma\\" reactivo"' in content
-    assert "pubDate: 2026-06-10" in content
+    assert "date: 2026-06-10" in content
     assert 'tags: ["java", "reactor"]' in content
     assert content.rstrip().endswith("palabra")
 
@@ -191,10 +191,26 @@ def test_render_article_returns_frontmatter_and_body():
         summary="El TL;DR.",
         issue_number=5,
         requested_by="jordi",
-        model="writer + reviewer (reviewer)",
+        writer="deepseek-v4-pro",
     )
     assert content.startswith("---\n")
     assert 'title: "Project Reactor"' in content
-    assert "pubDate: 2026-06-11" in content
-    assert 'model: "writer + reviewer (reviewer)"' in content
+    assert "date: 2026-06-11" in content
+    assert 'writer: "deepseek-v4-pro"' in content
     assert content.endswith("## Sección\n\nTexto.\n")
+
+
+def test_split_frontmatter_separates_block_and_body():
+    from article_generator.article import split_frontmatter
+
+    fm, body = split_frontmatter('---\ntitle: "X"\ndate: 2026-06-11\n---\n\n## Sección\n\nTexto.')
+    assert fm == '---\ntitle: "X"\ndate: 2026-06-11\n---\n\n'
+    assert body == "## Sección\n\nTexto."
+
+
+def test_split_frontmatter_without_block_returns_body_untouched():
+    from article_generator.article import split_frontmatter
+
+    fm, body = split_frontmatter("## Sección\n\nTexto.")
+    assert fm == ""
+    assert body == "## Sección\n\nTexto."
