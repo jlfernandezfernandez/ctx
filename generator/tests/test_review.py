@@ -6,21 +6,21 @@ import pytest
 from article_generator.review import run
 
 
-def env(pr_number=9, max_rounds=None):
-    e = {
+def env(pr_number=9, max_rounds="2"):
+    return {
         "GITHUB_REPOSITORY": "owner/repo",
         "GITHUB_TOKEN": "tok",
         "LLM_BASE_URL": "https://llm.example/v1",
         "LLM_API_KEY": "k",
         "LLM_REVIEWER_MODEL": "reviewer-m",
         "LLM_WRITER_MODEL": "writer-m",
+        "MAX_REVIEW_ROUNDS": max_rounds,
         "PR_NUMBER": str(pr_number),
         "SITE_URL": "https://owner.github.io/repo",
     }
-    if max_rounds is not None:
-        e["MAX_REVIEW_ROUNDS"] = max_rounds
-    return e
 
+
+FRONTMATTER = '---\ntitle: "Vistas"\ndate: 2026-06-11\nwriter: "writer-m"\n---\n\n'
 
 ARTICLE_BODY = (
     "## Contexto\n\n" + "palabra " * 200
@@ -55,7 +55,7 @@ def setup_pr(prs_cls, body="Closes #5"):
         "title": "article: Vistas materializadas en Snowflake",
     }
     prs.get_article_path.return_value = PATH
-    prs.read_file.return_value = ARTICLE_BODY
+    prs.read_file.return_value = FRONTMATTER + ARTICLE_BODY
     return prs
 
 
@@ -84,7 +84,10 @@ def test_approved_first_round_merges_and_closes_issue(issues_cls, llm_cls, prs_c
 
     prs.merge_pr.assert_called_once_with(9, branch="article/issue-5")
     prs.comment_on_pr.assert_not_called()
-    prs.update_file.assert_not_called()
+    signed = prs.update_file.call_args.args[2]
+    assert signed.startswith("---\n")
+    assert '\nreviewer: "reviewer-m"\n' in signed
+    assert prs.update_file.call_args.args[3] == "chore: reviewer sign-off"
     closing = issues_cls.return_value.close_with_comment.call_args.args[1]
     assert closing.endswith("/blog/2026-06-11-vistas-materializadas-en-snowflake/")
 
@@ -99,7 +102,6 @@ def test_suggestions_only_merge_with_comment(issues_cls, llm_cls, prs_cls):
     assert run(env()) == 0
 
     prs.merge_pr.assert_called_once_with(9, branch="article/issue-5")
-    prs.update_file.assert_not_called()
     comment = prs.comment_on_pr.call_args.args[1]
     assert "sugerencias" in comment
     assert "records" in comment
@@ -120,9 +122,12 @@ def test_blocking_defect_writer_fixes_then_merges(issues_cls, llm_cls, prs_cls):
         assert run(env()) == 0
 
     writer.generate.assert_called_once()
-    assert "falta import de Flux" in writer.generate.call_args.args[1]
-    prs.update_file.assert_called_once_with(
-        "article/issue-5", PATH, ARTICLE_BODY, "fix: review feedback (round 1)"
+    rewrite = writer.generate.call_args.args[1]
+    assert "falta import de Flux" in rewrite
+    assert "title:" not in rewrite  # the writer never sees the frontmatter
+    fix_call = prs.update_file.call_args_list[0]
+    assert fix_call.args == (
+        "article/issue-5", PATH, FRONTMATTER + ARTICLE_BODY, "fix: review feedback (round 1)"
     )
     round_comment = prs.comment_on_pr.call_args_list[0].args[1]
     assert "Cambios solicitados (ronda 1)" in round_comment

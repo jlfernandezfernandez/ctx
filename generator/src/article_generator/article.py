@@ -18,8 +18,19 @@ VAGUE_REFERENCE = re.compile(
 )
 
 
+FRONTMATTER = re.compile(r"\A(---\n.*?\n---\n+)", re.DOTALL)
+
+
 class ValidationError(Exception):
     pass
+
+
+def split_frontmatter(content: str) -> tuple[str, str]:
+    """(frontmatter block, body); empty frontmatter when there is none."""
+    match = FRONTMATTER.match(content)
+    if not match:
+        return "", content
+    return match.group(1), content[match.end():]
 
 
 def slugify(title: str) -> str:
@@ -135,23 +146,23 @@ def render_article(
     summary: str = "",
     issue_number: int | None = None,
     requested_by: str = "",
-    model: str = "",
+    writer: str = "",
 ) -> str:
     tags_yaml = "[" + ", ".join(_yaml_str(t) for t in tags) + "]"
     summary_line = f"summary: {_yaml_str(summary)}\n" if summary else ""
     issue_line = f"issue: {issue_number}\n" if issue_number else ""
     requested_line = f"requestedBy: {_yaml_str(requested_by)}\n" if requested_by else ""
-    model_line = f"model: {_yaml_str(model)}\n" if model else ""
+    writer_line = f"writer: {_yaml_str(writer)}\n" if writer else ""
     frontmatter = (
         "---\n"
         f"title: {_yaml_str(title)}\n"
         f"description: {_yaml_str(description)}\n"
-        f"pubDate: {pub_date.isoformat()}\n"
+        f"date: {pub_date.isoformat()}\n"
         f"tags: {tags_yaml}\n"
         f"{summary_line}"
         f"{issue_line}"
         f"{requested_line}"
-        f"{model_line}"
+        f"{writer_line}"
         "---\n\n"
     )
     return frontmatter + body.strip() + "\n"
@@ -168,7 +179,7 @@ def write_article(
     summary: str = "",
     issue_number: int | None = None,
     requested_by: str = "",
-    model: str = "",
+    writer: str = "",
 ) -> str:
     content = render_article(
         pub_date=pub_date,
@@ -179,7 +190,7 @@ def write_article(
         summary=summary,
         issue_number=issue_number,
         requested_by=requested_by,
-        model=model,
+        writer=writer,
     )
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)

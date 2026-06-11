@@ -15,7 +15,7 @@ import os
 import re
 import sys
 
-from .article import validate_body, ValidationError
+from .article import split_frontmatter, validate_body, ValidationError
 from .github_issues import IssuesClient
 from .github_prs import PRClient
 from .llm import LLMClient, LLMError
@@ -27,7 +27,6 @@ from .prompts import (
 )
 
 BLOG_PREFIX = "site/src/content/blog/"
-DEFAULT_MAX_ROUNDS = 2
 
 
 def _parse_pr_body(body: str) -> int | None:
@@ -85,14 +84,23 @@ def _article_link(site_url: str, path: str) -> str:
     return f"{site_url}/blog/{slug}/" if site_url else slug
 
 
+def _sign_frontmatter(frontmatter: str, reviewer_model: str) -> str:
+    """Record which model reviewed the article, next to the writer's line."""
+    if not frontmatter or "\nreviewer:" in frontmatter:
+        return frontmatter
+    escaped = reviewer_model.replace("\\", "\\\\").replace('"', '\\"')
+    return frontmatter.replace("\n---", f'\nreviewer: "{escaped}"\n---', 1)
+
+
 def run(env: dict) -> int:
     repo = env["GITHUB_REPOSITORY"]
     token = env["GITHUB_TOKEN"]
     pr_number = int(env["PR_NUMBER"])
-    max_rounds = int(env.get("MAX_REVIEW_ROUNDS") or DEFAULT_MAX_ROUNDS)
+    max_rounds = int(env["MAX_REVIEW_ROUNDS"])
 
     base_url, api_key = env["LLM_BASE_URL"], env["LLM_API_KEY"]
-    reviewer = LLMClient(base_url=base_url, api_key=api_key, model=env["LLM_REVIEWER_MODEL"])
+    reviewer_model = env["LLM_REVIEWER_MODEL"]
+    reviewer = LLMClient(base_url=base_url, api_key=api_key, model=reviewer_model)
     writer = LLMClient(base_url=base_url, api_key=api_key, model=env["LLM_WRITER_MODEL"])
 
     issues = IssuesClient(repo=repo, token=token)
@@ -104,7 +112,9 @@ def run(env: dict) -> int:
     topic = pr["title"].removeprefix("article: ").strip()
 
     path = prs.get_article_path(pr_number)
-    draft = prs.read_file(branch, path)
+    # The LLMs only ever see and rewrite the body; the frontmatter is
+    # machine-built metadata and must survive every round untouched.
+    frontmatter, draft = split_frontmatter(prs.read_file(branch, path))
     print(f"Reviewing article for issue #{issue_number}: {topic}")
 
     site_url = env.get("SITE_URL", "").rstrip("/")
@@ -114,6 +124,9 @@ def run(env: dict) -> int:
             prs.comment_on_pr(
                 pr_number, f"Aprobado con sugerencias no bloqueantes:\n\n{_bullets(suggestions)}"
             )
+        signed = _sign_frontmatter(frontmatter, reviewer_model)
+        if signed != frontmatter:
+            prs.update_file(branch, path, signed + draft, "chore: reviewer sign-off")
         prs.merge_pr(pr_number, branch=branch)
         if issue_number:
             note = " (con correcciones)" if fixes else ""
@@ -157,7 +170,9 @@ def run(env: dict) -> int:
                 "La corrección del writer rompió la estructura del artículo.",
                 blocking + [f"[estructura] {exc}"],
             )
-        prs.update_file(branch, path, fixed, f"fix: review feedback (round {round_number})")
+        prs.update_file(
+            branch, path, frontmatter + fixed, f"fix: review feedback (round {round_number})"
+        )
         draft = fixed
         previous_blocking = blocking
 
