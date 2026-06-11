@@ -9,6 +9,7 @@ on:
 permissions:
   contents: write
   issues: write
+  pull-requests: write
 
 concurrency:
   group: generate
@@ -30,7 +31,10 @@ jobs:
       - name: Generate article
         env:
           LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
-          LLM_MODEL: ${{ vars.LLM_MODEL }}
+          WRITER_MODEL: ${{ vars.WRITER_MODEL }}
+          REVIEWER_MODEL: ${{ vars.REVIEWER_MODEL }}
+          MAX_REVIEW_ITERATIONS: ${{ vars.MAX_REVIEW_ITERATIONS }}
+          MAX_TOPICS_PER_RUN: ${{ vars.MAX_TOPICS_PER_RUN }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
