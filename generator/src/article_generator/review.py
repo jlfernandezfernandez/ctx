@@ -81,8 +81,8 @@ def _bullets(items: list[str]) -> str:
 
 
 def _article_link(site_url: str, path: str) -> str:
-    blog_path = path.removeprefix(BLOG_PREFIX)
-    return f"{site_url}/blog/{blog_path}" if site_url else blog_path
+    slug = path.removeprefix(BLOG_PREFIX).removesuffix(".md")
+    return f"{site_url}/blog/{slug}/" if site_url else slug
 
 
 def run(env: dict) -> int:

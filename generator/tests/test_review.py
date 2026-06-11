@@ -85,7 +85,8 @@ def test_approved_first_round_merges_and_closes_issue(issues_cls, llm_cls, prs_c
     prs.merge_pr.assert_called_once_with(9, branch="article/issue-5")
     prs.comment_on_pr.assert_not_called()
     prs.update_file.assert_not_called()
-    issues_cls.return_value.close_with_comment.assert_called_once()
+    closing = issues_cls.return_value.close_with_comment.call_args.args[1]
+    assert closing.endswith("/blog/2026-06-11-vistas-materializadas-en-snowflake/")
 
 
 @patch("article_generator.review.PRClient")
