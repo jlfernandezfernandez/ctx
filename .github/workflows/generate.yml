@@ -31,8 +31,8 @@ jobs:
       - name: Generate article
         env:
           LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
-          WRITER_MODEL: ${{ vars.WRITER_MODEL }}
-          REVIEWER_MODEL: ${{ vars.REVIEWER_MODEL }}
+          LLM_WRITER_MODEL: ${{ vars.LLM_WRITER_MODEL }}
+          LLM_REVIEWER_MODEL: ${{ vars.LLM_REVIEWER_MODEL }}
           MAX_REVIEW_ITERATIONS: ${{ vars.MAX_REVIEW_ITERATIONS }}
           MAX_TOPICS_PER_RUN: ${{ vars.MAX_TOPICS_PER_RUN }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}

@@ -18,8 +18,8 @@ def env():
         "GITHUB_TOKEN": "tok",
         "LLM_BASE_URL": "https://llm.example/v1",
         "LLM_API_KEY": "k",
-        "WRITER_MODEL": "writer-m",
-        "REVIEWER_MODEL": "reviewer-m",
+        "LLM_WRITER_MODEL": "writer-m",
+        "LLM_REVIEWER_MODEL": "reviewer-m",
         "OUTPUT_DIR": "/tmp/out",
         "SITE_URL": "https://owner.github.io/repo",
     }
@@ -106,7 +106,7 @@ def test_two_models_and_max_iterations_from_env(issues_cls, llm_cls, drafts_cls,
 def test_writer_model_falls_back_to_legacy_llm_model(issues_cls, llm_cls, drafts_cls, build_graph):
     issues_cls.return_value.next_topic.return_value = None
     e = env()
-    del e["WRITER_MODEL"]
+    del e["LLM_WRITER_MODEL"]
     e["LLM_MODEL"] = "legacy-m"
 
     assert run(e) == 0

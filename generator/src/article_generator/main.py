@@ -123,8 +123,8 @@ def run(env: dict) -> int:
     site_url = env.get("SITE_URL", "").rstrip("/")
 
     # Unset workflow vars arrive as empty strings, hence `or` over defaults.
-    writer_model = env.get("WRITER_MODEL") or env.get("LLM_MODEL") or "deepseek-v4-pro"
-    reviewer_model = env.get("REVIEWER_MODEL") or "minimax-m3"
+    writer_model = env.get("LLM_WRITER_MODEL") or env.get("LLM_MODEL") or "deepseek-v4-pro"
+    reviewer_model = env.get("LLM_REVIEWER_MODEL") or "minimax-m3"
     max_iterations = int(env.get("MAX_REVIEW_ITERATIONS") or 2)
     max_topics = int(env.get("MAX_TOPICS_PER_RUN") or 2)
 
