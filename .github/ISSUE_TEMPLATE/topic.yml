@@ -6,8 +6,8 @@ body:
     attributes:
       value: |
         El **título de la issue** es el tema del artículo (p. ej. "Kafka sin ZooKeeper: KRaft").
-        Un clasificador automático comprobará que sea técnico y le asignará una categoría.
-        Máximo 5 propuestas por persona y día.
+        Un curador automático corregirá errores obvios del título y comprobará que sea un tema técnico válido.
+        Si hay dudas, la propuesta quedará pendiente de revisión humana.
   - type: textarea
     id: notas
     attributes:

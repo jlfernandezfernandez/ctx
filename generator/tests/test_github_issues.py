@@ -110,42 +110,30 @@ def test_close_with_comment_tolerates_label_failure():
     c.session.patch.assert_called_once()
 
 
-def test_count_issues_by_author_since_filters_old_issues_and_adds_current():
-    c = client_with([
-        {**issue(1, "2026-06-11T08:00:00Z", []), "user": {"login": "jordi"}},
-        {**issue(2, "2026-06-10T08:00:00Z", []), "user": {"login": "jordi"}},
-    ])
-    assert c.count_issues_by_author_since("jordi", "2026-06-11T00:00:00Z", 3) == 2
-    assert c.session.get.call_args.kwargs["params"]["creator"] == "jordi"
+def test_get_issue_returns_issue():
+    payload = issue(7, "2026-06-11T08:00:00Z", ["triage"])
+    c = client_with(payload)
+    assert c.get_issue(7) == payload
+    c.session.get.assert_called_once_with(
+        "https://api.github.com/repos/owner/repo/issues/7"
+    )
 
 
-def test_category_labels_excludes_queue_labels():
-    c = client_with([
-        {"name": "topic"},
-        {"name": "triage"},
-        {"name": "enhancement"},
-        {"name": "java"},
-        {"name": "sql"},
-    ])
-    assert c.category_labels() == ["java", "sql"]
-
-
-def test_ensure_system_labels_creates_only_missing_labels():
-    c = client_with([{"name": "topic"}, {"name": "triage"}])
-    c.ensure_system_labels()
-    created = [call.kwargs["json"]["name"] for call in c.session.post.call_args_list]
-    assert "topic" not in created
-    assert "triage" not in created
-    assert "rejected" in created
-    assert "rate-limited" in created
+def test_update_title_updates_issue():
+    c = client_with([])
+    c.update_title(7, "Pydantic AI")
+    c.session.patch.assert_called_once_with(
+        "https://api.github.com/repos/owner/repo/issues/7",
+        json={"title": "Pydantic AI"},
+    )
 
 
 def test_set_labels_replaces_all_issue_labels():
     c = client_with([])
-    c.set_labels(7, ["topic", "java"])
+    c.set_labels(7, ["topic"])
     c.session.put.assert_called_once_with(
         "https://api.github.com/repos/owner/repo/issues/7/labels",
-        json={"labels": ["topic", "java"]},
+        json={"labels": ["topic"]},
     )
 
 

@@ -6,7 +6,6 @@ content schema is always satisfied.
 import re
 import unicodedata
 from datetime import date
-from pathlib import Path
 
 MIN_WORDS = 1000  # target is 2500-3500; below 1000 means generation went wrong
 EXPECTED_H2_COUNT = 6
@@ -167,33 +166,3 @@ def render_article(
     )
     return frontmatter + body.strip() + "\n"
 
-
-def write_article(
-    output_dir: str,
-    pub_date: date,
-    slug: str,
-    title: str,
-    description: str,
-    tags: list[str],
-    body: str,
-    summary: str = "",
-    issue_number: int | None = None,
-    requested_by: str = "",
-    writer: str = "",
-) -> str:
-    content = render_article(
-        pub_date=pub_date,
-        title=title,
-        description=description,
-        tags=tags,
-        body=body,
-        summary=summary,
-        issue_number=issue_number,
-        requested_by=requested_by,
-        writer=writer,
-    )
-    out = Path(output_dir)
-    out.mkdir(parents=True, exist_ok=True)
-    path = out / f"{pub_date.isoformat()}-{slug}.md"
-    path.write_text(content, encoding="utf-8")
-    return str(path)

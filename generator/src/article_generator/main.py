@@ -16,7 +16,7 @@ from .article import (
     validate_body,
     ValidationError,
 )
-from .github_issues import SYSTEM_LABELS, IssuesClient
+from .github_issues import IssuesClient
 from .github_prs import PRClient
 from .llm import LLMClient, LLMError
 from .prompts import SYSTEM_PROMPT, article_prompt, metadata_prompt, outline_prompt
@@ -30,8 +30,8 @@ def clean_notes(body: str) -> str:
     return body.strip()
 
 
-def collect_metadata(llm: LLMClient, issue: dict, topic: str, body: str) -> tuple[str, list[str]]:
-    tags = [l["name"] for l in issue["labels"] if l["name"] not in SYSTEM_LABELS]
+def collect_metadata(llm: LLMClient, topic: str, body: str) -> tuple[str, list[str]]:
+    tags = []
     summary = ""
     try:
         meta = llm.generate_json(SYSTEM_PROMPT, metadata_prompt(topic, body))
@@ -86,7 +86,7 @@ def run(env: dict) -> int:
     except ValidationError as exc:
         print(f"Structure validation failed ({exc}); opening PR anyway for the reviewer.")
 
-    summary, tags = collect_metadata(writer, issue, topic, draft)
+    summary, tags = collect_metadata(writer, topic, draft)
     slug = slugify(topic)
     content = render_article(
         pub_date=today,

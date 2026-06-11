@@ -10,7 +10,7 @@ Cada día laborable, un artículo en profundidad (~15 min, 2.500-3.500 palabras,
 
 ## Cómo funciona
 
-1. Propón un tema con la plantilla de issue ["Proponer tema"](../../issues/new/choose). Un modelo pequeño valida que sea técnico y le asigna una categoría.
+1. Propón un tema con la plantilla de issue ["Proponer tema"](../../issues/new/choose). Un modelo pequeño normaliza el título y modera spam o contenido claramente no técnico; ante la duda, decide una persona.
 2. **Vota con 👍**: cada noche (L-V, ~6:30 Madrid) se elige el tema aceptado más votado (empate → el más antiguo; el label `priority` salta la cola).
 3. El **writer** genera el artículo y abre una PR, igual que lo haría un compañero.
 4. El **reviewer** evalúa código, rigor y legibilidad sobre esa PR, como un compañero senior: cada defecto es **bloqueante** (código que no compila, dato falso, referencia inventada) o **sugerencia** (estilo, matices — no impiden publicar).
@@ -24,17 +24,19 @@ Todo el flujo vive en un único workflow ([`publish.yml`](.github/workflows/publ
 
 | Agente | Modelo | Qué hace |
 |---|---|---|
-| **Triaje** | `LLM_TRIAGE_MODEL` | Valida que la propuesta sea técnica, asigna categoría |
+| **Triaje** | `LLM_TRIAGE_MODEL` | Cura el título y modera propuestas claramente inválidas |
 | **Writer** | `LLM_WRITER_MODEL` | Genera esquema + artículo, abre PR, corrige el feedback |
 | **Reviewer** | `LLM_REVIEWER_MODEL` | Evalúa la PR y decide: mergea, pide cambios o escala a humano |
 
-El writer y el reviewer usan modelos distintos para evitar que un modelo apruebe sus propios vicios. El triaje limita cada autor a 5 propuestas por día UTC.
+El writer y el reviewer usan modelos distintos para evitar que un modelo apruebe sus propios vicios. Los tags del artículo los propone el writer a partir del contenido, no de labels de la issue.
 
 ## Estructura
 
 - `generator/` — generador Python (LLM agnóstico vía API OpenAI-compatible)
 - `site/` — web Astro (GitHub Pages)
-- `.github/workflows/` — `triage-topic` (clasifica propuestas), `publish` (writer + reviewer), `deploy` (Pages), `ci` (tests y build)
+- `.github/workflows/` — `triage-topic` (cura propuestas), `publish` (writer + reviewer), `deploy` (Pages), `ci` (tests y build)
+
+Los únicos labels requeridos por el producto son `triage`, `topic`, `priority`, `published` y `rejected`.
 
 ## Configuración (Actions)
 

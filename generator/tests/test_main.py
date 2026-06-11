@@ -43,7 +43,7 @@ def test_writer_generates_and_opens_pr(issues_cls, llm_cls, prs_cls, tmp_path):
     issues.next_topic.return_value = topic_issue()
     writer = llm_cls.return_value
     writer.generate.side_effect = ["outline", "palabra " * 1200]
-    writer.generate_json.return_value = {"summary": "El TL;DR.", "tags": ["reactive", "java"]}
+    writer.generate_json.return_value = {"summary": "El TL;DR.", "tags": ["reactive"]}
     prs = prs_cls.return_value
     prs.open_pr.return_value = ("https://github.com/owner/repo/pull/9", 9)
     output_file = tmp_path / "github_output"
@@ -58,6 +58,8 @@ def test_writer_generates_and_opens_pr(issues_cls, llm_cls, prs_cls, tmp_path):
     assert kwargs["path"].startswith("site/src/content/blog/")
     assert "Closes #5" in kwargs["body"]
     assert "title: " in kwargs["content"]
+    assert 'tags: ["reactive"]' in kwargs["content"]
+    assert '"java"' not in kwargs["content"]
     assert "pr_number=9" in output_file.read_text()
 
 

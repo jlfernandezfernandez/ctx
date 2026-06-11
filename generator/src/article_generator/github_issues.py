@@ -10,39 +10,6 @@ TRIAGE_LABEL = "triage"
 PRIORITY_LABEL = "priority"
 PUBLISHED_LABEL = "published"
 REJECTED_LABEL = "rejected"
-RATE_LIMITED_LABEL = "rate-limited"
-
-SYSTEM_LABELS = {
-    TOPIC_LABEL,
-    TRIAGE_LABEL,
-    PRIORITY_LABEL,
-    PUBLISHED_LABEL,
-    REJECTED_LABEL,
-    RATE_LIMITED_LABEL,
-}
-
-GITHUB_DEFAULT_LABELS = {
-    "bug",
-    "documentation",
-    "duplicate",
-    "enhancement",
-    "good first issue",
-    "help wanted",
-    "invalid",
-    "question",
-    "wontfix",
-}
-
-NON_CATEGORY_LABELS = SYSTEM_LABELS | GITHUB_DEFAULT_LABELS
-
-SYSTEM_LABEL_DETAILS = {
-    TOPIC_LABEL: ("0e8a16", "Tema aceptado y pendiente de publicación"),
-    TRIAGE_LABEL: ("fbca04", "Propuesta pendiente de clasificación o revisión"),
-    PRIORITY_LABEL: ("b60205", "Publicar antes que la cola ordinaria"),
-    PUBLISHED_LABEL: ("5319e7", "Artículo publicado"),
-    REJECTED_LABEL: ("d93f0b", "Propuesta descartada"),
-    RATE_LIMITED_LABEL: ("6e7781", "Propuesta cerrada por límite diario"),
-}
 
 
 class GitHubError(Exception):
@@ -93,61 +60,17 @@ class IssuesClient:
         # Most 👍 reactions wins; ties go to the oldest issue.
         return sorted(pool, key=lambda i: (-_votes(i), i["created_at"]))[0]
 
-    def _labels(self) -> list[dict]:
-        resp = self.session.get(f"{self.base}/labels", params={"per_page": 100})
-        self._require(resp, (200,), "list labels")
+    def get_issue(self, number: int) -> dict:
+        resp = self.session.get(f"{self.base}/issues/{number}")
+        self._require(resp, (200,), f"get issue #{number}")
         return resp.json()
 
-    def category_labels(self) -> list[str]:
-        return sorted(
-            label["name"]
-            for label in self._labels()
-            if label["name"].lower() not in NON_CATEGORY_LABELS
+    def update_title(self, number: int, title: str) -> None:
+        resp = self.session.patch(
+            f"{self.base}/issues/{number}",
+            json={"title": title},
         )
-
-    def ensure_system_labels(self) -> None:
-        existing = {label["name"].lower() for label in self._labels()}
-        for name, (color, description) in SYSTEM_LABEL_DETAILS.items():
-            if name in existing:
-                continue
-            created = self.session.post(
-                f"{self.base}/labels",
-                json={"name": name, "color": color, "description": description},
-            )
-            self._require(created, (201, 422), f"create system label {name}")
-
-    def count_issues_by_author_since(
-        self, author: str, since: str, current_number: int
-    ) -> int:
-        resp = self.session.get(
-            f"{self.base}/issues",
-            params={
-                "state": "all",
-                "creator": author,
-                "since": since,
-                "per_page": 100,
-            },
-        )
-        self._require(resp, (200,), f"count issues created by {author}")
-        issues = [
-            issue
-            for issue in resp.json()
-            if "pull_request" not in issue and issue["created_at"] >= since
-        ]
-        numbers = {issue["number"] for issue in issues}
-        return len(issues) + (current_number not in numbers)
-
-    def create_category_label(self, name: str) -> None:
-        resp = self.session.post(
-            f"{self.base}/labels",
-            json={
-                "name": name,
-                "color": "1f6feb",
-                "description": "Categoría técnica asignada automáticamente",
-            },
-        )
-        # Another workflow may have created the same label concurrently.
-        self._require(resp, (201, 422), f"create label {name}")
+        self._require(resp, (200,), f"update title on issue #{number}")
 
     def set_labels(self, number: int, labels: list[str]) -> None:
         resp = self.session.put(

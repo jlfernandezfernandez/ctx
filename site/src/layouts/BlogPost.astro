@@ -1,6 +1,7 @@
 ---
 import type { CollectionEntry } from 'astro:content';
 import type { MarkdownHeading } from 'astro';
+import ArticleHeader from '../components/ArticleHeader.astro';
 import TopicQueue from '../components/TopicQueue.astro';
 import Page from './Page.astro';
 import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
@@ -24,59 +25,7 @@ const {
 <Page title={`${SITE_TITLE} — ${title}`} description={description}>
 	<article>
 		<div class="prose" data-pagefind-body>
-			<div class="title">
-				<p class="article-command">ctx article --read</p>
-				<h1>{title}</h1>
-				<div class="meta">
-					<span class="fence">---</span>
-					<div>
-						<span class="key">date:</span>
-						<span class="value">{date.toISOString().slice(0, 10)}</span>
-					</div>
-					{
-						tags.length > 0 && (
-							<div>
-								<span class="key">tags:</span>
-								<span class="value">
-									[{tags.map((tag, i) => (
-										<><a href={`${BASE}/tags/${tag}/`}>{tag}</a>{i < tags.length - 1 ? ', ' : ''}</>
-									))}]
-								</span>
-							</div>
-						)
-					}
-					{
-						issue && (
-							<div>
-								<span class="key">issue:</span>
-								<a href={`${REPO_URL}/issues/${issue}`} target="_blank">#{issue}</a>
-								{requestedBy && (
-									<span class="value">
-										(<a href={`https://github.com/${requestedBy}`} target="_blank">@{requestedBy}</a>)
-									</span>
-								)}
-							</div>
-						)
-					}
-					{
-						writer && (
-							<div>
-								<span class="key">writer:</span>
-								<span class="value">{writer}</span>
-							</div>
-						)
-					}
-					{
-						reviewer && (
-							<div>
-								<span class="key">reviewer:</span>
-								<span class="value">{reviewer}</span>
-							</div>
-						)
-					}
-					<span class="fence">---</span>
-				</div>
-			</div>
+			<ArticleHeader {title} {date} {tags} {issue} {requestedBy} {writer} {reviewer} />
 			{
 				summary && (
 					<aside class="tldr">
@@ -126,61 +75,6 @@ const {
 	}
 	.prose {
 		color: rgb(var(--gray-dark));
-	}
-	.title {
-		margin-bottom: 1.5em;
-		padding: 1.5em 0;
-		border-bottom: 1px solid rgb(var(--gray-light));
-	}
-	.article-command {
-		margin: 0 0 0.65em;
-		font-family: var(--font-mono);
-		font-size: 0.72em;
-		color: var(--accent);
-		text-transform: uppercase;
-		letter-spacing: 0.08em;
-	}
-	.article-command::before {
-		content: '$ ';
-		color: rgb(var(--gray));
-	}
-	.title h1 {
-		margin: 0 0 0.8em 0;
-		font-family: var(--font-sans);
-		font-weight: 700;
-		font-size: 2.1em;
-		letter-spacing: -0.02em;
-		line-height: 1.15;
-	}
-	/* Article metadata rendered as its own frontmatter */
-	.meta {
-		padding: 0.8em 1.25em;
-		border: 1px solid rgb(var(--gray-light));
-		border-radius: 6px;
-		background: var(--bg-raise);
-		font-family: var(--font-mono);
-		font-size: 0.8em;
-		line-height: 1.9;
-		overflow-x: auto;
-		box-shadow: var(--panel-shadow);
-	}
-	.meta .fence,
-	.meta .key {
-		color: rgb(var(--gray));
-	}
-	.meta .fence {
-		display: block;
-	}
-	.meta .value {
-		color: rgb(var(--gray-dark));
-	}
-	.meta a {
-		color: var(--accent);
-		text-decoration: none;
-	}
-	.meta a:hover {
-		text-decoration: underline;
-		text-underline-offset: 3px;
 	}
 	.tldr {
 		margin: 0 0 1.5em 0;
@@ -269,16 +163,6 @@ const {
 		font-size: 0.82em;
 	}
 	@media (max-width: 720px) {
-		.title {
-			padding-top: 0.5em;
-		}
-		.title h1 {
-			font-size: 1.85em;
-		}
-		.meta {
-			padding: 0.7em 1em;
-			line-height: 1.7;
-		}
 		.toc {
 			margin-bottom: 2em;
 		}

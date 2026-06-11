@@ -1,0 +1,97 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { BASE } from '../consts';
+import FormattedDate from './FormattedDate.astro';
+
+interface Props {
+	post: CollectionEntry<'blog'>;
+}
+
+const { post } = Astro.props;
+---
+
+<section class="today">
+	<p class="label">Último artículo</p>
+	<h2><a href={`${BASE}/blog/${post.id}/`}>{post.data.title}</a></h2>
+	<p class="date">
+		<FormattedDate date={post.data.date} />
+		{post.data.tags.length > 0 && <span> · {post.data.tags.join(' · ')}</span>}
+	</p>
+	<p class="description">{post.data.description}</p>
+	<a class="read" href={`${BASE}/blog/${post.id}/`}>leer artículo →</a>
+</section>
+
+<style>
+	.today {
+		margin-top: 3em;
+		padding: 1.5em 1.75em;
+		border: 1px solid rgb(var(--gray-light));
+		border-left: 3px solid var(--accent);
+		border-radius: 6px;
+		background: var(--bg-raise);
+		box-shadow: var(--panel-shadow);
+		transition:
+			border-color 180ms ease,
+			transform 180ms ease;
+	}
+	.today:hover {
+		border-color: rgba(255, 180, 84, 0.38);
+		transform: translateY(-2px);
+	}
+	.label {
+		margin: 0 0 0.8em 0;
+		font-family: var(--font-mono);
+		font-size: 0.8em;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: rgb(var(--gray));
+	}
+	.today h2 {
+		margin: 0 0 0.3em 0;
+		font-family: var(--font-sans);
+		font-weight: 700;
+		font-size: 1.8em;
+		letter-spacing: -0.02em;
+		line-height: 1.2;
+	}
+	.today h2 a {
+		color: rgb(var(--black));
+		text-decoration: none;
+	}
+	.today h2 a:hover {
+		color: var(--accent);
+	}
+	.date {
+		font-family: var(--font-mono);
+		font-size: 0.8em;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: rgb(var(--gray));
+	}
+	.description {
+		margin: 0.8em 0 0 0;
+		color: rgb(var(--gray-dark));
+		max-width: 44em;
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 3;
+		overflow: hidden;
+	}
+	.read {
+		display: inline-block;
+		margin-top: 1em;
+		font-family: var(--font-mono);
+		font-weight: 500;
+	}
+	@media (max-width: 720px) {
+		.today h2 {
+			font-size: 1.4em;
+		}
+		.today {
+			padding: 1.25em 1.35em;
+		}
+		.description {
+			-webkit-line-clamp: 4;
+		}
+	}
+</style>

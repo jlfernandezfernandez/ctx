@@ -6,8 +6,8 @@ Abre una issue con la plantilla **"Proponer tema"**:
 
 - El **título de la issue** es el tema del artículo. Sé concreto: mejor "Kafka sin ZooKeeper: KRaft" que "Kafka".
 - Las **notas de enfoque** (opcionales) se inyectan al prompt del generador: qué no entiendes, con qué compararlo, qué casos cubrir.
-- La issue nace con el label `triage`: un clasificador automático valida que sea técnica y le asigna una categoría (`java`, `sql`, ...), que se convierte en tag del artículo publicado. Si duda, queda en `triage` para revisión manual; si claramente no es técnica, se cierra como `rejected`.
-- Máximo 5 propuestas por persona y día. Un colaborador puede añadir `priority` para saltar la cola.
+- La issue nace con el label `triage`: un curador automático corrige errores obvios del título y valida que sea técnica. Si duda, queda en `triage` para revisión manual; si es claramente spam o no técnica, se cierra como `rejected`.
+- Un colaborador puede añadir `priority` para saltar la cola.
 
 **Vota con 👍** las issues aceptadas (label `topic`): cada día laborable se publica la más votada (empate → la más antigua; `priority` siempre primero). Al publicarse, la issue se cierra con el link.
 
@@ -24,14 +24,4 @@ Abre una issue con la plantilla **"Proponer tema"**:
 - Editar artículos publicados en `site/src/content/blog/` a mano salvo errata clara.
 - Lanzar workflows: solo colaboradores con permiso de escritura pueden ejecutar `workflow_dispatch`.
 
-## Arquitectura en 30 segundos
-
-```
-Issue (triage) → clasificador LLM → label topic + categoría → votos 👍
-  → Action nocturna (L-V): writer genera artículo y abre PR
-    → reviewer evalúa; si hay defectos bloqueantes, writer corrige (máx MAX_REVIEW_ROUNDS rondas)
-      → aprueba: merge → deploy a GitHub Pages → issue cerrada con link
-      → no aprueba: PR queda abierta con los defectos comentados → decide un humano
-```
-
-Detalles en `README.md`.
+La arquitectura y el flujo editorial están documentados en [README.md](README.md).

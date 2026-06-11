@@ -29,7 +29,6 @@ const { limit = 4, compact = false } = Astro.props;
 <script is:inline define:vars={{ topicsApiUrl: TOPICS_API_URL }}>
 	const CACHE_KEY = 'ctx-topic-queue';
 	const CACHE_TTL = 5 * 60 * 1000;
-	const EXCLUDED_LABELS = new Set(['topic', 'priority']);
 
 	function escapeHtml(value) {
 		return String(value)
@@ -81,10 +80,6 @@ const { limit = 4, compact = false } = Astro.props;
 	}
 
 	function renderTopic(issue, index) {
-		const labels = issue.labels
-			.filter((label) => !EXCLUDED_LABELS.has(label.name))
-			.map((label) => `<span>#${escapeHtml(label.name)}</span>`)
-			.join('');
 		const next = index === 0 ? '<strong class="next">NEXT</strong>' : '';
 		const priority = hasPriority(issue) ? '<strong class="priority">priority</strong>' : '';
 
@@ -94,7 +89,7 @@ const { limit = 4, compact = false } = Astro.props;
 				<div class="topic">
 					<div class="topic-flags">${next}${priority}</div>
 					<a href="${escapeHtml(issue.html_url)}" target="_blank">${escapeHtml(issue.title)}</a>
-					<p>👍 ${getVotes(issue)} · @${escapeHtml(issue.user.login)} ${labels}</p>
+					<p>👍 ${getVotes(issue)} · @${escapeHtml(issue.user.login)}</p>
 				</div>
 			</li>`;
 	}
@@ -247,10 +242,6 @@ const { limit = 4, compact = false } = Astro.props;
 		font-family: var(--font-mono);
 		font-size: 0.75em;
 		color: rgb(var(--gray));
-	}
-	.topic p span {
-		margin-left: 0.5em;
-		color: rgb(var(--gray-dark));
 	}
 	.queue-loading {
 		display: block !important;
