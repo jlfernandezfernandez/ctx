@@ -2,11 +2,7 @@
 
 **https://jlfernandezfernandez.github.io/ctx/**
 
-[![CI](https://github.com/jlfernandezfernandez/ctx/actions/workflows/ci.yml/badge.svg)](https://github.com/jlfernandezfernandez/ctx/actions/workflows/ci.yml)
-[![Generate daily article](https://github.com/jlfernandezfernandez/ctx/actions/workflows/generate.yml/badge.svg)](https://github.com/jlfernandezfernandez/ctx/actions/workflows/generate.yml)
-[![Triage proposed topic](https://github.com/jlfernandezfernandez/ctx/actions/workflows/triage-topic.yml/badge.svg)](https://github.com/jlfernandezfernandez/ctx/actions/workflows/triage-topic.yml)
-[![Review article](https://github.com/jlfernandezfernandez/ctx/actions/workflows/review.yml/badge.svg)](https://github.com/jlfernandezfernandez/ctx/actions/workflows/review.yml)
-[![Deploy site](https://github.com/jlfernandezfernandez/ctx/actions/workflows/deploy.yml/badge.svg)](https://github.com/jlfernandezfernandez/ctx/actions/workflows/deploy.yml)
+[![CI](https://github.com/jlfernandezfernandez/ctx/actions/workflows/ci.yml/badge.svg)](https://github.com/jlfernandezfernandez/ctx/actions/workflows/ci.yml) [![Deploy site](https://github.com/jlfernandezfernandez/ctx/actions/workflows/deploy.yml/badge.svg)](https://github.com/jlfernandezfernandez/ctx/actions/workflows/deploy.yml)
 
 Un deep dive técnico al día. Para vibe coders que quieren entender qué pasa por debajo.
 
@@ -14,33 +10,20 @@ Cada día laborable, un artículo en profundidad (~15 min, 2.500-3.500 palabras,
 
 ## Cómo funciona
 
-1. Propón un tema con la plantilla de issue ["Proponer tema"](../../issues/new/choose). Nace en `triage`; un modelo pequeño valida que sea técnico y reutiliza o crea su categoría.
+1. Propón un tema con la plantilla de issue ["Proponer tema"](../../issues/new/choose). Nace en `triage`; un modelo pequeño valida que sea técnico y le asigna una categoría.
 2. **Vota con 👍**: cada noche (L-V, ~6:30 Madrid) se publica el tema aceptado más votado (empate → el más antiguo). El label `priority` salta la cola.
-3. Una GitHub Action genera el artículo y abre una PR con el label `needs-review`.
-4. Otra GitHub Action revisa el artículo. Si aprueba, merge automático. Si corrige y aprueba, merge. Si no puede, label `needs-human-review` para revisión manual.
+3. El **writer** genera el artículo y abre una PR con label `needs-review`.
+4. El **reviewer** evalúa código, rigor y legibilidad. Si aprueba → merge. Si no → corrige y vuelve a intentar. Si sigue sin aprobar → label `needs-human-review`.
 
-```
-Issue (triage) → clasificación → topic + categoría → votos 👍
-  → writer → PR (needs-review) → reviewer → merge | needs-human-review
-```
+## Agentes
 
-El triaje limita cada autor a 5 propuestas por día UTC. Una respuesta ambigua o inválida
-del modelo permanece en `triage`; nunca se acepta ni descarta por defecto.
+| Agente | Modelo | Qué hace |
+|---|---|---|
+| **Triaje** | `LLM_TRIAGE_MODEL` | Valida que la propuesta sea técnica, asigna categoría |
+| **Writer** | `LLM_WRITER_MODEL` | Genera esquema + artículo completo, abre PR |
+| **Reviewer** | `LLM_REVIEWER_MODEL` | Evalúa el artículo, corrige si puede, merge o escalar |
 
-### Writer
-
-El writer genera el artículo (esquema + artículo completo) y abre una PR con el label
-`needs-review`. No commitea directamente a main.
-
-### Reviewer
-
-Se triggera cuando una PR recibe el label `needs-review`. El revisor:
-
-1. Lee el artículo de la PR
-2. Evalúa código, rigor técnico y legibilidad
-3. Si aprueba → merge automático y cierre de la issue
-4. Si rechaza → genera una corrección y la push. Si la corrección aprueba → merge
-5. Si la corrección tampoco aprueba → label `needs-human-review` y comentario en la PR
+El writer y reviewer usan modelos distintos para evitar sesgo. El triaje limita cada autor a 5 propuestas por día UTC.
 
 ## Estructura
 
@@ -53,14 +36,12 @@ Se triggera cuando una PR recibe el label `needs-review`. El revisor:
 | Dónde | Nombre | Valor actual |
 |---|---|---|
 | Secret | `LLM_API_KEY` | API key del proveedor |
-| Variable | `LLM_BASE_URL` | `https://ollama.com/v1` (Ollama Cloud) |
+| Variable | `LLM_BASE_URL` | `https://ollama.com/v1` |
 | Variable | `LLM_WRITER_MODEL` | `deepseek-v4-pro` |
 | Variable | `LLM_REVIEWER_MODEL` | `minimax-m3` |
 | Variable | `LLM_TRIAGE_MODEL` | `deepseek-v4-flash` |
 
-Cambiar de proveedor o modelo = cambiar esas variables, cero código. Nunca commitees keys; `.env` está en `.gitignore` y los secrets viven solo en GitHub Actions Secrets.
-
-**Seguridad:** las PRs de forks no reciben secrets; el generador publica máximo un artículo al día aunque se relance. El clasificador trata el contenido de cada issue como datos no confiables, valida estrictamente su respuesta y usa permisos limitados a `issues: write`.
+Cambiar de proveedor o modelo = cambiar esas variables, cero código.
 
 ## Desarrollo local
 

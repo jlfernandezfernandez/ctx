@@ -17,7 +17,6 @@ BLOG_PREFIX = "site/src/content/blog/"
 
 
 def _parse_pr_body(body: str) -> int | None:
-    """Extract issue number from 'Closes #N' in the PR body."""
     m = re.search(r"Closes\s+#(\d+)", body)
     return int(m.group(1)) if m else None
 
@@ -41,9 +40,9 @@ def _review_report(reviewer: LLMClient, topic: str, draft: str) -> dict:
     return fallback
 
 
-def _article_link(site_url: str, filename: str) -> str:
-    path = filename.removeprefix(BLOG_PREFIX)
-    return f"{site_url}/blog/{path}" if site_url else path
+def _article_link(site_url: str, path: str) -> str:
+    blog_path = path.removeprefix(BLOG_PREFIX)
+    return f"{site_url}/blog/{blog_path}" if site_url else blog_path
 
 
 def run(env: dict) -> int:
@@ -62,12 +61,8 @@ def run(env: dict) -> int:
     branch = pr["head"]["ref"]
     topic = pr["title"].removeprefix("article: ").strip()
 
-    file_content = drafts.get_file(branch, BLOG_PREFIX)
-    if not file_content:
-        print("No article file found in PR branch.")
-        return 1
-
-    filename, draft = file_content
+    path = drafts.get_article_path(pr_number)
+    draft = drafts.read_file(branch, path)
     print(f"Reviewing article for issue #{issue_number}: {topic}")
 
     report = _review_report(reviewer, topic, draft)
@@ -78,7 +73,7 @@ def run(env: dict) -> int:
         print("Reviewer approved. Auto-merging.")
         drafts.merge_pr(pr_number)
         if issue_number:
-            issues.close_with_comment(issue_number, f"Publicado: {_article_link(site_url, filename)}")
+            issues.close_with_comment(issue_number, f"Publicado: {_article_link(site_url, path)}")
         return 0
 
     issues_list = [f"[{i.get('category', 'general')}] {i.get('detail', '')}" for i in report["issues"]]
@@ -100,10 +95,10 @@ def run(env: dict) -> int:
         return 0
 
     print("Fixed version passes validation. Pushing fix.")
-    drafts.update_file(branch, f"{BLOG_PREFIX}{filename.split('/')[-1]}", fixed, "fix: address review feedback")
+    drafts.update_file(branch, path, fixed, "fix: address review feedback")
     drafts.merge_pr(pr_number)
     if issue_number:
-        issues.close_with_comment(issue_number, f"Publicado (con correcciones): {_article_link(site_url, filename)}")
+        issues.close_with_comment(issue_number, f"Publicado (con correcciones): {_article_link(site_url, path)}")
     return 0
 
 

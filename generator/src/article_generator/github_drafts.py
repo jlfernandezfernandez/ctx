@@ -32,7 +32,7 @@ class DraftsClient:
 
     def create_draft_pr(
         self, branch: str, path: str, content: str, title: str, body: str, base: str = "main"
-    ) -> str:
+    ) -> tuple[str, int]:
         ref = self.session.get(f"{self.base}/git/ref/heads/{base}")
         self._require(ref, (200,), f"resolve {base} ref")
         sha = ref.json()["object"]["sha"]
@@ -66,6 +66,25 @@ class DraftsClient:
         self._require(resp, (200,), f"get PR #{number}")
         return resp.json()
 
+    def get_article_path(self, pr_number: int) -> str:
+        """Find the .md file added by this PR under site/src/content/blog/."""
+        resp = self.session.get(f"{self.base}/pulls/{pr_number}/files")
+        self._require(resp, (200,), f"list files in PR #{pr_number}")
+        for f in resp.json():
+            if f["filename"].startswith("site/src/content/blog/") and f["filename"].endswith(".md"):
+                return f["filename"]
+        raise DraftsError(f"No article .md found in PR #{pr_number}")
+
+    def read_file(self, ref: str, path: str) -> str:
+        """Read file content from a branch via the contents API."""
+        resp = self.session.get(
+            f"{self.base}/contents/{path}",
+            params={"ref": ref},
+        )
+        self._require(resp, (200,), f"read {path} at {ref}")
+        import base64 as b64
+        return b64.b64decode(resp.json()["content"]).decode("utf-8")
+
     def merge_pr(self, number: int, commit_title: str = "") -> None:
         resp = self.session.put(
             f"{self.base}/pulls/{number}/merge",
@@ -73,23 +92,7 @@ class DraftsClient:
         )
         self._require(resp, (200,), f"merge PR #{number}")
 
-    def get_file(self, ref: str, dir_path: str) -> tuple[str, str] | None:
-        """Get the filename and decoded content of the first .md file in the directory at the given ref."""
-        resp = self.session.get(
-            f"{self.base}/contents/{dir_path}",
-            params={"ref": ref},
-        )
-        self._require(resp, (200,), f"list files in {dir_path} at {ref}")
-        entries = resp.json()
-        for entry in entries:
-            if entry.get("name", "").endswith(".md") and entry.get("type") == "file":
-                file_resp = self.session.get(entry["download_url"])
-                self._require(file_resp, (200,), f"download {entry['name']}")
-                return entry["name"], file_resp.text
-        return None
-
     def update_file(self, branch: str, path: str, content: str, message: str) -> None:
-        """Get the file's SHA, then update it."""
         resp = self.session.get(
             f"{self.base}/contents/{path}",
             params={"ref": branch},

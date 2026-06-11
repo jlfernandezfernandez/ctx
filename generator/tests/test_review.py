@@ -30,6 +30,8 @@ ARTICLE_BODY = (
     + "- [Blog](https://example.com/c)\n"
 )
 
+PATH = "site/src/content/blog/2026-06-11-vistas-materializadas-en-snowflake.md"
+
 
 @patch("article_generator.review.DraftsClient")
 @patch("article_generator.review.LLMClient")
@@ -38,11 +40,12 @@ def test_approved_auto_merges(issues_cls, llm_cls, drafts_cls):
     pr = {
         "body": "Closes #5",
         "head": {"ref": "article/issue-5"},
-        "title": "article: Project Reactor",
+        "title": "article: Vistas materializadas en Snowflake",
     }
     drafts = drafts_cls.return_value
     drafts.get_pr.return_value = pr
-    drafts.get_file.return_value = ("2026-06-11-project-reactor.md", ARTICLE_BODY)
+    drafts.get_article_path.return_value = PATH
+    drafts.read_file.return_value = ARTICLE_BODY
 
     reviewer = llm_cls.return_value
     reviewer.generate_json.return_value = {"approved": True, "issues": []}
@@ -60,11 +63,12 @@ def test_rejected_then_fixed_auto_merges(issues_cls, llm_cls, drafts_cls):
     pr = {
         "body": "Closes #5",
         "head": {"ref": "article/issue-5"},
-        "title": "article: Project Reactor",
+        "title": "article: Vistas materializadas en Snowflake",
     }
     drafts = drafts_cls.return_value
     drafts.get_pr.return_value = pr
-    drafts.get_file.return_value = ("2026-06-11-project-reactor.md", ARTICLE_BODY)
+    drafts.get_article_path.return_value = PATH
+    drafts.read_file.return_value = ARTICLE_BODY
 
     reviewer = llm_cls.return_value
     reviewer.generate_json.return_value = {
@@ -76,7 +80,9 @@ def test_rejected_then_fixed_auto_merges(issues_cls, llm_cls, drafts_cls):
     with patch("article_generator.review.validate_body"):
         assert run(env()) == 0
 
-    drafts.update_file.assert_called_once()
+    drafts.update_file.assert_called_once_with(
+        "article/issue-5", PATH, ARTICLE_BODY, "fix: address review feedback"
+    )
     drafts.merge_pr.assert_called_once_with(9)
 
 
@@ -89,11 +95,12 @@ def test_rejected_fix_fails_validation_needs_human(issues_cls, llm_cls, drafts_c
     pr = {
         "body": "Closes #5",
         "head": {"ref": "article/issue-5"},
-        "title": "article: Project Reactor",
+        "title": "article: Vistas materializadas en Snowflake",
     }
     drafts = drafts_cls.return_value
     drafts.get_pr.return_value = pr
-    drafts.get_file.return_value = ("2026-06-11-project-reactor.md", ARTICLE_BODY)
+    drafts.get_article_path.return_value = PATH
+    drafts.read_file.return_value = ARTICLE_BODY
 
     reviewer = llm_cls.return_value
     reviewer.generate_json.return_value = {
@@ -117,11 +124,12 @@ def test_no_issue_number_still_merges(issues_cls, llm_cls, drafts_cls):
     pr = {
         "body": "Some description without Closes",
         "head": {"ref": "article/issue-5"},
-        "title": "article: Project Reactor",
+        "title": "article: Vistas materializadas en Snowflake",
     }
     drafts = drafts_cls.return_value
     drafts.get_pr.return_value = pr
-    drafts.get_file.return_value = ("2026-06-11-project-reactor.md", ARTICLE_BODY)
+    drafts.get_article_path.return_value = PATH
+    drafts.read_file.return_value = ARTICLE_BODY
 
     reviewer = llm_cls.return_value
     reviewer.generate_json.return_value = {"approved": True, "issues": []}
