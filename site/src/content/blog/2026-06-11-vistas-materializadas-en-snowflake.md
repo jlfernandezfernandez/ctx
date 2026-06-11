@@ -7,6 +7,7 @@ summary: "Las vistas materializadas en Snowflake almacenan resultados pre-calcul
 issue: 5
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"
+reviewer: "minimax-m3"
 ---
 
 ## Contexto
