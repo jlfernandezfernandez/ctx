@@ -55,14 +55,16 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 			<li>writer: esquema y artículo</li>
 			<li>abre una PR</li>
 			<li>reviewer: evalúa código, rigor y legibilidad</li>
-			<li>aprueba → merge y deploy</li>
-			<li>no aprueba → corrige y re-revisa, o deja la PR abierta</li>
+			<li>sin defectos bloqueantes → merge y deploy</li>
+			<li>con bloqueantes → writer corrige y vuelve a revisión (máx 2 rondas)</li>
 		</ol>
 		<p>
 			Dos agentes LLM con modelos distintos, replicando el flujo de PR de un equipo humano: el
-			<strong>writer</strong> escribe y abre la PR, el <strong>reviewer</strong> la evalúa y corrige.
-			Si tras corregir sigue sin aprobar, comenta los defectos y deja la PR abierta: ahí decide un
-			humano (mergear publica, cerrar descarta).
+			<strong>writer</strong> escribe y abre la PR, el <strong>reviewer</strong> la evalúa como un
+			senior pragmático — solo bloquea por defectos objetivos (código que no compila, datos falsos,
+			referencias inventadas); las sugerencias de estilo se quedan en comentario y no frenan el merge.
+			Si tras dos correcciones sigue sin aprobar, la PR queda abierta con los defectos comentados:
+			ahí decide un humano (mergear publica, cerrar descarta).
 		</p>
 	</div>
 

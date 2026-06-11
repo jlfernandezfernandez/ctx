@@ -13,19 +13,20 @@ Cada día laborable, un artículo en profundidad (~15 min, 2.500-3.500 palabras,
 1. Propón un tema con la plantilla de issue ["Proponer tema"](../../issues/new/choose). Un modelo pequeño valida que sea técnico y le asigna una categoría.
 2. **Vota con 👍**: cada noche (L-V, ~6:30 Madrid) se elige el tema aceptado más votado (empate → el más antiguo; el label `priority` salta la cola).
 3. El **writer** genera el artículo y abre una PR, igual que lo haría un compañero.
-4. El **reviewer** evalúa código, rigor y legibilidad sobre esa PR:
-   - Aprueba → merge automático, la issue se cierra con el link y la web se despliega.
-   - Rechaza → corrige el artículo y lo vuelve a revisar. Si la corrección tampoco pasa, comenta los defectos pendientes y **deja la PR abierta**: una PR de artículo abierta significa "decide un humano" (mergear publica, cerrar descarta). Mientras tanto la cola no se bloquea: al día siguiente toca el siguiente tema.
+4. El **reviewer** evalúa código, rigor y legibilidad sobre esa PR, como un compañero senior: cada defecto es **bloqueante** (código que no compila, dato falso, referencia inventada) o **sugerencia** (estilo, matices — no impiden publicar).
+   - Sin bloqueantes → merge automático (las sugerencias quedan como comentario), la issue se cierra con el link y la web se despliega.
+   - Con bloqueantes → comenta "cambios solicitados" en la PR y se los devuelve al **writer**, que corrige y vuelve a revisión. Máximo `MAX_REVIEW_ROUNDS` correcciones (2 por defecto) para que el reviewer no saque pegas indefinidamente.
+   - Si tras agotar las rondas siguen los bloqueantes, **la PR queda abierta** con la mejor versión y los defectos comentados: una PR de artículo abierta significa "decide un humano" (mergear publica, cerrar descarta). La cola no se bloquea: al día siguiente toca el siguiente tema.
 
-Todo el flujo vive en un único workflow ([`publish.yml`](.github/workflows/publish.yml)): writer y reviewer son dos pasos del mismo run, así que no hay coreografía entre workflows ni labels de control.
+Todo el flujo vive en un único workflow ([`publish.yml`](.github/workflows/publish.yml)): writer y reviewer son pasos del mismo run y la conversación entre ambos ocurre en proceso; los comentarios y commits de la PR son el rastro visible, no el mecanismo (ni labels ni coreografía entre workflows).
 
 ## Agentes
 
 | Agente | Modelo | Qué hace |
 |---|---|---|
 | **Triaje** | `LLM_TRIAGE_MODEL` | Valida que la propuesta sea técnica, asigna categoría |
-| **Writer** | `LLM_WRITER_MODEL` | Genera esquema + artículo completo, abre PR |
-| **Reviewer** | `LLM_REVIEWER_MODEL` | Evalúa la PR, corrige si puede, mergea o escala a humano |
+| **Writer** | `LLM_WRITER_MODEL` | Genera esquema + artículo, abre PR, corrige el feedback |
+| **Reviewer** | `LLM_REVIEWER_MODEL` | Evalúa la PR y decide: mergea, pide cambios o escala a humano |
 
 El writer y el reviewer usan modelos distintos para evitar que un modelo apruebe sus propios vicios. El triaje limita cada autor a 5 propuestas por día UTC.
 

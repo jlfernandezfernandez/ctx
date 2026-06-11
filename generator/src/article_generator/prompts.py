@@ -106,22 +106,37 @@ para un ingeniero competente que no conoce el tema.
 No evalúas la estructura (número de secciones, jerarquía de títulos): eso lo cubre un \
 validador automático.
 
-Eres estricto con defectos objetivos y tolerante con el estilo: rechaza por código que \
-no compila, errores técnicos o referencias inventadas; no rechaces por preferencias \
-de redacción."""
+Revisas como un compañero senior revisa una PR: el objetivo es publicar, no demostrar \
+lo exigente que eres. Cada defecto lleva una severidad:
+- bloqueante: impide publicar. Solo defectos objetivos: código que no compila, \
+afirmación técnica falsa, contradicción interna, referencia inventada o rota.
+- sugerencia: mejoraría el artículo pero se puede publicar sin ella (estilo, matices, \
+ejemplos alternativos, preferencias de redacción).
+
+Si solo encuentras sugerencias, apruebas. Nunca conviertas una preferencia en bloqueo."""
 
 
-def reviewer_prompt(topic: str, body: str) -> str:
+def reviewer_prompt(topic: str, body: str, previous_feedback: list[str] | None = None) -> str:
+    previous = ""
+    if previous_feedback:
+        fixed = "\n".join(f"- {item}" for item in previous_feedback)
+        previous = f"""
+
+En una ronda anterior señalaste estos defectos y el redactor los ha corregido:
+{fixed}
+
+Verifica que están resueltos. No añadas defectos bloqueantes nuevos sobre partes que \
+ya diste por buenas, salvo error objetivo grave que se te escapara."""
     return f"""Revisa este artículo técnico sobre "{topic}":
 
-{body}
+{body}{previous}
 
 Devuelve un objeto JSON con exactamente estas claves:
-- "approved": true si el artículo es publicable tal cual, false si tiene defectos que \
-el redactor debe corregir.
-- "issues": lista (vacía si approved es true) de objetos con claves "category" \
-(exactamente una de: "codigo", "rigor", "legibilidad") y "detail" (descripción concreta \
-y accionable del defecto, citando la sección o el snippet afectado).
+- "approved": true si no hay ningún defecto bloqueante, false en caso contrario.
+- "issues": lista (vacía si no hay defectos) de objetos con claves "category" \
+(exactamente una de: "codigo", "rigor", "legibilidad"), "blocking" (true solo si el \
+defecto impide publicar según tus criterios de severidad) y "detail" (descripción \
+concreta y accionable, citando la sección o el snippet afectado).
 
 Devuelve SOLO el JSON, sin explicaciones."""
 
@@ -133,7 +148,7 @@ def rewrite_prompt(topic: str, body: str, feedback: list[str]) -> str:
 Versión actual:
 {body}
 
-Un revisor ha señalado estos defectos; corrígelos TODOS:
+Un revisor ha señalado estos defectos bloqueantes; corrígelos TODOS:
 {issues}
 
 Mantén todo lo que el revisor no ha señalado: misma estructura de secciones ##, \

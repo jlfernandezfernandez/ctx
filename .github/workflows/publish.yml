@@ -46,11 +46,13 @@ jobs:
           SITE_URL: https://${{ github.repository_owner }}.github.io/ctx
         run: generate-article
 
-      - name: Reviewer — review PR, fix if needed, merge or leave open
+      - name: Review loop — reviewer judges, writer fixes, merge or leave open
         if: inputs.pr_number != '' || steps.writer.outputs.pr_number != ''
         env:
           LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
           LLM_REVIEWER_MODEL: ${{ vars.LLM_REVIEWER_MODEL }}
+          LLM_WRITER_MODEL: ${{ vars.LLM_WRITER_MODEL }}
+          MAX_REVIEW_ROUNDS: ${{ vars.MAX_REVIEW_ROUNDS }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
