@@ -16,20 +16,26 @@ from .llm import LLMClient, LLMError
 TAGS_FILE = Path("site/src/data/tags.json")
 BLOG_DIR = Path("site/src/content/blog")
 MAX_RECENT = 10  # only the last N articles' metadata for token budget
-MAX_TAGS = 40  # hard cap for the taxonomy
+MAX_TAGS = 15  # hard cap, prompt already aims for fewer
 
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---", re.DOTALL)
 TAGS_LINE = re.compile(r'^tags:\s*\[(.+)\]$', re.MULTILINE)
 
 SYSTEM_PROMPT = """Eres el curador de etiquetas de Ctx (ctx), un blog técnico. Simplificas \
-la taxonomía de tags del blog para que sea útil al buscar y no se disperse.
+la taxonomía de tags para que cada tag agrupe un concepto, no una librería o feature concreta.
+
+Tu objetivo es REDUCIR el número de tags siempre que puedas. Cada artículo debe llevar \
+2-3 tags como mucho. Si un artículo tiene más, los sobrantes son demasiado específicos \
+y deben absorberse en tags más genéricos.
 
 Reglas:
-- Fusiona tags semánticamente equivalentes en uno solo (ej: "apache-kafka" → "kafka").
-- Elimina tags demasiado específicos si otro más genérico los cubre bien.
-- No sobre-generalices: mantén tags que representen conceptos de búsqueda distintos.
+- Fusiona tags equivalentes sin piedad (ej: "raft", "kraft", "controller" → solo "kafka").
+- Un tag debe representar una tecnología, lenguaje o concepto transversal, nunca un \
+detalle de implementación ni un feature puntual.
+- Prefieres 5 tags a 15. Prefieres 10 a 20.
 - Mantén los nombres de tecnología/proyecto tal cual (java, kafka, snowflake, postgresql).
-- Devuelve entre 15 y 40 tags como máximo.
+- Los conceptos transversales se reutilizan entre artículos (agents, llm, reactive).
+- Máximo 15 tags absolutos. Para 7 artículos, 10 es un buen número.
 - No inventes tags que no aparezcan en los artículos.
 
 Responde únicamente con un objeto JSON:

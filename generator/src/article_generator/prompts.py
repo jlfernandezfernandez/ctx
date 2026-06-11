@@ -61,8 +61,8 @@ def metadata_prompt(topic: str, body: str, existing_tags: list[str] | None = Non
     if existing_tags:
         tag_list = ", ".join(existing_tags)
         tag_hint = (
-            f"\n\nTags existentes en el blog (reutilízalas si encajan; solo añade una nueva "
-            f"si es necesario): {tag_list}"
+            f"\n\nTags canónicos del blog (REUTILÍZALOS siempre que encajen; solo crea uno nuevo "
+            f"si es inevitable): {tag_list}. Usa 2 o 3 como máximo, eligiendo los más representativos."
         )
     return f"""Para este artículo técnico sobre "{topic}":
 
