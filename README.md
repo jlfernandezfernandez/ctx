@@ -24,17 +24,19 @@ Todo el flujo vive en un único workflow ([`publish.yml`](.github/workflows/publ
 
 | Agente | Modelo | Qué hace |
 |---|---|---|
-| **Triaje** | `LLM_TRIAGE_MODEL` | Cura el título y la descripción, modera propuestas claramente inválidas |
+| **Triaje** | `LLM_TRIAGE_MODEL` | Cura título y descripción, modera spam |
 | **Writer** | `LLM_WRITER_MODEL` | Genera esquema + artículo, abre PR, corrige el feedback |
 | **Reviewer** | `LLM_REVIEWER_MODEL` | Evalúa la PR y decide: mergea, pide cambios o escala a humano |
+| **Tag curator** | `LLM_TRIAGE_MODEL` | Revisa `tags.json` tras cada publicación: fusiona, elimina o añade tags para mantener la taxonomía limpia |
 
-El writer y el reviewer usan modelos distintos para evitar que un modelo apruebe sus propios vicios. Los tags del artículo los propone el writer a partir del contenido, no de labels de la issue.
+El writer y el reviewer usan modelos distintos para evitar que un modelo apruebe sus propios vicios. El writer recibe los tags existentes como referencia y decide cuáles usar; el tag curator simplifica la taxonomía completa en cada ejecución.
 
 ## Estructura
 
 - `generator/` — generador Python (LLM agnóstico vía API OpenAI-compatible)
 - `site/` — web Astro (GitHub Pages)
-- `.github/workflows/` — `triage-topic` (cura propuestas), `publish` (writer + reviewer), `deploy` (Pages), `ci` (tests y build)
+- `.github/workflows/` — `triage-topic` (cura propuestas), `publish` (writer + reviewer + tag curator), `deploy` (Pages), `ci` (tests y build)
+- `site/src/data/tags.json` — taxonomía canónica de tags, actualizada automáticamente por el tag curator
 
 Los únicos labels requeridos por el producto son `triage`, `topic`, `priority`, `published` y `rejected`.
 
