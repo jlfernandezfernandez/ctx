@@ -17,7 +17,7 @@ con LangGraph y mejorar la calidad antes de publicar.
 |---|---|
 | Patrón de flujo | Loop con feedback (evaluator-optimizer): el revisor no edita, emite informe; el redactor reescribe. |
 | Framework | LangGraph solo para orquestación (StateGraph, nodos, aristas condicionales). Los nodos son funciones Python que usan el `LLMClient` propio — sin wrappers LangChain, repo sigue provider-agnostic. |
-| Modelos | Dos instancias de `LLMClient` contra Ollama Cloud: `WRITER_MODEL` (default `deepseek-v4-pro`) y `REVIEWER_MODEL` (modelo de otra familia, a elegir del catálogo). |
+| Modelos | Dos instancias de `LLMClient` contra Ollama Cloud: `WRITER_MODEL` (default `deepseek-v4-pro`) y `REVIEWER_MODEL` (default `minimax-m3`, familia distinta y fuerte en código). |
 | Alcance del revisor | Código (imports, compilable), rigor técnico (sin inventos, referencias plausibles) y legibilidad (español natural, nivel "vibe coders"). La estructura la cubre el validador determinista. |
 | Validación determinista | `validate_body()` y `validate_reference_urls()` se mantienen como gate obligatorio. Nunca se delega a LLM lo que cubre un regex. |
 | Rechazo tras N iteraciones | No se publica. Se crea draft PR con el artículo + informe, label `needs-human-review` en la issue, y el run intenta el siguiente tema (máx 2 temas por run). |
@@ -80,7 +80,7 @@ topic ──> [writer] ──> [validate] ──> [reviewer] ──> ¿aprobado?
 | Var | Tipo | Default |
 |---|---|---|
 | `WRITER_MODEL` | repo var | `deepseek-v4-pro` |
-| `REVIEWER_MODEL` | repo var | (a elegir, familia distinta) |
+| `REVIEWER_MODEL` | repo var | `minimax-m3` |
 | `MAX_REVIEW_ITERATIONS` | repo var | `2` |
 | `MAX_TOPICS_PER_RUN` | repo var | `2` |
 | `LLM_BASE_URL`, `LLM_API_KEY` | sin cambios | — |
