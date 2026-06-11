@@ -25,14 +25,20 @@ const recent = rest.slice(0, RECENT_COUNT);
 			>
 		</h1>
 		<script is:inline>
+			// Reveal characters in place (no reflow) so the headline never shifts layout.
 			const typingText = document.querySelector('.typing-text');
 			if (typingText && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-				const text = typingText.textContent;
-				const characters = Array.from(text);
+				const characters = Array.from(typingText.textContent);
 				typingText.textContent = '';
-				characters.forEach((character, index) => {
+				for (const character of characters) {
+					const span = document.createElement('span');
+					span.textContent = character;
+					span.style.visibility = 'hidden';
+					typingText.appendChild(span);
+				}
+				[...typingText.children].forEach((span, index) => {
 					window.setTimeout(() => {
-						typingText.textContent += character;
+						span.style.visibility = 'visible';
 					}, 70 * index);
 				});
 			}
@@ -62,7 +68,6 @@ const recent = rest.slice(0, RECENT_COUNT);
 			<a class="vote-link" href={TOPICS_URL} target="_blank">ver y votar próximos temas →</a>
 		</div>
 	</section>
-	<HomeActivity posts={posts} />
 	{
 		latest && (
 			<section class="today">
@@ -81,7 +86,6 @@ const recent = rest.slice(0, RECENT_COUNT);
 			</section>
 		)
 	}
-	<TopicQueue />
 	{
 		recent.length > 0 && (
 			<section class="recent">
@@ -97,6 +101,8 @@ const recent = rest.slice(0, RECENT_COUNT);
 			</a>
 		)
 	}
+	<TopicQueue />
+	<HomeActivity posts={posts} />
 </Page>
 
 <style>

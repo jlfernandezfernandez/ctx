@@ -120,7 +120,7 @@ const maxModelCount = Math.max(...models.map(([, count]) => count), 1);
 		padding: 0.7em 1em;
 		border-bottom: 1px solid rgb(var(--gray-light));
 		font-family: var(--font-mono);
-		font-size: 0.72em;
+		font-size: 0.75em;
 		color: rgb(var(--gray));
 	}
 	.activity-command {
@@ -129,19 +129,6 @@ const maxModelCount = Math.max(...models.map(([, count]) => count), 1);
 	.activity-command::before {
 		content: '$ ';
 		color: rgb(var(--gray));
-	}
-	.live {
-		display: flex;
-		align-items: center;
-		gap: 0.5em;
-	}
-	.live::before {
-		content: '';
-		width: 6px;
-		height: 6px;
-		border-radius: 50%;
-		background: var(--accent);
-		box-shadow: 0 0 0 4px rgba(255, 180, 84, 0.1);
 	}
 	.activity-grid {
 		display: grid;
@@ -193,7 +180,7 @@ const maxModelCount = Math.max(...models.map(([, count]) => count), 1);
 		z-index: 1;
 		margin: 0;
 		font-family: var(--font-mono);
-		font-size: 0.68em;
+		font-size: 0.75em;
 		line-height: 1.6;
 		color: rgb(var(--gray));
 	}
@@ -209,7 +196,7 @@ const maxModelCount = Math.max(...models.map(([, count]) => count), 1);
 	.panel-label {
 		margin: 0 0 1em;
 		font-family: var(--font-mono);
-		font-size: 0.68em;
+		font-size: 0.75em;
 		text-transform: uppercase;
 		letter-spacing: 0.08em;
 		color: rgb(var(--gray));
@@ -220,7 +207,7 @@ const maxModelCount = Math.max(...models.map(([, count]) => count), 1);
 		gap: 0.35em 1em;
 		margin-top: 0.9em;
 		font-family: var(--font-mono);
-		font-size: 0.72em;
+		font-size: 0.75em;
 	}
 	.model-name {
 		overflow: hidden;
@@ -258,7 +245,7 @@ const maxModelCount = Math.max(...models.map(([, count]) => count), 1);
 		border: 1px solid rgb(var(--gray-light));
 		border-radius: 999px;
 		font-family: var(--font-mono);
-		font-size: 0.7em;
+		font-size: 0.75em;
 		color: rgb(var(--gray-dark));
 	}
 	.person i {
@@ -280,7 +267,7 @@ const maxModelCount = Math.max(...models.map(([, count]) => count), 1);
 		align-items: center;
 		margin-top: 0.9em;
 		font-family: var(--font-mono);
-		font-size: 0.68em;
+		font-size: 0.75em;
 		color: rgb(var(--gray));
 	}
 	.people .more-data {
