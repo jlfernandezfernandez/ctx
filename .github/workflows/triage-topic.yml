@@ -3,6 +3,12 @@ name: Triage proposed topic
 on:
   issues:
     types: [opened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Issue number to triage (optional, auto-detects from event if omitted)
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -31,6 +37,7 @@ jobs:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_TRIAGE_MODEL: ${{ vars.LLM_TRIAGE_MODEL }}
           TRIAGE_DAILY_LIMIT: "5"
+          TRIAGE_ISSUE_NUMBER: ${{ inputs.issue_number }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: triage-topic

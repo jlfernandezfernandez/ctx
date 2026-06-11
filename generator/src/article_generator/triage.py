@@ -134,6 +134,21 @@ def load_issue(event_path: str) -> dict:
         raise TriageError("GITHUB_EVENT_PATH does not contain an issue event") from exc
 
 
+def fetch_issue(repo: str, number: int, token: str) -> dict:
+    import requests
+    resp = requests.get(
+        f"https://api.github.com/repos/{repo}/issues/{number}",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+    )
+    if resp.status_code != 200:
+        raise TriageError(f"Failed to fetch issue #{number}: {resp.status_code}")
+    return resp.json()
+
+
 def leave_for_review(issues: IssuesClient, number: int, reason: str) -> None:
     issues.comment(
         number,
@@ -196,11 +211,18 @@ def apply_classification(
 
 
 def run(env: dict) -> int:
-    issue = load_issue(env["GITHUB_EVENT_PATH"])
+    issues = IssuesClient(repo=env["GITHUB_REPOSITORY"], token=env["GITHUB_TOKEN"])
+
+    if env.get("TRIAGE_ISSUE_NUMBER"):
+        number = int(env["TRIAGE_ISSUE_NUMBER"])
+        issue = fetch_issue(env["GITHUB_REPOSITORY"], number, env["GITHUB_TOKEN"])
+    else:
+        issue = load_issue(env["GITHUB_EVENT_PATH"])
+        number = issue["number"]
+
     number = issue["number"]
     author = issue["user"]["login"]
     limit = int(env.get("TRIAGE_DAILY_LIMIT", "5"))
-    issues = IssuesClient(repo=env["GITHUB_REPOSITORY"], token=env["GITHUB_TOKEN"])
 
     issues.ensure_system_labels()
     issues.set_labels(number, [TRIAGE_LABEL])
