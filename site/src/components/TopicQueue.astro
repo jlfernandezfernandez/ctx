@@ -29,7 +29,8 @@ const { limit = 4, compact = false } = Astro.props;
 <script is:inline define:vars={{ topicsApiUrl: TOPICS_API_URL }}>
 	const CACHE_KEY = 'ctx-topic-queue';
 	const CACHE_TTL = 5 * 60 * 1000;
-	const EXCLUDED_LABELS = new Set(['topic', 'priority']);
+	const EXCLUDED_LABELS = new Set(['topic', 'priority', 'needs-review', 'needs-human-review']);
+	const SKIP_LABELS = new Set(['needs-review', 'needs-human-review']);
 
 	function escapeHtml(value) {
 		return String(value)
@@ -125,14 +126,26 @@ const { limit = 4, compact = false } = Astro.props;
 			'<li class="queue-loading">Consulta la cola directamente en GitHub.</li>';
 	}
 
-	const queues = document.querySelectorAll('[data-topic-queue]');
-	loadIssues()
-		.then((issues) => {
-			const topics = issues.filter((issue) => !issue.pull_request).sort(compareTopics);
+	async function refresh() {
+		const queues = document.querySelectorAll('[data-topic-queue]');
+		try {
+			const issues = await loadIssues();
+			const topics = issues
+				.filter((issue) => !issue.pull_request)
+				.filter((issue) => !issue.labels.some((label) => SKIP_LABELS.has(label.name)))
+				.sort(compareTopics);
 			updateQueueCount(topics.length);
 			queues.forEach((queue) => renderQueue(queue, topics));
-		})
-		.catch(() => queues.forEach(renderError));
+		} catch {
+			queues.forEach(renderError);
+		}
+	}
+
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', refresh);
+	} else {
+		refresh();
+	}
 </script>
 
 <style is:global>
