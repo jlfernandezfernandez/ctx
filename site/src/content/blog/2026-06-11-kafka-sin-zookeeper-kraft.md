@@ -66,7 +66,7 @@ services:
       KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092"
       KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
-      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka1:9093,2@kafka2:9093,3@kafka3:9093"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka1:9093,2@kafka2:9095,3@kafka3:9097"
       KAFKA_LOG_DIRS: "/var/lib/kafka/data"
       KAFKA_METADATA_LOG_DIR: "/var/lib/kafka/data/metadata"
       CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
@@ -92,7 +92,7 @@ services:
       KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9094"
       KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
-      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka1:9093,2@kafka2:9093,3@kafka3:9093"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka1:9093,2@kafka2:9095,3@kafka3:9097"
       KAFKA_LOG_DIRS: "/var/lib/kafka/data"
       KAFKA_METADATA_LOG_DIR: "/var/lib/kafka/data/metadata"
       CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
@@ -118,7 +118,7 @@ services:
       KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9096"
       KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
-      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka1:9093,2@kafka2:9093,3@kafka3:9093"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka1:9093,2@kafka2:9095,3@kafka3:9097"
       KAFKA_LOG_DIRS: "/var/lib/kafka/data"
       KAFKA_METADATA_LOG_DIR: "/var/lib/kafka/data/metadata"
       CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
@@ -131,9 +131,7 @@ services:
       "
 ```
 
-Cada nodo usa `KAFKA_CONTROLLER_QUORUM_VOTERS` con la misma lista de tres voters, donde el puerto de controller de kafka2 es 9093 (mapeado internamente, pero en la variable se usa el puerto del listener CONTROLLER dentro del contenedor, que es 9093 para kafka1, 9095 para kafka2, 9097 para kafka3; aquí se ha simplificado usando 9093 para todos porque los hostnames resuelven dentro de la red Docker, pero en un entorno real cada uno debe apuntar a su propio puerto. Corregimos: en kafka2, su listener CONTROLLER está en 9095, por lo que en la lista de voters debe aparecer como `2@kafka2:9095`. Lo mismo para kafka3: `3@kafka3:9097`. Ajustemos el ejemplo para que sea correcto. En el código anterior, todos usan `1@kafka1:9093,2@kafka2:9093,3@kafka3:9093`, lo cual es incorrecto porque kafka2 y kafka3 no escuchan en 9093. Vamos a corregir: en kafka2, su CONTROLLER listener es 9095, así que debe ser `2@kafka2:9095`. En kafka3, `3@kafka3:9097`. La variable debe reflejar eso. Reescribiré el docker-compose con los valores correctos. Además, el comando `kafka-storage format` necesita el archivo de configuración; en las imágenes de Confluent, el archivo se genera a partir de las variables de entorno en `/etc/kafka/kafka.properties`. Podemos usar ese path. El comando `--ignore-formatted` evita error si ya está formateado. El `CLUSTER_ID` debe ser un UUID en base64; usamos uno fijo. Todo esto es autocontenido.
-
-Corregiré el ejemplo para que los puertos de controller sean consistentes. En kafka1: CONTROLLER en 9093, voter 1@kafka1:9093. kafka2: CONTROLLER en 9095, voter 2@kafka2:9095. kafka3: CONTROLLER en 9097, voter 3@kafka3:9097. La lista de voters debe ser idéntica en los tres nodos: "1@kafka1:9093,2@kafka2:9095,3@kafka3:9097". Así cada nodo sabe cómo contactar a los demás. Lo reflejaré.
+La variable `KAFKA_CONTROLLER_QUORUM_VOTERS` debe ser idéntica en todos los nodos y contener la dirección y puerto del listener CONTROLLER de cada voter. En este ejemplo, kafka1 escucha en 9093, kafka2 en 9095 y kafka3 en 9097, por lo que la lista es `1@kafka1:9093,2@kafka2:9095,3@kafka3:9097`. Cada nodo usa esta misma cadena para saber cómo contactar a los demás miembros del quorum.
 
 ### Inspección y gestión del quorum con `kafka-metadata-quorum`
 
