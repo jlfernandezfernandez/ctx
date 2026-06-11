@@ -28,7 +28,7 @@ def env(tmp_path, issue=None):
         "GITHUB_TOKEN": "tok",
         "LLM_BASE_URL": "https://ollama.com/v1",
         "LLM_API_KEY": "key",
-        "TRIAGE_MODEL": "nemotron-3-nano:30b-cloud",
+        "LLM_TRIAGE_MODEL": "nemotron-3-nano:30b-cloud",
     }
 
 

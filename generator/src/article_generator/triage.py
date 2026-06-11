@@ -154,7 +154,7 @@ def classify_issue(env: dict, issue: dict, categories: set[str]) -> Classificati
     llm = LLMClient(
         base_url=env["LLM_BASE_URL"],
         api_key=env["LLM_API_KEY"],
-        model=env.get("TRIAGE_MODEL", "nemotron-3-nano:30b-cloud"),
+        model=env["LLM_TRIAGE_MODEL"],
         timeout=60,
     )
     output = llm.generate(
