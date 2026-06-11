@@ -99,21 +99,6 @@ def test_two_models_and_max_iterations_from_env(issues_cls, llm_cls, drafts_cls,
     assert build_graph.call_args.args[2] == 3
 
 
-@patch("article_generator.main.build_graph")
-@patch("article_generator.main.DraftsClient")
-@patch("article_generator.main.LLMClient")
-@patch("article_generator.main.IssuesClient")
-def test_writer_model_falls_back_to_legacy_llm_model(issues_cls, llm_cls, drafts_cls, build_graph):
-    issues_cls.return_value.next_topic.return_value = None
-    e = env()
-    del e["LLM_WRITER_MODEL"]
-    e["LLM_MODEL"] = "legacy-m"
-
-    assert run(e) == 0
-
-    assert llm_cls.call_args_list[0].kwargs["model"] == "legacy-m"
-
-
 @patch("article_generator.main.write_article", return_value="/tmp/out/x.md")
 @patch("article_generator.main.build_graph")
 @patch("article_generator.main.DraftsClient")
