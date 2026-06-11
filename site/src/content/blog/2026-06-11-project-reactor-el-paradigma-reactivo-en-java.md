@@ -3,10 +3,13 @@ title: "Project Reactor: el paradigma reactivo en Java"
 description: "Project Reactor es una librería para construir aplicaciones asíncronas y no bloqueantes en la JVM, implementando la especificación Reactive Streams. Resuelve el cuello de botella del modelo hilo-por-petición al usar un número reducido de hilos para manejar alta concurrencia I/O, gracias a flujos reactivos con backpressure. Usar cuando se requiera bajo consumo de recursos y alta escalabilidad, pero no si la lógica es inherentemente bloqueante o la depuración de pipelines reactivos añade una complejidad injustificada."
 pubDate: 2026-06-11
 tags: ["java", "reactive", "backpressure", "project-reactor", "non-blocking"]
+issue: 1
+requestedBy: "jlfernandezfernandez"
+model: "deepseek-v4-pro"
 summary: "Project Reactor es una librería para construir aplicaciones asíncronas y no bloqueantes en la JVM, implementando la especificación Reactive Streams. Resuelve el cuello de botella del modelo hilo-por-petición al usar un número reducido de hilos para manejar alta concurrencia I/O, gracias a flujos reactivos con backpressure. Usar cuando se requiera bajo consumo de recursos y alta escalabilidad, pero no si la lógica es inherentemente bloqueante o la depuración de pipelines reactivos añade una complejidad injustificada."
 ---
 
-## 1. Contexto: qué problema existe y por qué este tema importa (desde cero)
+## Contexto: qué problema existe y por qué este tema importa
 
 El modelo imperativo y bloqueante ha sido la columna vertebral del desarrollo backend durante años. La premisa es simple: llega una petición HTTP, el servidor le asigna un hilo del pool, ese hilo ejecuta la lógica de negocio —que puede incluir llamadas a base de datos, a otros servicios o a disco— y devuelve una respuesta. Mientras la lógica espera una operación de I/O, el hilo queda bloqueado, inactivo, consumiendo memoria y recursos del sistema operativo. Si el pool tiene 200 hilos y todos están esperando respuestas de servicios externos, la aplicación deja de aceptar nuevas conexiones, aunque la CPU esté prácticamente ociosa.
 
@@ -16,7 +19,7 @@ La raíz del problema está en la naturaleza síncrona de las APIs: cuando un m�
 
 El paradigma reactivo lleva esta idea al extremo, organizándola en torno a flujos de datos asíncronos gobernados por un modelo de empuje (push). En lugar de que el consumidor tire (pull) de los datos llamando a un método y quedándose bloqueado, es el productor quien empuja los datos hacia el consumidor cuando están disponibles. Así nace la especificación Reactive Streams (reactive-streams.org), un estándar mínimo que define la interacción entre un `Publisher` (fuente de datos asíncrona) y un `Subscriber` (consumidor), con un mecanismo de control de flujo no bloqueante llamado *backpressure*. Project Reactor es la implementación de referencia de esta especificación para la JVM y el núcleo reactivo de todo el ecosistema Spring.
 
-## 2. Concepto central: la idea clave explicada con precisión
+## Concepto central
 
 Project Reactor introduce dos tipos principales: `Mono<T>` y `Flux<T>`. Ambos representan secuencias asíncronas de datos, pero `Mono` emite de 0 a 1 elemento (análogo a un `CompletableFuture<T>` pero con semántica reactiva completa) y `Flux` emite de 0 a N elementos (equivalente a un `Iterable<T>` push-based). A diferencia de `CompletableFuture`, que es eager y comienza a ejecutarse inmediatamente, `Mono` y `Flux` son lazy: no sucede nada hasta que alguien se suscribe.
 
@@ -107,7 +110,7 @@ public class ReactiveLineCounter {
 
 Aquí el `Subscriber` controla cuántas líneas recibe del `Publisher`. Si el consumidor fuera más lento (por ejemplo porque escribe en disco), simplemente retrasaría las llamadas a `request()`, y el productor esperaría, sin ocupar hilos ni buffers intermedios.
 
-## 3. En profundidad: internals, trade-offs, comparativas (lo que una newsletter no cuenta)
+## En profundidad: internals, trade-offs y comparativas
 
 ### Ensamblaje de operadores y cadena de decoradores
 
@@ -161,7 +164,7 @@ RxJava (versiones 2 y 3) también implementa Reactive Streams, pero con diferenc
 
 La naturaleza lazy y anidada de los operadores hace que los stacktraces por defecto sean crípticos: una excepción muestra una larga cadena de decoradores anónimos con poca información sobre dónde se declaró el ensamblaje. Reactor ofrece `Hooks.onOperatorDebug()`, que activa un modo de debugging en el que cada operador captura la traza de ensamblaje y la adjunta a los eventos. El coste en rendimiento es significativo (puede multiplicar por 5 o 10 el tiempo de ejecución), por lo que no debe usarse en producción. Como alternativa más ligera, se pueden usar checkpoints: `.checkpoint("después-consulta-bd")` añade una etiqueta que aparece en el stacktrace sin el overhead masivo de capturar toda la traza. En producción, las trazas de ensamblaje se pueden obtener con el agente Java de Reactor (`reactor-tools`), que las construye bajo demanda con un costo mucho menor.
 
-## 4. Ejemplos de código ejecutables, comentados, de menos a más complejo
+## Ejemplos de código ejecutables
 
 **Ejemplo 1: Creación y suscripción básica**
 
@@ -300,7 +303,7 @@ public class ResilientService {
 
 `Mono.fromCallable` difiere la ejecución hasta la suscripción. `Retry.backoff` espera 100 ms entre el primer y segundo intento, 200 ms entre el segundo y el tercero, etc. Si agotados los reintentos aún falla, `onErrorResume` proporciona un fallback.
 
-## 5. Trampas comunes: errores reales que comete la gente y cómo evitarlos
+## Trampas comunes
 
 **Bloquear dentro de operadores reactivos**
 
@@ -331,14 +334,14 @@ Activar `Hooks.onOperatorDebug()` en producción es una receta para el desastre:
 
 Cuando se trabaja con recursos que deben liberarse (ficheros, conexiones, sockets), el operador `using` puede no ser suficiente porque no asegura la liberación en caso de cancelación. `Flux.usingWhen` (y `Mono.usingWhen`) garantiza que el recurso se limpia tanto en caso de finalización normal como en error o cancelación, siguiendo un contrato de `cleanup` asíncrono. No hacerlo puede dejar conexiones abiertas que agoten el pool de la base de datos. Un ejemplo incorrecto sería un `Flux.create` que abre un `InputStream` y nunca lo cierra si el suscriptor cancela.
 
-## 6. Para saber más
+## Para saber más
 
 1. **Documentación oficial de Project Reactor – "Reactor Core Features"**. La referencia más completa y actualizada, con guías sobre todos los operadores, schedulers y testing. [https://projectreactor.io/docs/core/release/reference/](https://projectreactor.io/docs/core/release/reference/)
 
 2. **Reactive Streams Specification**. El documento breve pero esencial que define el protocolo de backpressure y la interacción entre `Publisher` y `Subscriber`. Imprescindible para entender los contratos que Reactor implementa. [https://www.reactive-streams.org/](https://www.reactive-streams.org/)
 
-3. **"Reactive Spring" – Josh Long**. Libro y serie de artículos en el blog oficial de Spring que explican la integración de Reactor con Spring Boot y Spring Cloud, con numerosos ejemplos prácticos. [https://spring.io/blog](https://spring.io/blog) (buscar "Reactive Spring").
+3. **"Reactive Spring" – Josh Long**. Libro y serie de contenidos que explican la integración de Reactor con Spring Boot y Spring Cloud. [https://spring.io/reactive](https://spring.io/reactive)
 
 4. **"Understanding Project Reactor's .then() and .flatMap() operators" – Baeldung**. Artículo que profundiza en operadores que generan confusión entre asincronía y secuencialidad, con ejemplos claros. [https://www.baeldung.com/project-reactor-then-flatmap](https://www.baeldung.com/project-reactor-then-flatmap)
 
-5. **"Reactor Internals" – Simon Baslé (YouTube)**. Charla impartida por uno de los desarrolladores principales del proyecto, donde explica el ensamblaje de operadores, la fusión de macros y las optimizaciones internas. Disponible en el canal de SpringDeveloper.
+5. **Blog de Project Reactor**. Novedades, decisiones técnicas y explicaciones publicadas por el equipo responsable del proyecto. [https://projectreactor.io/blog/](https://projectreactor.io/blog/)
