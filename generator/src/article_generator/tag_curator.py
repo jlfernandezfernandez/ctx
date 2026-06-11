@@ -108,7 +108,6 @@ def run(env: dict) -> int:
         print("Tag taxonomy unchanged.")
         return 0
 
-    TAGS_FILE.write_text(json.dumps(new_tags, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     added = set(new_tags) - set(canonical)
     removed = set(canonical) - set(new_tags)
     msg_parts = []
@@ -118,11 +117,12 @@ def run(env: dict) -> int:
         msg_parts.append(f"-{len(removed)} tags ({', '.join(sorted(removed))})")
     print(f"Tag taxonomy updated: {'; '.join(msg_parts)}")
 
-    # Commit and push the change directly to main.
+    # Commit and push directly to main: pull first, write, then push.
     commit_msg = f"chore: curate tags ({'; '.join(msg_parts)})"
     subprocess.run(["git", "config", "user.name", "github-actions[bot]"], check=True)
     subprocess.run(["git", "config", "user.email", "github-actions[bot]@users.noreply.github.com"], check=True)
     subprocess.run(["git", "pull", "origin", "main", "--rebase"], check=True)
+    TAGS_FILE.write_text(json.dumps(new_tags, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     subprocess.run(["git", "add", str(TAGS_FILE)], check=True)
     subprocess.run(["git", "commit", "-m", commit_msg], check=True)
     subprocess.run(["git", "push", "origin", "main"], check=True)
