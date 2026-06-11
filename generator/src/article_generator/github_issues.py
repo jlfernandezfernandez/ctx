@@ -11,6 +11,7 @@ PRIORITY_LABEL = "priority"
 PUBLISHED_LABEL = "published"
 REJECTED_LABEL = "rejected"
 RATE_LIMITED_LABEL = "rate-limited"
+NEEDS_HUMAN_REVIEW_LABEL = "needs-human-review"
 
 SYSTEM_LABELS = {
     TOPIC_LABEL,
@@ -19,6 +20,7 @@ SYSTEM_LABELS = {
     PUBLISHED_LABEL,
     REJECTED_LABEL,
     RATE_LIMITED_LABEL,
+    NEEDS_HUMAN_REVIEW_LABEL,
 }
 
 GITHUB_DEFAULT_LABELS = {
@@ -42,6 +44,7 @@ SYSTEM_LABEL_DETAILS = {
     PUBLISHED_LABEL: ("5319e7", "Artículo publicado"),
     REJECTED_LABEL: ("d93f0b", "Propuesta descartada"),
     RATE_LIMITED_LABEL: ("6e7781", "Propuesta cerrada por límite diario"),
+    NEEDS_HUMAN_REVIEW_LABEL: ("e99695", "El revisor IA no aprobó el borrador; pendiente de humano"),
 }
 
 
@@ -77,7 +80,12 @@ class IssuesClient:
         )
         if resp.status_code != 200:
             raise GitHubError(f"GitHub API error {resp.status_code}: {resp.text[:500]}")
-        issues = [i for i in resp.json() if "pull_request" not in i]
+        issues = [
+            i
+            for i in resp.json()
+            if "pull_request" not in i
+            and not any(l["name"] == NEEDS_HUMAN_REVIEW_LABEL for l in i["labels"])
+        ]
         if not issues:
             return None
         priority = [
@@ -150,6 +158,13 @@ class IssuesClient:
             json={"labels": labels},
         )
         self._require(resp, (200,), f"set labels on issue #{number}")
+
+    def add_label(self, number: int, label: str) -> None:
+        resp = self.session.post(
+            f"{self.base}/issues/{number}/labels",
+            json={"labels": [label]},
+        )
+        self._require(resp, (200, 201), f"add label {label} to issue #{number}")
 
     def comment(self, number: int, body: str) -> None:
         resp = self.session.post(
