@@ -2,6 +2,11 @@
 
 **https://jlfernandezfernandez.github.io/ctx/**
 
+[![CI](https://github.com/jlfernandezfernandez/ctx/actions/workflows/ci.yml/badge.svg)](https://github.com/jlfernandezfernandez/ctx/actions/workflows/ci.yml)
+[![Generate daily article](https://github.com/jlfernandezfernandez/ctx/actions/workflows/generate.yml/badge.svg)](https://github.com/jlfernandezfernandez/ctx/actions/workflows/generate.yml)
+[![Triage proposed topic](https://github.com/jlfernandezfernandez/ctx/actions/workflows/triage-topic.yml/badge.svg)](https://github.com/jlfernandezfernandez/ctx/actions/workflows/triage-topic.yml)
+[![Deploy site](https://github.com/jlfernandezfernandez/ctx/actions/workflows/deploy.yml/badge.svg)](https://github.com/jlfernandezfernandez/ctx/actions/workflows/deploy.yml)
+
 Un deep dive técnico al día. Para vibe coders que quieren entender qué pasa por debajo.
 
 Cada día laborable, un artículo en profundidad (~15 min, 2.500-3.500 palabras, con código ejecutable) sobre un tema propuesto y votado por el equipo. Desde cero hasta donde una newsletter generalista no llega.
