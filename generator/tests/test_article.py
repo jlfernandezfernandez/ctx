@@ -227,3 +227,26 @@ def test_write_article_creates_file_with_frontmatter(tmp_path):
     assert "pubDate: 2026-06-10" in content
     assert 'tags: ["java", "reactor"]' in content
     assert content.rstrip().endswith("palabra")
+
+
+def test_render_article_returns_frontmatter_and_body():
+    from datetime import date
+
+    from article_generator.article import render_article
+
+    content = render_article(
+        pub_date=date(2026, 6, 11),
+        title="Project Reactor",
+        description="desc",
+        tags=["java"],
+        body="## Sección\n\nTexto.",
+        summary="El TL;DR.",
+        issue_number=5,
+        requested_by="jordi",
+        model="writer + reviewer (reviewer)",
+    )
+    assert content.startswith("---\n")
+    assert 'title: "Project Reactor"' in content
+    assert "pubDate: 2026-06-11" in content
+    assert 'model: "writer + reviewer (reviewer)"' in content
+    assert content.endswith("## Sección\n\nTexto.\n")
