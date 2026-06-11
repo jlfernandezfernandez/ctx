@@ -20,6 +20,8 @@ def env():
         "LLM_API_KEY": "k",
         "LLM_WRITER_MODEL": "writer-m",
         "LLM_REVIEWER_MODEL": "reviewer-m",
+        "MAX_REVIEW_ITERATIONS": "2",
+        "MAX_TOPICS_PER_RUN": "2",
         "OUTPUT_DIR": "/tmp/out",
         "SITE_URL": "https://owner.github.io/repo",
     }

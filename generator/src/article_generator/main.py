@@ -126,8 +126,8 @@ def run(env: dict) -> int:
     # Unset workflow vars arrive as empty strings, hence `or` over defaults.
     writer_model = env["LLM_WRITER_MODEL"]
     reviewer_model = env["LLM_REVIEWER_MODEL"]
-    max_iterations = int(env.get("MAX_REVIEW_ITERATIONS") or 2)
-    max_topics = int(env.get("MAX_TOPICS_PER_RUN") or 2)
+    max_iterations = int(env["MAX_REVIEW_ITERATIONS"])
+    max_topics = int(env["MAX_TOPICS_PER_RUN"])
 
     writer = LLMClient(base_url=env["LLM_BASE_URL"], api_key=env["LLM_API_KEY"], model=writer_model)
     reviewer = LLMClient(base_url=env["LLM_BASE_URL"], api_key=env["LLM_API_KEY"], model=reviewer_model)
