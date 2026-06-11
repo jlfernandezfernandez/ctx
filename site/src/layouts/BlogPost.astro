@@ -25,6 +25,7 @@ const {
 	<article>
 		<div class="prose" data-pagefind-body>
 			<div class="title">
+				<p class="article-command">ctx article --read</p>
 				<h1>{title}</h1>
 				<div class="meta">
 					<span class="fence">---</span>
@@ -131,6 +132,18 @@ const {
 		padding: 1.5em 0;
 		border-bottom: 1px solid rgb(var(--gray-light));
 	}
+	.article-command {
+		margin: 0 0 0.65em;
+		font-family: var(--font-mono);
+		font-size: 0.72em;
+		color: var(--accent);
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+	}
+	.article-command::before {
+		content: '$ ';
+		color: rgb(var(--gray));
+	}
 	.title h1 {
 		margin: 0 0 0.8em 0;
 		font-family: var(--font-sans);
@@ -149,6 +162,7 @@ const {
 		font-size: 0.8em;
 		line-height: 1.9;
 		overflow-x: auto;
+		box-shadow: var(--panel-shadow);
 	}
 	.meta .fence,
 	.meta .key {
@@ -174,7 +188,8 @@ const {
 		border: 1px solid rgb(var(--gray-light));
 		border-left: 3px solid var(--accent);
 		border-radius: 6px;
-		background: var(--bg-raise);
+		background: linear-gradient(90deg, rgba(255, 180, 84, 0.045), var(--bg-raise) 36%);
+		box-shadow: var(--panel-shadow);
 	}
 	.tldr .label {
 		display: block;
@@ -195,6 +210,7 @@ const {
 		border-radius: 6px;
 		font-family: var(--font-mono);
 		font-size: 0.85em;
+		background: rgba(17, 21, 28, 0.5);
 	}
 	.toc .label {
 		display: block;

@@ -32,44 +32,79 @@ const tags = [...tagCounts.entries()]
 	<p class="kicker">ls articles/</p>
 	<h1>Artículos</h1>
 	<p>{posts.length} artículos publicados. Busca o filtra por tema:</p>
-	<div id="search"></div>
-	<script is:inline>
-		window.addEventListener('DOMContentLoaded', () => {
-			if (typeof PagefindUI !== 'undefined') {
-				new PagefindUI({
-					element: '#search',
-					showImages: false,
-					showSubResults: true,
-					translations: {
-						placeholder: 'grep -r "tema" articles/',
-						zero_results: 'Sin resultados para [SEARCH_TERM]',
-					},
+	<section class="filters" aria-label="Buscar y filtrar artículos">
+		<div class="filters-head">
+			<span>article_index</span>
+			<span>{tags.length} temas visibles</span>
+		</div>
+		<div class="filters-body">
+			<div id="search"></div>
+			<script is:inline>
+				window.addEventListener('DOMContentLoaded', () => {
+					if (typeof PagefindUI !== 'undefined') {
+						new PagefindUI({
+							element: '#search',
+							showImages: false,
+							showSubResults: true,
+							translations: {
+								placeholder: 'grep "tema" articles/',
+								zero_results: 'Sin resultados para [SEARCH_TERM]',
+							},
+						});
+					}
 				});
-			}
-		});
-	</script>
-	<ul class="tagcloud">
-		{
-			tags.map(([tag, count]) => (
-				<li>
-					<a href={`${BASE}/tags/${tag}/`}>
-						#{tag} <span class="count">({count})</span>
-					</a>
-				</li>
-			))
-		}
-	</ul>
+			</script>
+			<ul class="tagcloud">
+				{
+					tags.map(([tag, count]) => (
+						<li>
+							<a href={`${BASE}/tags/${tag}/`}>
+								#{tag} <span class="count">({count})</span>
+							</a>
+						</li>
+					))
+				}
+			</ul>
+		</div>
+	</section>
 	<div class="list">
+		<p class="list-label">Todos los artículos</p>
 		<ArticleList posts={posts} />
 	</div>
 </Page>
 
 <style>
+	.filters {
+		margin-top: 1.5em;
+		border: 1px solid rgb(var(--gray-light));
+		border-radius: 7px;
+		background: rgba(17, 21, 28, 0.72);
+		box-shadow: var(--panel-shadow);
+		overflow: hidden;
+	}
+	.filters-head {
+		display: flex;
+		justify-content: space-between;
+		gap: 1em;
+		padding: 0.55em 0.9em;
+		border-bottom: 1px solid rgb(var(--gray-light));
+		font-family: var(--font-mono);
+		font-size: 0.65em;
+		color: rgb(var(--gray));
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+	}
+	.filters-head span:first-child {
+		color: var(--accent);
+	}
+	.filters-body {
+		padding: 0.3em 1em 1em;
+	}
 	.tagcloud {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.5em;
-		margin: 1.5em 0 0 0;
+		margin: 1em 0 0;
 		padding: 0;
 		list-style: none;
 	}
@@ -91,7 +126,7 @@ const tags = [...tagCounts.entries()]
 		color: rgb(var(--gray));
 	}
 	#search {
-		margin-top: 1.5em;
+		margin-top: 0.5em;
 		--pagefind-ui-scale: 0.85;
 		--pagefind-ui-primary: var(--accent);
 		--pagefind-ui-text: rgb(var(--gray-dark));
@@ -103,6 +138,14 @@ const tags = [...tagCounts.entries()]
 		--pagefind-ui-font: var(--font-mono);
 	}
 	.list {
-		margin-top: 2em;
+		margin-top: 2.5em;
+	}
+	.list-label {
+		margin: 0 0 0.6em;
+		font-family: var(--font-mono);
+		font-size: 0.7em;
+		color: rgb(var(--gray));
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
 	}
 </style>

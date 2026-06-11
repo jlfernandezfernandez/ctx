@@ -32,7 +32,7 @@ const maxModelCount = Math.max(...models.map(([, count]) => count), 1);
 	<div class="activity-grid">
 		<div class="activity-primary">
 			<div class="signal">
-				<strong data-count={posts.length}>0</strong>
+				<strong data-count={posts.length}>{posts.length}</strong>
 				<h2>artículos publicados</h2>
 				<p>Markdown generado y versionado públicamente.</p>
 			</div>
@@ -80,28 +80,28 @@ const maxModelCount = Math.max(...models.map(([, count]) => count), 1);
 </section>
 
 <script is:inline>
-	const counters = document.querySelectorAll('[data-count]');
-	const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+	{
+		const counters = document.querySelectorAll('[data-count]');
+		const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-	function animateCounter(counter) {
-		const target = Number(counter.dataset.count);
-		if (reduceMotion) {
-			counter.textContent = String(target);
-			return;
+		function animateCounter(counter) {
+			const target = Number(counter.dataset.count);
+			if (reduceMotion) return;
+
+			// Keep the count-up under ~1.2s no matter how many articles exist.
+			const delay = Math.min(90, 1200 / target);
+			let value = 0;
+			counter.textContent = '0';
+			function step() {
+				value += 1;
+				counter.textContent = String(value);
+				if (value < target) window.setTimeout(step, delay);
+			}
+			if (target > 0) window.setTimeout(step, 250);
 		}
 
-		// Keep the count-up under ~1.2s no matter how many articles exist.
-		const delay = Math.min(90, 1200 / target);
-		let value = 0;
-		function step() {
-			value += 1;
-			counter.textContent = String(value);
-			if (value < target) window.setTimeout(step, delay);
-		}
-		if (target > 0) window.setTimeout(step, 250);
+		counters.forEach(animateCounter);
 	}
-
-	counters.forEach(animateCounter);
 </script>
 
 <style>
@@ -111,6 +111,7 @@ const maxModelCount = Math.max(...models.map(([, count]) => count), 1);
 		border-radius: 8px;
 		background: rgba(17, 21, 28, 0.72);
 		overflow: hidden;
+		box-shadow: var(--panel-shadow);
 	}
 	.activity-head {
 		display: flex;

@@ -23,8 +23,13 @@ const { posts } = Astro.props;
 
 <Page title={`${SITE_TITLE} — #${tag}`} description={`Artículos sobre ${tag}.`}>
 	<p class="kicker">ls articles/ | grep {tag}</p>
-	<h1>#{tag}</h1>
-	<p>{posts.length} {posts.length === 1 ? 'artículo' : 'artículos'} sobre este tema.</p>
+	<div class="tag-heading">
+		<div>
+			<h1>#{tag}</h1>
+			<p>{posts.length} {posts.length === 1 ? 'artículo' : 'artículos'} sobre este tema.</p>
+		</div>
+		<span>{String(posts.length).padStart(2, '0')}</span>
+	</div>
 	<div class="list">
 		<ArticleList posts={posts} />
 	</div>
@@ -32,8 +37,32 @@ const { posts } = Astro.props;
 </Page>
 
 <style>
+	.tag-heading {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1em;
+		padding-bottom: 1.5em;
+		border-bottom: 1px solid rgb(var(--gray-light));
+	}
+	.tag-heading h1,
+	.tag-heading p {
+		margin-bottom: 0;
+	}
+	.tag-heading span {
+		display: grid;
+		width: 2.3em;
+		height: 2.3em;
+		place-items: center;
+		border: 1px solid rgba(255, 180, 84, 0.35);
+		border-radius: 50%;
+		background: var(--accent-soft);
+		font-family: var(--font-mono);
+		font-size: 1.5em;
+		color: var(--accent);
+	}
 	.list {
-		margin-top: 2em;
+		margin-top: 1.5em;
 	}
 	.all {
 		display: inline-block;

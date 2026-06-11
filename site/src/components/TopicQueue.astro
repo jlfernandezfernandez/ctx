@@ -153,6 +153,7 @@ const { limit = 4, compact = false } = Astro.props;
 		border: 1px solid rgb(var(--gray-light));
 		border-radius: 6px;
 		background: var(--bg-raise);
+		box-shadow: var(--panel-shadow);
 	}
 	.queue-head {
 		display: flex;
@@ -205,6 +206,13 @@ const { limit = 4, compact = false } = Astro.props;
 		gap: 1em;
 		padding: 0.9em 0;
 		border-bottom: 1px solid rgb(var(--gray-light));
+		transition:
+			background 160ms ease,
+			border-color 160ms ease;
+	}
+	.queue-list li:not(.queue-loading):hover {
+		border-bottom-color: rgba(255, 180, 84, 0.32);
+		background: var(--accent-soft);
 	}
 	.position {
 		padding-top: 0.2em;

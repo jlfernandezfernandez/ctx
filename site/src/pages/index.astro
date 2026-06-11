@@ -20,27 +20,37 @@ const recent = rest.slice(0, RECENT_COUNT);
 	<section class="hero">
 		<h1 class="typing" aria-label="Un deep dive técnico al día.">
 			<span class="typing-text" aria-hidden="true">Un deep dive técnico al día.</span><span
-				class="typing-cursor"
+				class="typing-cursor pending"
 				aria-hidden="true">▍</span
 			>
 		</h1>
 		<script is:inline>
-			// Reveal characters in place (no reflow) so the headline never shifts layout.
-			const typingText = document.querySelector('.typing-text');
-			if (typingText && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-				const characters = Array.from(typingText.textContent);
-				typingText.textContent = '';
-				for (const character of characters) {
-					const span = document.createElement('span');
-					span.textContent = character;
-					span.style.visibility = 'hidden';
-					typingText.appendChild(span);
-				}
-				[...typingText.children].forEach((span, index) => {
+			{
+				// Reveal characters in place (no reflow) so the headline never shifts layout.
+				const typingText = document.querySelector('.typing-text');
+				const typingCursor = document.querySelector('.typing-cursor');
+				const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+				if (typingText && typingCursor && !reduceMotion) {
+					const characters = Array.from(typingText.textContent);
+					typingText.textContent = '';
+					for (const character of characters) {
+						const span = document.createElement('span');
+						span.textContent = character;
+						span.style.visibility = 'hidden';
+						typingText.appendChild(span);
+					}
+					[...typingText.children].forEach((span, index) => {
+						window.setTimeout(() => {
+							span.style.visibility = 'visible';
+						}, 70 * index);
+					});
 					window.setTimeout(() => {
-						span.style.visibility = 'visible';
-					}, 70 * index);
-				});
+						typingCursor.classList.remove('pending');
+					}, 70 * characters.length);
+				} else {
+					typingCursor?.classList.remove('pending');
+				}
 			}
 		</script>
 		<div class="terminal">
@@ -123,6 +133,7 @@ const recent = rest.slice(0, RECENT_COUNT);
 		border-radius: 8px;
 		background: var(--bg-raise);
 		overflow: hidden;
+		box-shadow: var(--panel-shadow);
 	}
 	.term-bar {
 		display: flex;
@@ -197,6 +208,14 @@ const recent = rest.slice(0, RECENT_COUNT);
 		border-left: 3px solid var(--accent);
 		border-radius: 6px;
 		background: var(--bg-raise);
+		box-shadow: var(--panel-shadow);
+		transition:
+			border-color 180ms ease,
+			transform 180ms ease;
+	}
+	.today:hover {
+		border-color: rgba(255, 180, 84, 0.38);
+		transform: translateY(-2px);
 	}
 	.label {
 		margin: 0 0 0.8em 0;
