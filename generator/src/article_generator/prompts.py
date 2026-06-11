@@ -14,7 +14,9 @@ Reglas:
 - Llegas a profundidad real, más allá de una newsletter generalista: internals, \
 trade-offs, comparativas y casos límite.
 - Todos los ejemplos de código son completos y ejecutables, no pseudocódigo. \
-Los imports y las APIs son exactos y reales: verifica que cada snippet compilaría tal cual.
+Cada snippet incluye TODOS sus imports (también los de tipos usados solo en firmas \
+de métodos) y compilaría tal cual: sin APIs inventadas ni referencias `this` en \
+contextos static.
 - El código de los ejemplos nunca contradice las buenas prácticas o trampas que \
 el propio artículo enseña.
 - No repitas el mismo ejemplo de código en secciones distintas.
@@ -63,6 +65,24 @@ el artículo ni empieces con "El artículo", "Este artículo" o similar.
 (p. ej. "java", "reactive", "backpressure", "kafka", "sql").
 
 Devuelve SOLO el JSON, sin explicaciones."""
+
+
+def review_prompt(body: str) -> str:
+    return f"""Revisa este artículo técnico en markdown y corrige SOLO defectos objetivos \
+en los bloques de código:
+- imports que faltan o son incorrectos (todo tipo usado debe estar importado, también \
+los que aparecen solo en firmas de métodos),
+- código que no compilaría tal cual (referencias `this` en contextos static, APIs \
+inexistentes, tipos mal usados),
+- ejemplos que contradicen las trampas o buenas prácticas que el propio artículo enseña.
+
+No reescribas la prosa, no cambies títulos ni estructura, no añadas ni quites secciones. \
+Si un bloque ya es correcto, déjalo idéntico.
+
+{body}
+
+Devuelve el artículo completo en markdown, idéntico salvo las correcciones de código. \
+Sin explicaciones ni comentarios sobre lo corregido."""
 
 
 def article_prompt(topic: str, notes: str, outline: str) -> str:

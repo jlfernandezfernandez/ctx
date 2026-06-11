@@ -55,9 +55,13 @@ def write_article(
     tags: list[str],
     body: str,
     summary: str = "",
+    issue_number: int | None = None,
+    requested_by: str = "",
 ) -> str:
     tags_yaml = "[" + ", ".join(_yaml_str(t) for t in tags) + "]"
     summary_line = f"summary: {_yaml_str(summary)}\n" if summary else ""
+    issue_line = f"issue: {issue_number}\n" if issue_number else ""
+    requested_line = f"requestedBy: {_yaml_str(requested_by)}\n" if requested_by else ""
     frontmatter = (
         "---\n"
         f"title: {_yaml_str(title)}\n"
@@ -65,6 +69,8 @@ def write_article(
         f"pubDate: {pub_date.isoformat()}\n"
         f"tags: {tags_yaml}\n"
         f"{summary_line}"
+        f"{issue_line}"
+        f"{requested_line}"
         "---\n\n"
     )
     out = Path(output_dir)

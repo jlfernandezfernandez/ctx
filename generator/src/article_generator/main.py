@@ -4,10 +4,10 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from .article import make_description, slugify, validate_body, write_article
+from .article import ValidationError, make_description, slugify, validate_body, write_article
 from .github_issues import PRIORITY_LABEL, TOPIC_LABEL, IssuesClient
 from .llm import LLMClient, LLMError
-from .prompts import SYSTEM_PROMPT, article_prompt, metadata_prompt, outline_prompt
+from .prompts import SYSTEM_PROMPT, article_prompt, metadata_prompt, outline_prompt, review_prompt
 
 QUEUE_LABELS = {TOPIC_LABEL, PRIORITY_LABEL}
 
@@ -19,6 +19,24 @@ def clean_notes(body: str) -> str:
     for artifact in FORM_ARTIFACTS:
         body = body.replace(artifact, "")
     return body.strip()
+
+
+def review_code(llm: LLMClient, body: str) -> str:
+    """Second LLM pass that fixes compile errors in code blocks.
+
+    Single-pass generation keeps producing missing imports; falls back to
+    the original body if the review pass fails or mangles the article.
+    """
+    try:
+        reviewed = llm.generate(SYSTEM_PROMPT, review_prompt(body))
+        validate_body(reviewed)
+    except (LLMError, ValidationError) as exc:
+        print(f"Code review pass failed ({exc}); keeping original body.")
+        return body
+    if len(reviewed.split()) < 0.7 * len(body.split()):
+        print("Code review pass shrank the article; keeping original body.")
+        return body
+    return reviewed
 
 
 def run(env: dict) -> int:
@@ -51,6 +69,7 @@ def run(env: dict) -> int:
     outline = llm.generate(SYSTEM_PROMPT, outline_prompt(topic, notes))
     body = llm.generate(SYSTEM_PROMPT, article_prompt(topic, notes, outline))
     validate_body(body)
+    body = review_code(llm, body)
 
     tags = [l["name"] for l in issue["labels"] if l["name"] not in QUEUE_LABELS]
     summary = ""
@@ -77,6 +96,8 @@ def run(env: dict) -> int:
         tags=tags,
         body=body,
         summary=summary,
+        issue_number=issue["number"],
+        requested_by=(issue.get("user") or {}).get("login", ""),
     )
     print(f"Article written: {path}")
 

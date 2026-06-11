@@ -16,7 +16,11 @@ for (const post of posts) {
 		tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
 	}
 }
-const tags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+// Cap the cloud so it stays useful as tags accumulate; search covers the rest.
+const TAG_LIMIT = 15;
+const tags = [...tagCounts.entries()]
+	.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+	.slice(0, TAG_LIMIT);
 ---
 
 <!doctype html>
@@ -26,6 +30,8 @@ const tags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeC
 			title={`Artículos — ${SITE_TITLE}`}
 			description="Todos los deep dives publicados, filtrables por tema."
 		/>
+		<link rel="stylesheet" href={`${BASE}/pagefind/pagefind-ui.css`} />
+		<script is:inline src={`${BASE}/pagefind/pagefind-ui.js`}></script>
 		<style>
 			.kicker {
 				margin: 0 0 0.8em 0;
@@ -61,6 +67,18 @@ const tags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeC
 			}
 			.tagcloud .count {
 				color: rgb(var(--gray));
+			}
+			#search {
+				margin-top: 1.5em;
+				--pagefind-ui-scale: 0.85;
+				--pagefind-ui-primary: var(--accent);
+				--pagefind-ui-text: rgb(var(--gray-dark));
+				--pagefind-ui-background: var(--bg-raise);
+				--pagefind-ui-border: rgb(var(--gray-light));
+				--pagefind-ui-tag: rgb(var(--gray-light));
+				--pagefind-ui-border-width: 1px;
+				--pagefind-ui-border-radius: 6px;
+				--pagefind-ui-font: var(--font-mono);
 			}
 			.list {
 				margin-top: 2em;
@@ -103,7 +121,23 @@ const tags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeC
 		<main>
 			<p class="kicker">ls articles/</p>
 			<h1>Artículos</h1>
-			<p>{posts.length} deep dives publicados. Filtra por tema:</p>
+			<p>{posts.length} deep dives publicados. Busca o filtra por tema:</p>
+			<div id="search"></div>
+			<script is:inline>
+				window.addEventListener('DOMContentLoaded', () => {
+					if (typeof PagefindUI !== 'undefined') {
+						new PagefindUI({
+							element: '#search',
+							showImages: false,
+							showSubResults: true,
+							translations: {
+								placeholder: 'grep -r "tema" articles/',
+								zero_results: 'Sin resultados para [SEARCH_TERM]',
+							},
+						});
+					}
+				});
+			</script>
 			<ul class="tagcloud">
 				{
 					tags.map(([tag, count]) => (

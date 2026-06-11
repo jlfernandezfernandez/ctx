@@ -55,8 +55,23 @@ import HeaderLink from './HeaderLink.astro';
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
+		gap: 1em;
 		max-width: 880px;
 		margin: auto;
+	}
+	h2 a {
+		white-space: nowrap;
+	}
+	/* One single row always: links scroll horizontally if they don't fit. */
+	.internal-links {
+		display: flex;
+		min-width: 0;
+		overflow-x: auto;
+		white-space: nowrap;
+		scrollbar-width: none;
+	}
+	.internal-links::-webkit-scrollbar {
+		display: none;
 	}
 	nav a {
 		padding: 1em 0.5em;

@@ -7,6 +7,7 @@ import requests
 
 TOPIC_LABEL = "topic"
 PRIORITY_LABEL = "priority"
+PUBLISHED_LABEL = "published"
 
 
 class GitHubError(Exception):
@@ -48,6 +49,12 @@ class IssuesClient:
         resp = self.session.post(f"{self.base}/issues/{number}/comments", json={"body": comment})
         if resp.status_code not in (200, 201):
             raise GitHubError(f"Failed to comment on issue #{number}: {resp.status_code}")
+        # Best effort: a missing label must not block publishing.
+        resp = self.session.post(
+            f"{self.base}/issues/{number}/labels", json={"labels": [PUBLISHED_LABEL]}
+        )
+        if resp.status_code not in (200, 201):
+            print(f"Could not label issue #{number} as {PUBLISHED_LABEL}: {resp.status_code}")
         resp = self.session.patch(f"{self.base}/issues/{number}", json={"state": "closed"})
         if resp.status_code != 200:
             raise GitHubError(f"Failed to close issue #{number}: {resp.status_code}")

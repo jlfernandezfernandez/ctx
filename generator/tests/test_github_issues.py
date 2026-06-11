@@ -86,14 +86,24 @@ def test_next_topic_raises_on_api_error():
         client_with([], status=500).next_topic()
 
 
-def test_close_with_comment_comments_then_closes():
+def test_close_with_comment_comments_labels_then_closes():
     c = client_with([])
     c.close_with_comment(7, "done")
-    c.session.post.assert_called_once_with(
-        "https://api.github.com/repos/owner/repo/issues/7/comments",
-        json={"body": "done"},
-    )
+    posts = c.session.post.call_args_list
+    assert posts[0].args == ("https://api.github.com/repos/owner/repo/issues/7/comments",)
+    assert posts[0].kwargs == {"json": {"body": "done"}}
+    assert posts[1].args == ("https://api.github.com/repos/owner/repo/issues/7/labels",)
+    assert posts[1].kwargs == {"json": {"labels": ["published"]}}
     c.session.patch.assert_called_once_with(
         "https://api.github.com/repos/owner/repo/issues/7",
         json={"state": "closed"},
     )
+
+
+def test_close_with_comment_tolerates_label_failure():
+    c = client_with([])
+    ok = MagicMock(status_code=201)
+    label_fail = MagicMock(status_code=404)
+    c.session.post.side_effect = [ok, label_fail]
+    c.close_with_comment(7, "done")  # must not raise
+    c.session.patch.assert_called_once()

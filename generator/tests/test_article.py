@@ -73,6 +73,38 @@ def test_write_article_omits_summary_line_when_empty(tmp_path):
     assert "summary:" not in Path(path).read_text(encoding="utf-8")
 
 
+def test_write_article_includes_issue_and_requester_when_given(tmp_path):
+    path = write_article(
+        output_dir=str(tmp_path),
+        pub_date=date(2026, 6, 11),
+        slug="x",
+        title="X",
+        description="d",
+        tags=[],
+        body="palabra " * 1200,
+        issue_number=7,
+        requested_by="jordi",
+    )
+    content = Path(path).read_text(encoding="utf-8")
+    assert "issue: 7" in content
+    assert 'requestedBy: "jordi"' in content
+
+
+def test_write_article_omits_issue_and_requester_when_missing(tmp_path):
+    path = write_article(
+        output_dir=str(tmp_path),
+        pub_date=date(2026, 6, 11),
+        slug="x",
+        title="X",
+        description="d",
+        tags=[],
+        body="palabra " * 1200,
+    )
+    content = Path(path).read_text(encoding="utf-8")
+    assert "issue:" not in content
+    assert "requestedBy:" not in content
+
+
 def test_write_article_creates_file_with_frontmatter(tmp_path):
     body = "palabra " * 1200
     path = write_article(

@@ -23,6 +23,7 @@ def topic_issue():
         "body": "no entendemos el paradigma",
         "created_at": "2026-06-01T00:00:00Z",
         "labels": [{"name": "topic"}, {"name": "java"}],
+        "user": {"login": "jordi"},
     }
 
 
@@ -34,19 +35,21 @@ def test_run_generates_validates_writes_and_closes(issues_cls, llm_cls, validate
     issues = issues_cls.return_value
     issues.next_topic.return_value = topic_issue()
     llm = llm_cls.return_value
-    llm.generate.side_effect = ["the outline", "palabra " * 1200]
+    llm.generate.side_effect = ["the outline", "palabra " * 1200, "revisada " * 1200]
     llm.generate_json.return_value = {"summary": "El TL;DR.", "tags": ["reactive", "java"]}
 
     assert run(env()) == 0
 
-    assert llm.generate.call_count == 2
-    validate.assert_called_once()
+    assert llm.generate.call_count == 3  # outline, article, code review pass
     write.assert_called_once()
     kwargs = write.call_args.kwargs
     assert kwargs["slug"] == "project-reactor"
+    assert kwargs["body"] == "revisada " * 1200
     assert kwargs["summary"] == "El TL;DR."
     assert kwargs["description"] == "El TL;DR."
     assert kwargs["tags"] == ["java", "reactive"]  # issue labels first, LLM tags appended, deduped
+    assert kwargs["issue_number"] == 5
+    assert kwargs["requested_by"] == "jordi"
     issues.close_with_comment.assert_called_once()
     comment = issues.close_with_comment.call_args.args[1]
     assert "https://owner.github.io/repo/blog/" in comment
@@ -64,7 +67,7 @@ def test_run_falls_back_when_metadata_call_fails(issues_cls, llm_cls, validate, 
     issues.next_topic.return_value = topic_issue()
     llm = llm_cls.return_value
     body = "Primer párrafo del artículo.\n\n" + "palabra " * 1200
-    llm.generate.side_effect = ["outline", body]
+    llm.generate.side_effect = ["outline", body, body]
     llm.generate_json.side_effect = LLMError("bad json")
 
     assert run(env()) == 0
@@ -85,7 +88,7 @@ def test_run_strips_issue_form_artifacts_from_notes(issues_cls, llm_cls, validat
     issue["body"] = "### Notas de enfoque\n\n_No response_"
     issues_cls.return_value.next_topic.return_value = issue
     llm = llm_cls.return_value
-    llm.generate.side_effect = ["outline", "palabra " * 1200]
+    llm.generate.side_effect = ["outline", "palabra " * 1200, "palabra " * 1200]
 
     run(env())
 
@@ -115,6 +118,38 @@ def test_run_exits_zero_when_no_topics(issues_cls, llm_cls):
     issues_cls.return_value.next_topic.return_value = None
     assert run(env()) == 0
     llm_cls.return_value.generate.assert_not_called()
+
+
+@patch("article_generator.main.write_article", return_value="/tmp/out/x.md")
+@patch("article_generator.main.validate_body")
+@patch("article_generator.main.LLMClient")
+@patch("article_generator.main.IssuesClient")
+def test_run_keeps_original_body_when_review_pass_fails(issues_cls, llm_cls, validate, write):
+    from article_generator.llm import LLMError
+
+    issues_cls.return_value.next_topic.return_value = topic_issue()
+    llm = llm_cls.return_value
+    body = "palabra " * 1200
+    llm.generate.side_effect = ["outline", body, LLMError("review boom")]
+
+    assert run(env()) == 0
+
+    assert write.call_args.kwargs["body"] == body
+
+
+@patch("article_generator.main.write_article", return_value="/tmp/out/x.md")
+@patch("article_generator.main.validate_body")
+@patch("article_generator.main.LLMClient")
+@patch("article_generator.main.IssuesClient")
+def test_run_keeps_original_body_when_review_pass_shrinks_article(issues_cls, llm_cls, validate, write):
+    issues_cls.return_value.next_topic.return_value = topic_issue()
+    llm = llm_cls.return_value
+    body = "palabra " * 1200
+    llm.generate.side_effect = ["outline", body, "palabra " * 100]
+
+    assert run(env()) == 0
+
+    assert write.call_args.kwargs["body"] == body
 
 
 @patch("article_generator.main.write_article")
