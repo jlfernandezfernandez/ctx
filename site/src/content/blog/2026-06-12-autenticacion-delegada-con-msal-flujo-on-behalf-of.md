@@ -23,6 +23,33 @@ Reemitir el token con la identidad del usuario pero dirigido a otro recurso requ
 
 ## Fundamentos de delegación en Microsoft Identity Platform
 
+### Delegación no es impersonación sin límites
+
+Se suele describir OBO como un mecanismo de impersonación porque la API descendente recibe una llamada asociada al usuario original. Esa simplificación es útil, pero también peligrosa: la API intermedia no se convierte en el usuario ni hereda todos sus permisos. OBO implementa una **delegación acotada**. La llamada conserva la identidad del usuario, pero solo puede ejercer los scopes delegados que la API intermedia tenga configurados y que hayan sido consentidos.
+
+Por ejemplo, si una API recibe un token para `api://orders/access_as_user` y necesita consultar Microsoft Graph, no puede reutilizarlo ni solicitar cualquier permiso del usuario. Debe canjearlo por un token dirigido a Graph y pedir un scope concreto, como `User.Read`. Microsoft Entra ID solo emitirá ese segundo token si la aplicación, el usuario y el consentimiento permiten exactamente esa delegación.
+
+La distinción importa al diseñar la autorización:
+
+- **Autenticación**: OBO mantiene quién es el usuario original a lo largo de la cadena.
+- **Delegación**: limita qué puede hacer cada API en nombre de ese usuario.
+- **Autorización**: cada API sigue decidiendo si las claims y scopes del token permiten la operación solicitada.
+
+OBO tampoco convierte permisos de aplicación en permisos del usuario. El flujo trabaja con scopes delegados y requiere un usuario presente; para procesos sin usuario se utiliza normalmente `client_credentials`.
+
+### El mapa de objetos de Azure que evita la mayoría de confusiones
+
+En el portal aparecen varios identificadores parecidos. Entender qué representa cada uno facilita mucho la configuración y el diagnóstico:
+
+- **Tenant o directorio**: la frontera de identidad de una organización. Contiene usuarios, grupos, aplicaciones empresariales y sus asignaciones.
+- **App registration / application object**: la definición global de la aplicación en su tenant de origen. Es el plano o plantilla que declara redirect URIs, scopes expuestos y otros metadatos.
+- **Application (client) ID o `appId`**: identificador público y estable de esa aplicación. Se envía como `client_id` en OAuth y suele aparecer en la claim `aud` cuando la aplicación es el recurso. No es un secreto.
+- **Service principal / Enterprise application**: la identidad local de esa aplicación dentro de un tenant. Aquí viven el consentimiento, las asignaciones y el acceso efectivo en ese directorio. Una misma app registration puede tener service principals en varios tenants.
+- **Object ID**: identifica un objeto concreto dentro de un directorio. El application object y cada service principal tienen object IDs distintos; no debe usarse como sustituto del `client_id`.
+- **Client secret o certificado**: credencial con la que la API intermedia demuestra que es el cliente confidencial asociado al `client_id`. A diferencia del `appId`, sí debe protegerse.
+
+En una cadena OBO hay, como mínimo, una app registration para el cliente, otra para la API intermedia y otra identidad para la API descendente. El `appId` responde a “qué aplicación es”; el service principal responde a “qué permisos tiene esa aplicación en este tenant”; y el object ID responde a “qué objeto exacto estoy mirando en este directorio”.
+
 ### Permisos delegados vs. permisos de aplicación
 
 Antes de implementar OBO, hay que entender los dos tipos de permisos que una aplicación puede solicitar a Azure AD:

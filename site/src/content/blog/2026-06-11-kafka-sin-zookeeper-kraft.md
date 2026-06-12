@@ -18,7 +18,7 @@ Operar un clúster de Kafka exigía desplegar, monitorizar y escalar dos sistema
 
 Además, ZooKeeper imponía un límite práctico de escalabilidad. La recarga de metadatos durante un failover del controller crecía linealmente con el número de particiones, y la experiencia operativa mostraba que superar las ~200 000 particiones volvía el proceso frágil. La configuración de seguridad también era dual: ACLs de ZooKeeper por un lado y mecanismos SASL/TLS en Kafka por otro, lo que multiplicaba las posibilidades de error.
 
-KRaft (Kafka Raft) se diseñó para eliminar esta dependencia externa, simplificar la operación, reducir los tiempos de failover a segundos y permitir clústeres con millones de particiones. La versión 3.3.1 de Kafka marcó la madurez productiva de KRaft, y la versión 4.0 eliminará por completo el modo ZooKeeper. Para cualquier equipo que opere Kafka hoy, entender KRaft no es opcional: es la base sobre la que se construirá el futuro del sistema.
+KRaft (Kafka Raft) se diseñó para eliminar esta dependencia externa, simplificar la operación, reducir los tiempos de failover a segundos y permitir clústeres con millones de particiones. Kafka 3.3 declaró KRaft listo para producción y Kafka 4.0 eliminó el modo ZooKeeper. Para cualquier equipo que opere una versión actual de Kafka, KRaft ya no es una alternativa futura: es su único plano de control.
 
 ## El quorum de consenso interno: cómo KRaft reemplaza a ZooKeeper
 
@@ -30,7 +30,7 @@ La seguridad se unifica bajo los mecanismos nativos de Kafka. Ya no hay ACLs de 
 
 El controller activo escribe cada cambio de estado (creación de topics, reassignments, cambios de configuración) como un registro en el log Raft. Los seguidores replican esos registros y los aplican a su propia máquina de estados en memoria. Si el líder falla, un seguidor puede tomar el relevo inmediatamente porque ya posee una copia completa y actualizada de los metadatos, eliminando la ventana de inconsistencia que existía con ZooKeeper. Este diseño permite failover en segundos y escala a millones de particiones porque el nuevo líder no necesita reconstruir el estado desde cero: solo debe aplicar los registros que pudieran faltar desde la última snapshot.
 
-## Internals, trade-offs y comparativas del consenso empotrado
+## El precio de empotrar el consenso
 
 Kafka implementa su propio protocolo Raft en lugar de usar bibliotecas externas como Apache Ratis. El log de metadatos es un topic compactado con un único líder de quorum. Cada entrada del log representa un evento de cambio de estado: creación de topic, actualización de configuración, cambio de ISR, etc. El controller activo aplica estos eventos a una máquina de estados en memoria que refleja el estado completo del clúster. Periódicamente, el controller genera snapshots que serializan el estado actual y permiten truncar el log, evitando un crecimiento ilimitado y acelerando la recuperación de nodos que se incorporan tarde.
 
