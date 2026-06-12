@@ -7,14 +7,7 @@ import re
 import unicodedata
 from datetime import date
 
-MIN_WORDS = 1000  # target is 2500-3500; below 1000 means generation went wrong
-EXPECTED_H2_COUNT = 6
-REFERENCE_HEADING = re.compile(r"(para saber m[aá]s|referencias|fuentes)", re.IGNORECASE)
-MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\((https?://[^)\s]+)\)")
-VAGUE_REFERENCE = re.compile(
-    r"\b(buscar(?:lo)? en|disponible en|enlace pendiente|url pendiente)\b",
-    re.IGNORECASE,
-)
+MAX_TAGS_PER_ARTICLE = 3
 
 
 FRONTMATTER = re.compile(r"\A(---\n.*?\n---\n+)", re.DOTALL)
@@ -62,14 +55,20 @@ def slugify(title: str) -> str:
 def validate_body(body: str) -> None:
     if body.lstrip().startswith("---"):
         raise ValidationError("Body contains leftover frontmatter")
-    words = len(body.split())
-    if words < MIN_WORDS:
-        raise ValidationError(f"Body too short: {words} words (min {MIN_WORDS})")
+    if not body.strip():
+        raise ValidationError("Body is empty")
 
     headings = _parse_headings(body)
     _validate_headings(headings)
     _validate_code_fences(body)
-    _validate_references(body, headings)
+
+
+def validate_tags(tags: list[str], canonical_tags: list[str]) -> None:
+    if len(tags) > MAX_TAGS_PER_ARTICLE:
+        raise ValidationError(f"Article has more than {MAX_TAGS_PER_ARTICLE} tags")
+    unknown = sorted(set(tags) - set(canonical_tags))
+    if unknown:
+        raise ValidationError(f"Article uses unknown tags: {', '.join(unknown)}")
 
 
 def _heading_lines(body: str) -> list[tuple[int, int, str]]:
@@ -96,12 +95,6 @@ def _validate_headings(headings: list[tuple[int, str]]) -> None:
     if any(level == 1 for level, _ in headings):
         raise ValidationError("Body must not contain an H1; the layout renders the article title")
 
-    h2s = [title for level, title in headings if level == 2]
-    if len(h2s) != EXPECTED_H2_COUNT:
-        raise ValidationError(f"Body must contain exactly {EXPECTED_H2_COUNT} H2 sections")
-    if any(re.match(r"^\d+[.)]\s+", title) for title in h2s):
-        raise ValidationError("H2 section titles must not be numbered")
-
     previous_level = 1
     for level, _ in headings:
         if level > previous_level + 1:
@@ -112,32 +105,6 @@ def _validate_headings(headings: list[tuple[int, str]]) -> None:
 def _validate_code_fences(body: str) -> None:
     if sum(1 for line in body.splitlines() if line.strip().startswith("```")) % 2:
         raise ValidationError("Body contains an unclosed fenced code block")
-
-
-def _validate_references(body: str, headings: list[tuple[int, str]]) -> None:
-    h2s = [title for level, title in headings if level == 2]
-    reference_index = next(
-        (index for index, title in enumerate(h2s) if REFERENCE_HEADING.search(title)),
-        None,
-    )
-    if reference_index != len(h2s) - 1:
-        raise ValidationError("The final H2 section must contain references")
-    references = _reference_urls(body)
-    if not 3 <= len(references) <= 5:
-        raise ValidationError("References section must contain 3 to 5 linked sources")
-    if VAGUE_REFERENCE.search(_reference_section(body)):
-        raise ValidationError("References section contains vague or incomplete references")
-
-
-def _reference_section(body: str) -> str:
-    h2_lines = [index for index, level, _ in _heading_lines(body) if level == 2]
-    if not h2_lines:
-        return body
-    return "\n".join(body.splitlines()[h2_lines[-1] + 1 :])
-
-
-def _reference_urls(body: str) -> list[str]:
-    return list(dict.fromkeys(MARKDOWN_LINK.findall(_reference_section(body))))
 
 
 def make_description(body: str) -> str:
@@ -186,4 +153,3 @@ def render_article(
         "---\n\n"
     )
     return frontmatter + body.strip() + "\n"
-

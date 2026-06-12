@@ -4,7 +4,8 @@ from unittest.mock import call, patch
 
 import pytest
 
-from article_generator.agents.triage import Classification, TriageError, parse_classification, run
+from article_generator.agents.triage import Classification, TriageError, parse_classification
+from article_generator.pipeline import triage_run
 
 
 def env(tmp_path, issue=None):
@@ -59,8 +60,8 @@ def test_parse_classification_rejects_invalid_response(data):
         parse_classification(data)
 
 
-@patch("article_generator.agents.triage.LLMClient")
-@patch("article_generator.agents.triage.GitHubClient")
+@patch("article_generator.pipeline.LLMClient")
+@patch("article_generator.pipeline.GitHubClient")
 def test_run_approves_and_updates_title_and_description(issues_cls, llm_cls, tmp_path):
     issues = issues_cls.return_value
     llm_cls.return_value.generate_json.return_value = {
@@ -70,7 +71,7 @@ def test_run_approves_and_updates_title_and_description(issues_cls, llm_cls, tmp
         "reason": "Tema técnico válido",
     }
 
-    assert run(env(tmp_path)) == 0
+    assert triage_run(env(tmp_path)) == 0
 
     issues.update_issue.assert_called_once_with(17, title="Pydantic AI", body="Cómo crear agentes tipados con Pydantic AI.")
     issues.set_labels.assert_called_once_with(17, ["topic"])
@@ -78,8 +79,8 @@ def test_run_approves_and_updates_title_and_description(issues_cls, llm_cls, tmp
     assert llm_cls.call_args.kwargs["model"] == "curator-model"
 
 
-@patch("article_generator.agents.triage.LLMClient")
-@patch("article_generator.agents.triage.GitHubClient")
+@patch("article_generator.pipeline.LLMClient")
+@patch("article_generator.pipeline.GitHubClient")
 def test_run_approves_without_changes_when_identical(issues_cls, llm_cls, tmp_path):
     issue = {
         "number": 17,
@@ -96,14 +97,16 @@ def test_run_approves_without_changes_when_identical(issues_cls, llm_cls, tmp_pa
         "reason": "Tema técnico",
     }
 
-    assert run(env(tmp_path, issue=issue)) == 0
+    assert triage_run(env(tmp_path, issue=issue)) == 0
 
-    issues.update_issue.assert_not_called()
+    issues.update_issue.assert_called_once_with(
+        17, title="Pydantic AI", body="Cómo crear agentes tipados."
+    )
     issues.set_labels.assert_called_once_with(17, ["topic"])
 
 
-@patch("article_generator.agents.triage.LLMClient")
-@patch("article_generator.agents.triage.GitHubClient")
+@patch("article_generator.pipeline.LLMClient")
+@patch("article_generator.pipeline.GitHubClient")
 def test_run_rejects_clear_spam(issues_cls, llm_cls, tmp_path):
     issues = issues_cls.return_value
     llm_cls.return_value.generate_json.return_value = {
@@ -112,15 +115,15 @@ def test_run_rejects_clear_spam(issues_cls, llm_cls, tmp_path):
         "reason": "Spam sin contenido técnico",
     }
 
-    run(env(tmp_path))
+    triage_run(env(tmp_path))
 
     assert issues.set_labels.call_args_list == [call(17, ["rejected"])]
     issues.comment.assert_called_once_with(17, "Propuesta descartada: Spam sin contenido técnico")
     issues.close.assert_called_once_with(17)
 
 
-@patch("article_generator.agents.triage.LLMClient")
-@patch("article_generator.agents.triage.GitHubClient")
+@patch("article_generator.pipeline.LLMClient")
+@patch("article_generator.pipeline.GitHubClient")
 def test_run_leaves_doubtful_topic_for_review(issues_cls, llm_cls, tmp_path):
     issues = issues_cls.return_value
     llm_cls.return_value.generate_json.return_value = {
@@ -129,30 +132,30 @@ def test_run_leaves_doubtful_topic_for_review(issues_cls, llm_cls, tmp_path):
         "reason": "No queda claro el enfoque",
     }
 
-    run(env(tmp_path))
+    triage_run(env(tmp_path))
 
     issues.set_labels.assert_called_once_with(17, ["triage"])
     issues.comment.assert_called_once_with(
-        17, "Curación automática pendiente de revisión: No queda claro el enfoque"
+        17, "Triaje automático pendiente de revisión: No queda claro el enfoque"
     )
     issues.close.assert_not_called()
 
 
-@patch("article_generator.agents.triage.LLMClient")
-@patch("article_generator.agents.triage.GitHubClient")
+@patch("article_generator.pipeline.LLMClient")
+@patch("article_generator.pipeline.GitHubClient")
 def test_run_fails_safe_when_curator_response_is_invalid(issues_cls, llm_cls, tmp_path):
     issues = issues_cls.return_value
     llm_cls.return_value.generate_json.return_value = {"action": "APPROVE"}
 
-    assert run(env(tmp_path)) == 0
+    assert triage_run(env(tmp_path)) == 0
 
     issues.set_labels.assert_called_once_with(17, ["triage"])
     issues.comment.assert_called_once()
     issues.close.assert_not_called()
 
 
-@patch("article_generator.agents.triage.LLMClient")
-@patch("article_generator.agents.triage.GitHubClient")
+@patch("article_generator.pipeline.LLMClient")
+@patch("article_generator.pipeline.GitHubClient")
 def test_manual_run_fetches_requested_issue(issues_cls, llm_cls, tmp_path):
     issue = {
         "number": 3,
@@ -170,8 +173,8 @@ def test_manual_run_fetches_requested_issue(issues_cls, llm_cls, tmp_path):
         "reason": "Tema técnico",
     }
 
-    run({**env(tmp_path), "TRIAGE_ISSUE_NUMBER": "3"})
+    triage_run({**env(tmp_path), "TRIAGE_ISSUE_NUMBER": "3"})
 
     issues.get_issue.assert_called_once_with(3)
-    issues.update_issue.assert_not_called()
+    issues.update_issue.assert_called_once_with(3, title=issue["title"], body="")
     issues.set_labels.assert_called_once_with(3, ["topic", "priority"])

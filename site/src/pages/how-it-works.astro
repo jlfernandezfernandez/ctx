@@ -11,7 +11,7 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 	<h1>Cómo funciona</h1>
 	<p class="intro">
 		Hacemos vibe coding, pero queremos entender qué pasa por debajo. Cada día laborable se
-		publica aquí un deep dive técnico (~15 minutos de lectura): desde cero hasta los detalles
+		publica aquí un deep dive técnico: desde cero hasta los detalles
 		que una newsletter generalista no cuenta, con ejemplos de código completos.
 	</p>
 
@@ -64,7 +64,7 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 		<div class="intake" aria-label="Entrada a la cola editorial">
 			<span><small>propuesta</small><strong>issue + votos</strong></span>
 			<i>→</i>
-			<span class="agent"><small>agente de triage</small><strong>cura título y descripción</strong></span>
+			<span class="agent"><small>agente de triaje</small><strong>prepara el briefing</strong></span>
 			<i>→</i>
 			<span><small>orden editorial</small><strong>cola de temas</strong></span>
 		</div>
@@ -73,8 +73,8 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 			<div class="loop-main">
 				<div class="agent-box writer">
 					<span>writer</span>
-					<strong>esquema + artículo</strong>
-					<small>abre una PR</small>
+					<strong>título + tags + artículo</strong>
+					<small>abre una PR antes de revisión</small>
 				</div>
 				<div class="forward">
 					<span>PR lista</span>
@@ -101,18 +101,10 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 			<span><strong>rondas agotadas</strong> → decide una persona</span>
 		</div>
 
-		<div class="tag-curator" aria-label="Curación de etiquetas">
-			<span class="agent-box tag">
-				<span>tag curator</span>
-				<strong>simplifica taxonomía</strong>
-				<small>fusiona tags huérfanos</small>
-			</span>
-			<i>→</i>
-			<span><small>taxonomía curada</small><strong>tags.json</strong></span>
-		</div>
 		<p class="pipeline-note">
 			El reviewer solo bloquea por defectos objetivos: código que no compila, datos falsos,
-			contradicciones o referencias inventadas. Las sugerencias de estilo no frenan la publicación.
+			contenido desactualizado, contradicciones o referencias inventadas. El pipeline valida
+			Markdown y tags; las sugerencias de estilo no frenan la publicación.
 		</p>
 	</section>
 
@@ -145,19 +137,6 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 			Conversación real de la <a href={`${REPO_URL}/pull/9`} target="_blank">PR #9</a>. Cada artículo
 			deja rastro público de quién lo escribió, qué se objetó y qué se corrigió.
 		</p>
-	</section>
-
-	<section class="structure" aria-labelledby="structure-title">
-		<h2 id="structure-title">La estructura de cada artículo</h2>
-		<ol>
-			<li><strong>TL;DR</strong> — el resumen en 3 frases.</li>
-			<li><strong>Contexto</strong> — qué problema existe, desde cero.</li>
-			<li><strong>Concepto central</strong> — la idea clave con precisión.</li>
-			<li><strong>En profundidad</strong> — internals, trade-offs, comparativas.</li>
-			<li><strong>Código</strong> — ejemplos completos y comentados.</li>
-			<li><strong>Trampas comunes</strong> — errores reales y cómo evitarlos.</li>
-			<li><strong>Para saber más</strong> — referencias para seguir profundizando.</li>
-		</ol>
 	</section>
 
 	<div class="participate">
@@ -194,8 +173,7 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 		color: rgb(var(--gray-dark));
 	}
 	.pipeline,
-	.agents,
-	.structure {
+	.agents {
 		margin-top: 2.5em;
 		padding: 1.25em 1.5em;
 		border: 1px solid rgb(var(--gray-light));
@@ -393,51 +371,7 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 	.outcomes span + span strong {
 		color: var(--accent);
 	}
-	.tag-curator {
-		display: grid;
-		grid-template-columns: 1fr auto 1fr;
-		align-items: center;
-		gap: 0.55em;
-		margin-top: 1em;
-		padding-top: 1em;
-		border-top: 1px solid rgb(var(--gray-light));
-	}
-	.tag-curator .agent-box {
-		border-color: rgba(147, 112, 219, 0.4);
-	}
-	.tag-curator .agent-box .agent-box span {
-		margin-top: 0.15em;
-		font-size: 0.82em;
-	}
-	.tag-curator .agent-box small {
-		margin-top: 0.15em;
-		font-family: var(--font-mono);
-		font-size: 0.6em;
-		color: rgb(var(--gray));
-	}
-	.tag-curator > span:last-child strong,
-	.tag-curator > i {
-		color: var(--accent);
-		font-style: normal;
-	}
-	.tag-curator > span:last-child small {
-		display: block;
-		font-size: 0.55em;
-		color: rgb(var(--gray));
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-	}
-	.tag-curator > span:last-child strong {
-		font-family: var(--font-mono);
-		font-size: 0.7em;
-		font-weight: 500;
-		color: rgb(var(--black));
-	}
-	.tag-curator > i {
-		font-style: normal;
-	}
-	.agents h2,
-	.structure h2 {
+	.agents h2 {
 		margin: 0 0 1em;
 		font-size: 0.85em;
 		text-transform: uppercase;
@@ -493,13 +427,6 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 		font-size: 0.85em;
 		color: rgb(var(--gray));
 	}
-	.structure ol {
-		margin: 0;
-		padding-left: 1.4em;
-	}
-	.structure li {
-		margin: 0.35em 0;
-	}
 	.participate {
 		display: flex;
 		flex-wrap: wrap;
@@ -514,7 +441,7 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 	@media (max-width: 620px) {
 		.pipeline,
 		.agents,
-		.structure {
+		.agents {
 			padding: 1em;
 		}
 		.pipeline-heading {
@@ -544,13 +471,6 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 		}
 		.msg {
 			max-width: 100%;
-		}
-		.tag-curator {
-			grid-template-columns: 1fr;
-		}
-		.tag-curator > i {
-			justify-self: center;
-			transform: rotate(90deg);
 		}
 	}
 </style>

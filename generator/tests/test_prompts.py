@@ -1,10 +1,22 @@
-"""Tests for agent prompt builders."""
-from article_generator.agents.writer import SYSTEM_PROMPT, outline_prompt, article_prompt
-from article_generator.agents.reviewer import reviewer_prompt, rewrite_prompt
+"""Tests for static system prompts and task prompt builders."""
+from article_generator.agents.reviewer import reviewer_prompt
+from article_generator.agents.writer import (
+    SYSTEM_PROMPT,
+    article_prompt,
+    outline_prompt,
+    rewrite_prompt,
+)
+from article_generator.prompt import load_system_prompt
 
 
 def test_system_prompt_sets_role_and_language():
     assert "español" in SYSTEM_PROMPT.lower()
+
+
+def test_system_prompts_are_loaded_verbatim():
+    assert SYSTEM_PROMPT == load_system_prompt("writer")
+    assert "{" not in load_system_prompt("triage")
+    assert "{" not in load_system_prompt("reviewer")
 
 
 def test_outline_prompt_includes_topic_and_notes():
@@ -29,9 +41,10 @@ def test_reviewer_prompt_includes_article_and_json_contract():
     p = reviewer_prompt("Project Reactor", "cuerpo del articulo")
     assert "cuerpo del articulo" in p
     assert "Project Reactor" in p
-    assert '"issues"' in p
-    assert '"category"' in p
-    assert '"blocking"' in p
+    system = load_system_prompt("reviewer")
+    assert '"issues"' in system
+    assert "category" in system
+    assert "blocking" in system
     assert "ronda anterior" not in p
 
 

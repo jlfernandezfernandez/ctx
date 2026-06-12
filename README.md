@@ -6,37 +6,38 @@
 
 Un deep dive técnico al día. Para vibe coders que quieren entender qué pasa por debajo.
 
-Cada día laborable, un artículo en profundidad (~15 min, 2.500-3.500 palabras, con ejemplos de código completos) sobre un tema propuesto y votado por el equipo. Desde cero hasta donde una newsletter generalista no llega.
+Cada día laborable, un artículo técnico en profundidad sobre un tema propuesto y votado por el equipo. Desde cero hasta donde una newsletter generalista no llega.
 
 ## Cómo funciona
 
-1. Propón un tema con la plantilla de issue ["Proponer tema"](../../issues/new/choose). Un modelo pequeño normaliza el título y la descripción, y modera spam o contenido claramente no técnico; ante la duda, decide una persona.
+1. Propón un tema con la plantilla de issue ["Proponer tema"](../../issues/new/choose). El agente de **triaje** modera spam y convierte las notas en un briefing útil; ante la duda, decide una persona.
 2. **Vota con 👍**: cada noche (L-V, ~6:30 Madrid) se elige el tema aceptado más votado (empate → el más antiguo; el label `priority` salta la cola).
-3. El **writer** genera el artículo y abre una PR, igual que lo haría un compañero.
-4. El **reviewer** evalúa código, rigor y legibilidad sobre esa PR, como un compañero senior: cada defecto es **bloqueante** (código que no compila, dato falso, referencia inventada) o **sugerencia** (estilo, matices — no impiden publicar).
+3. El **writer** decide la estructura, genera título, resumen, tags y artículo, y abre una PR antes de la revisión.
+4. El **reviewer** evalúa código, rigor y legibilidad sobre esa PR: cada defecto es **bloqueante** (código incorrecto, dato falso o desactualizado, referencia inventada, carencia importante) o **sugerencia** (mejora no imprescindible).
    - Sin bloqueantes → merge automático (las sugerencias quedan como comentario), la issue se cierra con el link y la web se despliega.
    - Con bloqueantes → comenta "cambios solicitados" en la PR y se los devuelve al **writer**, que corrige y vuelve a revisión. Máximo `MAX_REVIEW_ROUNDS` correcciones para que el reviewer no saque pegas indefinidamente.
    - Si tras agotar las rondas siguen los bloqueantes, **la PR queda abierta** con la mejor versión y los defectos comentados: una PR de artículo abierta significa "decide un humano" (mergear publica, cerrar descarta). La cola no se bloquea: al día siguiente toca el siguiente tema.
 
-Todo el flujo vive en un único workflow ([`publish.yml`](.github/workflows/publish.yml)): writer y reviewer son pasos del mismo run y la conversación entre ambos ocurre en proceso; los comentarios y commits de la PR son el rastro visible, no el mecanismo (ni labels ni coreografía entre workflows).
+Todo el flujo vive en un único workflow ([`publish.yml`](.github/workflows/publish.yml)). Un pipeline Python conecta los agentes, valida contratos objetivos, gestiona GitHub y publica. Los agentes solo toman decisiones editoriales.
 
 ## Agentes
 
 | Agente          | Modelo               | Qué hace                                                                                                                                       |
 | --------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Triaje**      | `LLM_TRIAGE_MODEL`   | Cura título y descripción, modera spam                                                                                                         |
-| **Writer**      | `LLM_WRITER_MODEL`   | Genera esquema + artículo, abre PR, corrige el feedback                                                                                        |
-| **Reviewer**    | `LLM_REVIEWER_MODEL` | Evalúa la PR y decide: mergea, pide cambios o escala a humano                                                                                  |
-| **Tag curator** | `LLM_TRIAGE_MODEL`   | Revisa `tags.json` tras cada publicación: fusiona, elimina o añade tags. Solo guía los artículos futuros; los ya publicados conservan sus tags |
+| **Triaje**   | `LLM_TRIAGE_MODEL`   | Acepta, rechaza o escala propuestas y prepara el briefing |
+| **Writer**   | `LLM_WRITER_MODEL`   | Genera título, resumen, tags y artículo; corrige feedback |
+| **Reviewer** | `LLM_REVIEWER_MODEL` | Evalúa calidad y devuelve defectos o sugerencias |
 
-El writer y el reviewer usan modelos distintos para evitar que un modelo apruebe sus propios vicios. El writer recibe los tags existentes como referencia y decide cuáles usar; el tag curator simplifica la taxonomía completa en cada ejecución.
+Cada agente tiene un único system prompt estático en `generator/src/article_generator/system_prompts/`. No se comparten ni interpolan reglas entre agentes. El writer y el reviewer usan modelos distintos para evitar que un modelo apruebe sus propios vicios.
+
+El resto no son agentes: `pipeline.py` coordina rondas y GitHub; `article.py` valida Markdown, frontmatter y que el writer elija como máximo tres tags de la taxonomía manual.
 
 ## Estructura
 
 - `generator/` — generador Python (LLM agnóstico vía API OpenAI-compatible)
 - `site/` — web Astro (GitHub Pages)
-- `.github/workflows/` — `triage-topic` (cura propuestas), `publish` (writer + reviewer + tag curator), `deploy` (Pages), `ci` (tests y build)
-- `site/src/data/tags.json` — taxonomía canónica que el writer recibe como referencia, actualizada automáticamente por el tag curator
+- `.github/workflows/` — `triage-topic` (cura propuestas), `publish` (pipeline editorial), `deploy` (Pages), `ci` (tests y build)
+- `site/src/data/tags.json` — taxonomía canónica mantenida manualmente; el writer solo puede elegir tags de esta lista
 
 Los únicos labels requeridos por el producto son `triage`, `topic`, `priority`, `published` y `rejected`.
 
