@@ -280,7 +280,7 @@ var app = ConfidentialClientApplicationBuilder.Create(clientId)
 
 // Configurar serialización a Redis
 var redisConnection = ConnectionMultiplexer.Connect("redis-connection-string");
-var cache = app.AppTokenCache;
+var cache = app.UserTokenCache;
 cache.SetBeforeAccess(async (args) =>
 {
     var db = redisConnection.GetDatabase();
@@ -455,7 +455,7 @@ builder.Services.AddSingleton<IConfidentialClientApplication>(sp =>
 
     // Configurar serialización a Redis
     var redis = ConnectionMultiplexer.Connect(config["Redis:ConnectionString"]);
-    var cache = app.AppTokenCache;
+    var cache = app.UserTokenCache;
     cache.SetBeforeAccess(async (args) =>
     {
         var db = redis.GetDatabase();
