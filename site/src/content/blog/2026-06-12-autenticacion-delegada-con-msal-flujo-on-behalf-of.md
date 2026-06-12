@@ -7,6 +7,7 @@ summary: "El flujo On-Behalf-Of (OBO) permite a una API intermedia actuar en nom
 issue: 19
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"
+reviewer: "minimax-m3"
 ---
 
 ## El problema de la identidad en cadenas de APIs
