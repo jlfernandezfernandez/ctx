@@ -31,8 +31,8 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 			<div>
 				<h2>Vota con 👍</h2>
 				<p>
-					La reacción 👍 en una issue es un voto. Cada noche se elige el tema más votado; el label
-					<code>priority</code> salta la cola directamente.
+					La reacción 👍 en una issue es un voto. Cada madrugada laborable se elige el tema aceptado
+					más votado; el label <code>priority</code> salta la cola directamente.
 				</p>
 			</div>
 		</div>
@@ -73,7 +73,7 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 			<div class="loop-main">
 				<div class="agent-box writer">
 					<span>writer</span>
-					<strong>título + tags + artículo</strong>
+					<strong>tesis + título + tags + artículo</strong>
 					<small>abre una PR antes de revisión</small>
 				</div>
 				<div class="forward">
@@ -102,10 +102,11 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 		</div>
 
 		<p class="pipeline-note">
-			El reviewer solo bloquea por defectos objetivos: código que no compila, datos falsos,
-			contenido desactualizado, contradicciones o referencias inventadas. El pipeline valida
-			Markdown y el máximo de tags; el writer elige hasta tres ejes centrales y puede ampliar
-			la taxonomía con un único tag nuevo cuando ninguno existente representa uno de ellos.
+			El reviewer bloquea por defectos concretos: código incorrecto, datos falsos o desactualizados,
+			contradicciones, referencias inventadas, conceptos imprescindibles ausentes o un texto tan
+			superficial o disperso que no permite comprender el tema. El pipeline valida Markdown y el
+			máximo de tags; el writer elige hasta tres ejes centrales y puede ampliar la taxonomía con un
+			único tag nuevo cuando ninguno existente representa uno de ellos.
 		</p>
 	</section>
 
@@ -114,13 +115,13 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 		<div class="thread" role="log" aria-label="Conversación entre writer y reviewer en una pull request">
 			<div class="msg writer-msg">
 				<span class="who">writer <i>deepseek-v4-pro</i></span>
-				<p>abre la PR <strong>article: Novedades de Java 21 a 25</strong> — ~3.000 palabras, ejemplos de código y referencias.</p>
+				<p>abre la PR <strong>article: Autenticación delegada con MSAL: flujo On-Behalf-Of</strong>.</p>
 			</div>
 			<div class="msg reviewer-msg">
 				<span class="who">reviewer <i>minimax-m3</i></span>
 				<p>
-					Cambios solicitados (ronda 1): <code>[rigor]</code> los patrones sin nombre con
-					<code>_</code> son preview en Java 21 — el artículo los atribuye a Java 22.
+					Cambios solicitados (ronda 1): <code>[codigo]</code> el ejemplo persiste tokens OBO en
+					<code>AppTokenCache</code>, pero debe usar <code>UserTokenCache</code>.
 				</p>
 			</div>
 			<div class="msg writer-msg">
@@ -135,7 +136,7 @@ import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 			</div>
 		</div>
 		<p class="thread-note">
-			Conversación real de la <a href={`${REPO_URL}/pull/9`} target="_blank">PR #9</a>. Cada artículo
+			Conversación real de la <a href={`${REPO_URL}/pull/20`} target="_blank">PR #20</a>. Cada artículo
 			deja rastro público de quién lo escribió, qué se objetó y qué se corrigió.
 		</p>
 	</section>
