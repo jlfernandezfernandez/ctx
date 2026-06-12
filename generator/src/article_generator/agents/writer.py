@@ -62,8 +62,10 @@ Tags existentes, reutilízalos siempre que representen correctamente el tema: {t
 Devuelve SOLO un objeto JSON con:
 - "title": título final concreto y descriptivo
 - "summary": TL;DR técnico en 2-3 frases, sin empezar por "El artículo" o "Este artículo"
-- "tags": el menor número posible de tags, normalmente uno y nunca más de \
-{MAX_TAGS_PER_ARTICLE}. Crea un único tag nuevo y general solo si ninguno existente encaja"""
+- "tags": entre 1 y {MAX_TAGS_PER_ARTICLE} tags que representen ejes centrales del artículo. \
+Incluye cada tag solo si alguien interesado en él agradecería encontrar este artículo. \
+Crea como máximo un tag nuevo, general y reutilizable, solo cuando ningún tag existente \
+represente ese eje central"""
 
 
 def rewrite_prompt(topic: str, body: str, feedback: list[str], attempt: int = 1) -> str:

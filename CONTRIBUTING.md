@@ -21,8 +21,9 @@ Ver [README.md → Desarrollo local](README.md#desarrollo-local) para el setup.
 
 Los system prompts viven como texto estático en `generator/src/article_generator/system_prompts/`.
 Cada agente tiene un único rol; la orquestación y las reglas verificables pertenecen a código normal.
-El writer asigna el menor número posible de tags, reutiliza los existentes cuando encajan y solo
-amplía `tags.json` cuando el artículo introduce un dominio que la taxonomía todavía no representa.
+El writer asigna entre uno y tres tags que representen ejes centrales, reutiliza los existentes
+cuando encajan y solo amplía `tags.json` con un tag nuevo cuando la taxonomía todavía no representa
+uno de esos ejes.
 
 ## Lo que no se puede hacer
 
