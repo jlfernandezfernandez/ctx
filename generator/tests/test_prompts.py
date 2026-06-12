@@ -21,10 +21,11 @@ def test_system_prompts_are_loaded_verbatim():
     assert "{" not in load_system_prompt("reviewer")
 
 
-def test_writer_prefers_few_existing_tags_but_can_create_one():
+def test_writer_selects_central_tags_and_can_create_one():
     prompt = metadata_prompt("MSAL", "cuerpo", ["agents", "java"])
-    assert "menor número posible" in prompt
-    assert "Crea un único tag nuevo" in prompt
+    assert "ejes centrales" in prompt
+    assert "agradecería encontrar este artículo" in prompt
+    assert "como máximo un tag nuevo" in prompt
     assert normalize_tags(["Auth", "auth", "OAuth", "agents"], ["agents"]) == ["auth", "agents"]
 
 

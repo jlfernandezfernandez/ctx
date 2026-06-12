@@ -39,6 +39,10 @@ El resto no son agentes: `pipeline.py` coordina rondas y GitHub; `article.py` va
 - `.github/workflows/` — `triage-topic` (cura propuestas), `publish` (pipeline editorial), `deploy` (Pages), `ci` (tests y build)
 - `site/src/data/tags.json` — taxonomía canónica: el writer reutiliza tags existentes siempre que encajen y el pipeline añade a la misma PR un tag nuevo solo cuando hace falta
 
+Cada artículo lleva entre uno y tres tags que representen sus ejes centrales. Un tag solo se incluye
+si alguien interesado en él agradecería encontrar el artículo; la taxonomía puede crecer como máximo
+en un tag nuevo por artículo.
+
 Los únicos labels requeridos por el producto son `triage`, `topic`, `priority`, `published` y `rejected`.
 
 ## Configuración (Actions)
