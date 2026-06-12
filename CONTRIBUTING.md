@@ -12,9 +12,11 @@ Abre una issue con la plantilla **"Proponer tema"** y vota con 👍 las aceptada
 
 ## Contribuir código
 
+Ver [README.md → Desarrollo local](README.md#desarrollo-local) para el setup.
+
 1. Haz fork y abre una PR contra `main`.
-2. Generador (`generator/`): Python, TDD. `cd generator && pip install -e '.[dev]' && pytest` — los tests deben pasar.
-3. Web (`site/`): Astro. `cd site && npm install && npm run build` debe compilar.
+2. Generador (`generator/`): Python, TDD. Ejecuta `pytest`; los tests deben pasar.
+3. Web (`site/`): Astro. `npm run build` debe compilar.
 4. Las PRs de forks **no** reciben secrets: no puedes (ni necesitas) probar contra el LLM real. Mockea como hacen los tests existentes.
 
 ## Lo que no se puede hacer

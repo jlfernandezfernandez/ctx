@@ -22,12 +22,12 @@ Todo el flujo vive en un único workflow ([`publish.yml`](.github/workflows/publ
 
 ## Agentes
 
-| Agente | Modelo | Qué hace |
-|---|---|---|
-| **Triaje** | `LLM_TRIAGE_MODEL` | Cura título y descripción, modera spam |
-| **Writer** | `LLM_WRITER_MODEL` | Genera esquema + artículo, abre PR, corrige el feedback |
-| **Reviewer** | `LLM_REVIEWER_MODEL` | Evalúa la PR y decide: mergea, pide cambios o escala a humano |
-| **Tag curator** | `LLM_TRIAGE_MODEL` | Revisa `tags.json` tras cada publicación: fusiona, elimina o añade tags. Solo guía los artículos futuros; los ya publicados conservan sus tags |
+| Agente          | Modelo               | Qué hace                                                                                                                                       |
+| --------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Triaje**      | `LLM_TRIAGE_MODEL`   | Cura título y descripción, modera spam                                                                                                         |
+| **Writer**      | `LLM_WRITER_MODEL`   | Genera esquema + artículo, abre PR, corrige el feedback                                                                                        |
+| **Reviewer**    | `LLM_REVIEWER_MODEL` | Evalúa la PR y decide: mergea, pide cambios o escala a humano                                                                                  |
+| **Tag curator** | `LLM_TRIAGE_MODEL`   | Revisa `tags.json` tras cada publicación: fusiona, elimina o añade tags. Solo guía los artículos futuros; los ya publicados conservan sus tags |
 
 El writer y el reviewer usan modelos distintos para evitar que un modelo apruebe sus propios vicios. El writer recibe los tags existentes como referencia y decide cuáles usar; el tag curator simplifica la taxonomía completa en cada ejecución.
 
@@ -42,22 +42,34 @@ Los únicos labels requeridos por el producto son `triage`, `topic`, `priority`,
 
 ## Configuración (Actions)
 
-| Dónde | Nombre | Valor actual |
-|---|---|---|
-| Secret | `LLM_API_KEY` | API key del proveedor |
-| Variable | `LLM_BASE_URL` | `https://ollama.com/v1` |
-| Variable | `LLM_WRITER_MODEL` | `deepseek-v4-pro` |
-| Variable | `LLM_REVIEWER_MODEL` | `minimax-m3` |
-| Variable | `LLM_TRIAGE_MODEL` | `deepseek-v4-flash` |
-| Variable | `MAX_REVIEW_ROUNDS` | `2` |
+| Dónde    | Nombre               | Valor actual            |
+| -------- | -------------------- | ----------------------- |
+| Secret   | `LLM_API_KEY`        | API key del proveedor   |
+| Variable | `LLM_BASE_URL`       | `https://ollama.com/v1` |
+| Variable | `LLM_WRITER_MODEL`   | `deepseek-v4-pro`       |
+| Variable | `LLM_REVIEWER_MODEL` | `minimax-m3`            |
+| Variable | `LLM_TRIAGE_MODEL`   | `deepseek-v4-flash`     |
+| Variable | `MAX_REVIEW_ROUNDS`  | `2`                     |
 
 Cambiar de proveedor o modelo = cambiar esas variables, cero código.
 
 ## Desarrollo local
 
+Requiere [Node.js](https://nodejs.org) y [uv](https://docs.astral.sh/uv/) (`brew install uv`).
+
+### Generador (Python)
+
 ```bash
-cd generator && pip install -e '.[dev]' && pytest
-cd site && npm install && npm run dev
+cd generator
+uv run --extra dev pytest
+```
+
+### Web (Astro)
+
+```bash
+cd site
+npm install
+npm run dev
 ```
 
 ## Contribuir
