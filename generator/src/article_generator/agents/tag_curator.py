@@ -10,13 +10,13 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .article import parse_title_and_tags
-from .llm import LLMClient, LLMError
-from .prompts import MAX_TAGS_PER_ARTICLE
+from ..article import parse_title_and_tags
+from ..llm import LLMClient, LLMError
+from .common import MAX_TAGS_PER_ARTICLE
 
-TAGS_FILE = Path("site/src/data/tags.json")
-BLOG_DIR = Path("site/src/content/blog")
-MAX_RECENT = 30  # enough for the curator to see patterns
+TAGS_FILE_PATH = Path("site/src/data/tags.json")
+BLOG_DIR_PATH = Path("site/src/content/blog")
+MAX_RECENT_ARTICLES = 30  # enough for the curator to see patterns
 MAX_TAXONOMY_TAGS = 50  # generous safety cap; the prompt drives reduction
 
 SYSTEM_PROMPT = f"""Eres el curador de etiquetas de Ctx, un blog técnico. Simplificas \
@@ -57,12 +57,12 @@ Simplifica la taxonomía de tags. Devuelve SOLO el JSON."""
 
 def run(env: dict) -> int:
     try:
-        canonical = json.loads(TAGS_FILE.read_text())
+        canonical = json.loads(TAGS_FILE_PATH.read_text())
     except (OSError, ValueError):
         canonical = []
 
     # Gather recent article metadata (frontmatter only, cheap).
-    md_files = sorted(BLOG_DIR.glob("*.md"), reverse=True)[:MAX_RECENT]
+    md_files = sorted(BLOG_DIR_PATH.glob("*.md"), reverse=True)[:MAX_RECENT_ARTICLES]
     articles = []
     for f in md_files:
         title, tags = parse_title_and_tags(f.read_text(encoding="utf-8"))
@@ -112,8 +112,8 @@ def run(env: dict) -> int:
     subprocess.run(["git", "config", "user.name", "github-actions[bot]"], check=True)
     subprocess.run(["git", "config", "user.email", "github-actions[bot]@users.noreply.github.com"], check=True)
     subprocess.run(["git", "pull", "origin", "main", "--rebase"], check=True)
-    TAGS_FILE.write_text(json.dumps(new_tags, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    subprocess.run(["git", "add", str(TAGS_FILE)], check=True)
+    TAGS_FILE_PATH.write_text(json.dumps(new_tags, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    subprocess.run(["git", "add", str(TAGS_FILE_PATH)], check=True)
     subprocess.run(["git", "commit", "-m", commit_msg], check=True)
     subprocess.run(["git", "push", "origin", "main"], check=True)
     return 0

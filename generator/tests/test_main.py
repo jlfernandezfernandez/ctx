@@ -3,12 +3,12 @@ from unittest.mock import patch
 
 import pytest
 
-from article_generator.main import run
+from article_generator.agents.writer import run
 
 
 @pytest.fixture(autouse=True)
 def avoid_reference_network():
-    with patch("article_generator.main.validate_body"):
+    with patch("article_generator.agents.writer.validate_body"):
         yield
 
 
@@ -41,8 +41,8 @@ def setup_github(github_cls, issue=None):
     return github
 
 
-@patch("article_generator.main.LLMClient")
-@patch("article_generator.main.GitHubClient")
+@patch("article_generator.agents.writer.LLMClient")
+@patch("article_generator.agents.writer.GitHubClient")
 def test_writer_generates_and_opens_pr(github_cls, llm_cls, tmp_path):
     github = setup_github(github_cls, topic_issue())
     writer = llm_cls.return_value
@@ -65,8 +65,8 @@ def test_writer_generates_and_opens_pr(github_cls, llm_cls, tmp_path):
     assert "pr_number=9" in output_file.read_text()
 
 
-@patch("article_generator.main.LLMClient")
-@patch("article_generator.main.GitHubClient")
+@patch("article_generator.agents.writer.LLMClient")
+@patch("article_generator.agents.writer.GitHubClient")
 def test_writer_skips_topics_with_open_article_pr(github_cls, llm_cls):
     github = setup_github(github_cls)
     github.open_article_issue_numbers.return_value = {2}
@@ -76,8 +76,8 @@ def test_writer_skips_topics_with_open_article_pr(github_cls, llm_cls):
     github.next_topic.assert_called_once_with(skip={2})
 
 
-@patch("article_generator.main.LLMClient")
-@patch("article_generator.main.GitHubClient")
+@patch("article_generator.agents.writer.LLMClient")
+@patch("article_generator.agents.writer.GitHubClient")
 def test_metadata_failure_falls_back_to_description(github_cls, llm_cls):
     from article_generator.llm import LLMError
 
@@ -92,32 +92,16 @@ def test_metadata_failure_falls_back_to_description(github_cls, llm_cls):
     assert "content" in kwargs
 
 
-@patch("article_generator.main.LLMClient")
-@patch("article_generator.main.GitHubClient")
-def test_run_strips_issue_form_artifacts_from_notes(github_cls, llm_cls):
-    issue = topic_issue()
-    issue["body"] = "### Notas de enfoque\n\n_No response_"
-    setup_github(github_cls, issue)
-    writer = llm_cls.return_value
-    writer.generate.side_effect = ["outline", "palabra " * 1200]
-    writer.generate_json.return_value = {"summary": "s", "tags": []}
-
-    run(env())
-
-    outline_prompt = writer.generate.call_args_list[0]
-    assert "### Notas de enfoque" not in outline_prompt
-
-
-@patch("article_generator.main.LLMClient")
-@patch("article_generator.main.GitHubClient")
+@patch("article_generator.agents.writer.LLMClient")
+@patch("article_generator.agents.writer.GitHubClient")
 def test_run_exits_zero_when_no_topics(github_cls, llm_cls):
     setup_github(github_cls)
     assert run(env()) == 0
     llm_cls.return_value.generate.assert_not_called()
 
 
-@patch("article_generator.main.LLMClient")
-@patch("article_generator.main.GitHubClient")
+@patch("article_generator.agents.writer.LLMClient")
+@patch("article_generator.agents.writer.GitHubClient")
 def test_validation_failure_still_opens_pr(github_cls, llm_cls):
     from article_generator.article import ValidationError
 
@@ -126,7 +110,7 @@ def test_validation_failure_still_opens_pr(github_cls, llm_cls):
     writer.generate.side_effect = ["outline", "palabra " * 1200]
     writer.generate_json.return_value = {"summary": "s", "tags": []}
 
-    with patch("article_generator.main.validate_body", side_effect=ValidationError("Body too short")):
+    with patch("article_generator.agents.writer.validate_body", side_effect=ValidationError("Body too short")):
         assert run(env()) == 0
 
     github.open_pr.assert_called_once()

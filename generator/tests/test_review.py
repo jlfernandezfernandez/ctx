@@ -1,7 +1,7 @@
 """Tests for the writer-reviewer review loop."""
 from unittest.mock import MagicMock, patch
 
-from article_generator.review import run
+from article_generator.agents.reviewer import run
 
 
 def env(pr_number=9, max_rounds="2"):
@@ -71,8 +71,8 @@ def setup_llms(llm_cls, reports, fixes=()):
     return reviewer, writer
 
 
-@patch("article_generator.review.LLMClient")
-@patch("article_generator.review.GitHubClient")
+@patch("article_generator.agents.reviewer.LLMClient")
+@patch("article_generator.agents.reviewer.GitHubClient")
 def test_approved_first_round_merges_and_closes_issue(github_cls, llm_cls):
     github = setup_github(github_cls)
     setup_llms(llm_cls, [APPROVED])
@@ -89,8 +89,8 @@ def test_approved_first_round_merges_and_closes_issue(github_cls, llm_cls):
     assert closing.endswith("/blog/2026-06-11-vistas-materializadas-en-snowflake/")
 
 
-@patch("article_generator.review.LLMClient")
-@patch("article_generator.review.GitHubClient")
+@patch("article_generator.agents.reviewer.LLMClient")
+@patch("article_generator.agents.reviewer.GitHubClient")
 def test_suggestions_only_merge_with_comment(github_cls, llm_cls):
     github = setup_github(github_cls)
     setup_llms(llm_cls, [{"issues": [suggestion()]}])
@@ -103,8 +103,8 @@ def test_suggestions_only_merge_with_comment(github_cls, llm_cls):
     assert "records" in comment
 
 
-@patch("article_generator.review.LLMClient")
-@patch("article_generator.review.GitHubClient")
+@patch("article_generator.agents.reviewer.LLMClient")
+@patch("article_generator.agents.reviewer.GitHubClient")
 def test_blocking_defect_writer_fixes_then_merges(github_cls, llm_cls):
     github = setup_github(github_cls)
     reviewer, writer = setup_llms(
@@ -113,7 +113,7 @@ def test_blocking_defect_writer_fixes_then_merges(github_cls, llm_cls):
         fixes=[ARTICLE_BODY],
     )
 
-    with patch("article_generator.review.validate_body"):
+    with patch("article_generator.agents.reviewer.validate_body"):
         assert run(env()) == 0
 
     writer.generate.assert_called_once()
@@ -133,8 +133,8 @@ def test_blocking_defect_writer_fixes_then_merges(github_cls, llm_cls):
     assert "falta import de Flux" in reviewer.generate_json.call_args.args[1]
 
 
-@patch("article_generator.review.LLMClient")
-@patch("article_generator.review.GitHubClient")
+@patch("article_generator.agents.reviewer.LLMClient")
+@patch("article_generator.agents.reviewer.GitHubClient")
 def test_round_budget_exhausted_leaves_pr_open(github_cls, llm_cls):
     github = setup_github(github_cls)
     rejected = {"issues": [blocking_issue("API inexistente")]}
@@ -144,7 +144,7 @@ def test_round_budget_exhausted_leaves_pr_open(github_cls, llm_cls):
         fixes=[ARTICLE_BODY, ARTICLE_BODY],
     )
 
-    with patch("article_generator.review.validate_body"):
+    with patch("article_generator.agents.reviewer.validate_body"):
         assert run(env(max_rounds="2")) == 0
 
     assert writer.generate.call_count == 2  # the budget
@@ -156,8 +156,8 @@ def test_round_budget_exhausted_leaves_pr_open(github_cls, llm_cls):
     assert "API inexistente" in final_comment
 
 
-@patch("article_generator.review.LLMClient")
-@patch("article_generator.review.GitHubClient")
+@patch("article_generator.agents.reviewer.LLMClient")
+@patch("article_generator.agents.reviewer.GitHubClient")
 def test_fix_breaking_structure_escalates(github_cls, llm_cls):
     from article_generator.article import ValidationError
 
@@ -171,7 +171,7 @@ def test_fix_breaking_structure_escalates(github_cls, llm_cls):
     # The initial draft is valid; every rewrite breaks the structure.
     broken = [None, ValidationError("Body too short"), ValidationError("Body too short"),
               ValidationError("Body too short")]
-    with patch("article_generator.review.validate_body", side_effect=broken):
+    with patch("article_generator.agents.reviewer.validate_body", side_effect=broken):
         assert run(env()) == 0
 
     github.merge_pr.assert_not_called()
@@ -182,8 +182,8 @@ def test_fix_breaking_structure_escalates(github_cls, llm_cls):
     assert "3 intentos" in final_comment
 
 
-@patch("article_generator.review.LLMClient")
-@patch("article_generator.review.GitHubClient")
+@patch("article_generator.agents.reviewer.LLMClient")
+@patch("article_generator.agents.reviewer.GitHubClient")
 def test_invalid_draft_gets_structure_fix_before_reviewer(github_cls, llm_cls):
     github = setup_github(github_cls)
     github.read_file.return_value = FRONTMATTER + "## Solo una sección\n\ndemasiado corto"
@@ -200,8 +200,8 @@ def test_invalid_draft_gets_structure_fix_before_reviewer(github_cls, llm_cls):
     github.merge_pr.assert_called_once_with(9, branch="article/issue-5")
 
 
-@patch("article_generator.review.LLMClient")
-@patch("article_generator.review.GitHubClient")
+@patch("article_generator.agents.reviewer.LLMClient")
+@patch("article_generator.agents.reviewer.GitHubClient")
 def test_broken_reviewer_escalates_without_writer_fixes(github_cls, llm_cls):
     from article_generator.llm import LLMError
 
@@ -216,8 +216,8 @@ def test_broken_reviewer_escalates_without_writer_fixes(github_cls, llm_cls):
     assert "no devolvió un informe válido" in final_comment
 
 
-@patch("article_generator.review.LLMClient")
-@patch("article_generator.review.GitHubClient")
+@patch("article_generator.agents.reviewer.LLMClient")
+@patch("article_generator.agents.reviewer.GitHubClient")
 def test_report_without_issues_list_escalates(github_cls, llm_cls):
     github = setup_github(github_cls)
     bad_shape = {"issues": "no es una lista"}
@@ -231,21 +231,21 @@ def test_report_without_issues_list_escalates(github_cls, llm_cls):
     assert "no devolvió un informe válido" in final_comment
 
 
-@patch("article_generator.review.LLMClient")
-@patch("article_generator.review.GitHubClient")
+@patch("article_generator.agents.reviewer.LLMClient")
+@patch("article_generator.agents.reviewer.GitHubClient")
 def test_issue_without_blocking_flag_blocks(github_cls, llm_cls):
     github = setup_github(github_cls)
     rejected = {"issues": [{"category": "rigor", "detail": "dato sin contrastar"}]}
     setup_llms(llm_cls, reports=[rejected, rejected], fixes=[ARTICLE_BODY])
 
-    with patch("article_generator.review.validate_body"):
+    with patch("article_generator.agents.reviewer.validate_body"):
         assert run(env(max_rounds="1")) == 0
 
     github.merge_pr.assert_not_called()
 
 
-@patch("article_generator.review.LLMClient")
-@patch("article_generator.review.GitHubClient")
+@patch("article_generator.agents.reviewer.LLMClient")
+@patch("article_generator.agents.reviewer.GitHubClient")
 def test_no_issue_number_still_merges(github_cls, llm_cls):
     github = setup_github(github_cls, body="Some description without Closes")
     setup_llms(llm_cls, [APPROVED])

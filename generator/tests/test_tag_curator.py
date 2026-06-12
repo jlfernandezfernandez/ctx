@@ -4,9 +4,9 @@ from unittest.mock import patch
 
 import pytest
 
-from article_generator import tag_curator
+from article_generator import agents
 from article_generator.llm import LLMError
-from article_generator.tag_curator import run
+from article_generator.agents.tag_curator import run
 
 ARTICLE = """---
 title: "Vistas materializadas en Snowflake"
@@ -34,13 +34,13 @@ def workspace(tmp_path, monkeypatch):
     blog = tmp_path / "blog"
     blog.mkdir()
     tags_file = tmp_path / "tags.json"
-    monkeypatch.setattr(tag_curator, "BLOG_DIR", blog)
-    monkeypatch.setattr(tag_curator, "TAGS_FILE", tags_file)
+    monkeypatch.setattr(agents.tag_curator, "BLOG_DIR_PATH", blog)
+    monkeypatch.setattr(agents.tag_curator, "TAGS_FILE_PATH", tags_file)
     return blog, tags_file
 
 
-@patch("article_generator.tag_curator.subprocess")
-@patch("article_generator.tag_curator.LLMClient")
+@patch("article_generator.agents.tag_curator.subprocess")
+@patch("article_generator.agents.tag_curator.LLMClient")
 def test_no_articles_skips_llm(llm_cls, subprocess_mod, workspace):
     assert run(env()) == 0
 
@@ -48,8 +48,8 @@ def test_no_articles_skips_llm(llm_cls, subprocess_mod, workspace):
     subprocess_mod.run.assert_not_called()
 
 
-@patch("article_generator.tag_curator.subprocess")
-@patch("article_generator.tag_curator.LLMClient")
+@patch("article_generator.agents.tag_curator.subprocess")
+@patch("article_generator.agents.tag_curator.LLMClient")
 def test_llm_error_is_not_fatal(llm_cls, subprocess_mod, workspace):
     blog, _ = workspace
     (blog / "a.md").write_text(ARTICLE, encoding="utf-8")
@@ -60,8 +60,8 @@ def test_llm_error_is_not_fatal(llm_cls, subprocess_mod, workspace):
     subprocess_mod.run.assert_not_called()
 
 
-@patch("article_generator.tag_curator.subprocess")
-@patch("article_generator.tag_curator.LLMClient")
+@patch("article_generator.agents.tag_curator.subprocess")
+@patch("article_generator.agents.tag_curator.LLMClient")
 def test_invalid_response_is_not_fatal(llm_cls, subprocess_mod, workspace):
     blog, _ = workspace
     (blog / "a.md").write_text(ARTICLE, encoding="utf-8")
@@ -72,8 +72,8 @@ def test_invalid_response_is_not_fatal(llm_cls, subprocess_mod, workspace):
     subprocess_mod.run.assert_not_called()
 
 
-@patch("article_generator.tag_curator.subprocess")
-@patch("article_generator.tag_curator.LLMClient")
+@patch("article_generator.agents.tag_curator.subprocess")
+@patch("article_generator.agents.tag_curator.LLMClient")
 def test_unchanged_taxonomy_does_not_push(llm_cls, subprocess_mod, workspace):
     blog, tags_file = workspace
     (blog / "a.md").write_text(ARTICLE, encoding="utf-8")
@@ -85,8 +85,8 @@ def test_unchanged_taxonomy_does_not_push(llm_cls, subprocess_mod, workspace):
     subprocess_mod.run.assert_not_called()
 
 
-@patch("article_generator.tag_curator.subprocess")
-@patch("article_generator.tag_curator.LLMClient")
+@patch("article_generator.agents.tag_curator.subprocess")
+@patch("article_generator.agents.tag_curator.LLMClient")
 def test_changed_taxonomy_writes_commits_and_pushes(llm_cls, subprocess_mod, workspace):
     blog, tags_file = workspace
     (blog / "a.md").write_text(ARTICLE, encoding="utf-8")

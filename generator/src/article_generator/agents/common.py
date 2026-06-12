@@ -1,14 +1,10 @@
-"""Shared constants and prompt fragments used across agents.
+"""Shared constants used across agents."""
 
-Per-agent system prompts and prompt builders live in agents/<agent>.py
-so each agent file is self-contained.
-"""
-
-# Tags per article: enforced as a cap in agents/writer.py
+# Tags per article: single source for the writer cap and the tag-curator prompt.
 MAX_TAGS_PER_ARTICLE = 3
 
-# Title rules shared with the triage agent: a single source so both agents
-# improve titles with the same criteria.
+# Title rules shared by the writer (metadata prompt) and the triage agent so
+# both improve titles with the same criteria.
 TITLE_RULES = """- Si es muy corto o genérico ("Pydantic AI"), añade un subtítulo descriptivo tras ": " \
 que adelante el enfoque (ej: "Introducción a Pydantic AI: structured output para LLMs").
 - Si es comparativo ("X vs Y"), añade el criterio de decisión ("X vs Y: cuándo usar cada uno").

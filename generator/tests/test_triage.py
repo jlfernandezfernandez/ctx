@@ -4,7 +4,7 @@ from unittest.mock import call, patch
 
 import pytest
 
-from article_generator.triage import Classification, TriageError, parse_classification, run
+from article_generator.agents.triage import Classification, TriageError, parse_classification, run
 
 
 def env(tmp_path, issue=None):
@@ -59,8 +59,8 @@ def test_parse_classification_rejects_invalid_response(data):
         parse_classification(data)
 
 
-@patch("article_generator.triage.LLMClient")
-@patch("article_generator.triage.GitHubClient")
+@patch("article_generator.agents.triage.LLMClient")
+@patch("article_generator.agents.triage.GitHubClient")
 def test_run_approves_and_updates_title_and_description(issues_cls, llm_cls, tmp_path):
     issues = issues_cls.return_value
     llm_cls.return_value.generate_json.return_value = {
@@ -78,8 +78,8 @@ def test_run_approves_and_updates_title_and_description(issues_cls, llm_cls, tmp
     assert llm_cls.call_args.kwargs["model"] == "curator-model"
 
 
-@patch("article_generator.triage.LLMClient")
-@patch("article_generator.triage.GitHubClient")
+@patch("article_generator.agents.triage.LLMClient")
+@patch("article_generator.agents.triage.GitHubClient")
 def test_run_approves_without_changes_when_identical(issues_cls, llm_cls, tmp_path):
     issue = {
         "number": 17,
@@ -102,8 +102,8 @@ def test_run_approves_without_changes_when_identical(issues_cls, llm_cls, tmp_pa
     issues.set_labels.assert_called_once_with(17, ["topic"])
 
 
-@patch("article_generator.triage.LLMClient")
-@patch("article_generator.triage.GitHubClient")
+@patch("article_generator.agents.triage.LLMClient")
+@patch("article_generator.agents.triage.GitHubClient")
 def test_run_rejects_clear_spam(issues_cls, llm_cls, tmp_path):
     issues = issues_cls.return_value
     llm_cls.return_value.generate_json.return_value = {
@@ -119,8 +119,8 @@ def test_run_rejects_clear_spam(issues_cls, llm_cls, tmp_path):
     issues.close.assert_called_once_with(17)
 
 
-@patch("article_generator.triage.LLMClient")
-@patch("article_generator.triage.GitHubClient")
+@patch("article_generator.agents.triage.LLMClient")
+@patch("article_generator.agents.triage.GitHubClient")
 def test_run_leaves_doubtful_topic_for_review(issues_cls, llm_cls, tmp_path):
     issues = issues_cls.return_value
     llm_cls.return_value.generate_json.return_value = {
@@ -138,8 +138,8 @@ def test_run_leaves_doubtful_topic_for_review(issues_cls, llm_cls, tmp_path):
     issues.close.assert_not_called()
 
 
-@patch("article_generator.triage.LLMClient")
-@patch("article_generator.triage.GitHubClient")
+@patch("article_generator.agents.triage.LLMClient")
+@patch("article_generator.agents.triage.GitHubClient")
 def test_run_fails_safe_when_curator_response_is_invalid(issues_cls, llm_cls, tmp_path):
     issues = issues_cls.return_value
     llm_cls.return_value.generate_json.return_value = {"action": "APPROVE"}
@@ -151,8 +151,8 @@ def test_run_fails_safe_when_curator_response_is_invalid(issues_cls, llm_cls, tm
     issues.close.assert_not_called()
 
 
-@patch("article_generator.triage.LLMClient")
-@patch("article_generator.triage.GitHubClient")
+@patch("article_generator.agents.triage.LLMClient")
+@patch("article_generator.agents.triage.GitHubClient")
 def test_manual_run_fetches_requested_issue(issues_cls, llm_cls, tmp_path):
     issue = {
         "number": 3,

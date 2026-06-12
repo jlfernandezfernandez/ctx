@@ -1,5 +1,6 @@
-"""Tests for prompt builders."""
-from article_generator.prompts import SYSTEM_PROMPT, outline_prompt, article_prompt
+"""Tests for agent prompt builders."""
+from article_generator.agents.writer import SYSTEM_PROMPT, outline_prompt, article_prompt
+from article_generator.agents.reviewer import reviewer_prompt, rewrite_prompt
 
 
 def test_system_prompt_sets_role_and_language():
@@ -25,8 +26,6 @@ def test_article_prompt_includes_outline_topic_and_notes():
 
 
 def test_reviewer_prompt_includes_article_and_json_contract():
-    from article_generator.prompts import reviewer_prompt
-
     p = reviewer_prompt("Project Reactor", "cuerpo del articulo")
     assert "cuerpo del articulo" in p
     assert "Project Reactor" in p
@@ -37,16 +36,12 @@ def test_reviewer_prompt_includes_article_and_json_contract():
 
 
 def test_reviewer_prompt_includes_previous_feedback_on_later_rounds():
-    from article_generator.prompts import reviewer_prompt
-
     p = reviewer_prompt("Project Reactor", "cuerpo", ["[codigo] falta import de Flux"])
     assert "ronda anterior" in p
     assert "falta import de Flux" in p
 
 
 def test_rewrite_prompt_includes_draft_and_feedback():
-    from article_generator.prompts import rewrite_prompt
-
     p = rewrite_prompt(
         "Project Reactor",
         "el borrador",
