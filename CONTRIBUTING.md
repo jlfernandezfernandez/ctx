@@ -1,15 +1,14 @@
 # Contribuir a Ctx
 
+El flujo editorial completo (triaje → votos → writer → reviewer) está documentado en el [README](README.md).
+
 ## Proponer un tema (lo más valioso)
 
-Abre una issue con la plantilla **"Proponer tema"**:
+Abre una issue con la plantilla **"Proponer tema"** y vota con 👍 las aceptadas (label `topic`):
 
 - El **título de la issue** es el tema del artículo. Sé concreto: mejor "Kafka sin ZooKeeper: KRaft" que "Kafka".
-- Las **notas de enfoque** (opcionales) se inyectan al prompt del generador: qué no entiendes, con qué compararlo, qué casos cubrir.
-- La issue nace con el label `triage`: un curador automático corrige errores obvios del título y valida que sea técnica. Si duda, queda en `triage` para revisión manual; si es claramente spam o no técnica, se cierra como `rejected`.
+- Las **notas de enfoque** (opcionales) se inyectan al prompt del writer: qué no entiendes, con qué compararlo, qué casos cubrir.
 - Un colaborador puede añadir `priority` para saltar la cola.
-
-**Vota con 👍** las issues aceptadas (label `topic`): cada día laborable se publica la más votada (empate → la más antigua; `priority` siempre primero). Al publicarse, la issue se cierra con el link.
 
 ## Contribuir código
 
@@ -23,5 +22,3 @@ Abre una issue con la plantilla **"Proponer tema"**:
 - Commitear keys o `.env` (está en `.gitignore`; los secrets viven en GitHub Actions Secrets).
 - Editar artículos publicados en `site/src/content/blog/` a mano salvo errata clara.
 - Lanzar workflows: solo colaboradores con permiso de escritura pueden ejecutar `workflow_dispatch`.
-
-La arquitectura y el flujo editorial están documentados en [README.md](README.md).

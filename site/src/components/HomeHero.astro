@@ -40,12 +40,12 @@ import { REPO_URL, TOPICS_URL } from '../consts';
 			<span>Ctx — zsh</span>
 		</div>
 		<div class="term-body">
-			<p class="cmd">ctx --why</p>
+			<p class="cmd term-command">ctx --why</p>
 			<p class="out">
 				Hacemos vibe coding: la IA escribe el código a una velocidad absurda. Entender qué hace
 				por debajo sigue siendo nuestro trabajo — y nuestra ventaja.
 			</p>
-			<p class="cmd">ctx --how</p>
+			<p class="cmd term-command">ctx --how</p>
 			<p class="out">
 				Propones un tema → el equipo vota con 👍 → cada mañana (L–V) un LLM publica aquí un deep
 				dive de ~15 min: desde cero hasta internals, con ejemplos de código completos.
@@ -105,11 +105,6 @@ import { REPO_URL, TOPICS_URL } from '../consts';
 	}
 	.cmd {
 		margin: 0;
-		color: var(--accent);
-	}
-	.cmd::before {
-		content: '$ ';
-		color: rgb(var(--gray));
 	}
 	.out {
 		margin: 0.2em 0 1.2em 0;

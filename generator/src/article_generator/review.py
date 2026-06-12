@@ -15,9 +15,14 @@ import os
 import re
 import sys
 
-from .article import split_frontmatter, validate_body, ValidationError
-from .github_issues import IssuesClient
-from .github_prs import PRClient
+from .article import (
+    parse_title_and_tags,
+    sign_reviewer,
+    split_frontmatter,
+    validate_body,
+    ValidationError,
+)
+from .github import GitHubClient
 from .llm import LLMClient, LLMError
 from .prompts import (
     REVIEWER_SYSTEM_PROMPT,
@@ -36,31 +41,29 @@ def _parse_pr_body(body: str) -> int | None:
 
 def _review_report(
     reviewer: LLMClient, topic: str, draft: str, previous_feedback: list[str] | None = None
-) -> dict:
-    fallback = {
-        "approved": False,
-        "issues": [
-            {
-                "category": "general",
-                "blocking": True,
-                "detail": "el revisor no devolvió un informe válido",
-            }
-        ],
-    }
-    for retry_left in (True, False):
+) -> dict | None:
+    """One review round, with one retry. None means the reviewer is broken:
+    that's an infrastructure failure, not an article defect, so the caller
+    escalates to a human instead of sending the writer to fix nothing."""
+    for _ in range(2):
         try:
             report = reviewer.generate_json(
                 REVIEWER_SYSTEM_PROMPT, reviewer_prompt(topic, draft, previous_feedback)
             )
         except LLMError:
-            if retry_left:
-                continue
-            return fallback
-        if isinstance(report.get("approved"), bool) and isinstance(report.get("issues"), list):
+            continue
+        if isinstance(report.get("issues"), list):
             return report
-        if not retry_left:
-            return fallback
-    return fallback
+    return None
+
+
+def _structure_defects(draft: str) -> list[str]:
+    """The reviewer never judges structure, so the validator gates each round."""
+    try:
+        validate_body(draft)
+        return []
+    except ValidationError as exc:
+        return [f"[estructura] {exc}"]
 
 
 def _split_issues(report: dict) -> tuple[list[str], list[str]]:
@@ -84,14 +87,6 @@ def _article_link(site_url: str, path: str) -> str:
     return f"{site_url}/blog/{slug}/" if site_url else slug
 
 
-def _sign_frontmatter(frontmatter: str, reviewer_model: str) -> str:
-    """Record which model reviewed the article, next to the writer's line."""
-    if not frontmatter or "\nreviewer:" in frontmatter:
-        return frontmatter
-    escaped = reviewer_model.replace("\\", "\\\\").replace('"', '\\"')
-    return frontmatter.replace("\n---", f'\nreviewer: "{escaped}"\n---', 1)
-
-
 def run(env: dict) -> int:
     repo = env["GITHUB_REPOSITORY"]
     token = env["GITHUB_TOKEN"]
@@ -103,38 +98,35 @@ def run(env: dict) -> int:
     reviewer = LLMClient(base_url=base_url, api_key=api_key, model=reviewer_model)
     writer = LLMClient(base_url=base_url, api_key=api_key, model=env["LLM_WRITER_MODEL"])
 
-    issues = IssuesClient(repo=repo, token=token)
-    prs = PRClient(repo=repo, token=token)
+    github = GitHubClient(repo=repo, token=token)
 
-    pr = prs.get_pr(pr_number)
+    pr = github.get_pr(pr_number)
     issue_number = _parse_pr_body(pr.get("body") or "")
     branch = pr["head"]["ref"]
     topic = pr["title"].removeprefix("article: ").strip()
 
-    path = prs.get_article_path(pr_number)
+    path = github.get_article_path(pr_number)
     # The LLMs only ever see and rewrite the body; the frontmatter is
     # machine-built metadata and must survive every round untouched.
-    frontmatter, draft = split_frontmatter(prs.read_file(branch, path))
-    # Prepend the title so the reviewer can check it matches the content.
-    title_match = re.search(r'^title:\s*"(.+)"$', frontmatter, re.MULTILINE)
-    title = title_match.group(1) if title_match else topic
-    review_body = f"# {title}\n\n{draft}"
+    content = github.read_file(branch, path)
+    frontmatter, draft = split_frontmatter(content)
+    title = parse_title_and_tags(content)[0] or topic
     print(f"Reviewing article for issue #{issue_number}: {title}")
 
     site_url = env.get("SITE_URL", "").rstrip("/")
 
     def publish(fixes: int, suggestions: list[str]) -> int:
         if suggestions:
-            prs.comment_on_pr(
+            github.comment(
                 pr_number, f"Aprobado con sugerencias no bloqueantes:\n\n{_bullets(suggestions)}"
             )
-        signed = _sign_frontmatter(frontmatter, reviewer_model)
+        signed = sign_reviewer(frontmatter, reviewer_model)
         if signed != frontmatter:
-            prs.update_file(branch, path, signed + draft, "chore: reviewer sign-off")
-        prs.merge_pr(pr_number, branch=branch)
+            github.update_file(branch, path, signed + draft, "chore: reviewer sign-off")
+        github.merge_pr(pr_number, branch=branch)
         if issue_number:
             note = " (con correcciones)" if fixes else ""
-            issues.close_with_comment(
+            github.close_with_comment(
                 issue_number, f"Publicado{note}: {_article_link(site_url, path)}"
             )
         # Quality log: traceable per-article stats for prompt tuning.
@@ -147,18 +139,28 @@ def run(env: dict) -> int:
         return 0
 
     def escalate(reason: str, pending: list[str]) -> int:
-        prs.comment_on_pr(
+        details = f" Defectos pendientes:\n\n{_bullets(pending)}\n\n" if pending else "\n\n"
+        github.comment(
             pr_number,
-            f"{reason} Defectos pendientes:\n\n{_bullets(pending)}\n\n"
-            "Mergear publica el artículo; cerrar la PR lo descarta.",
+            f"{reason}{details}Mergear publica el artículo; cerrar la PR lo descarta.",
         )
         print("Could not approve. PR left open for a human.")
         return 0
 
     previous_blocking: list[str] | None = None
     for fixes_done in range(max_rounds + 1):
-        report = _review_report(reviewer, title, review_body, previous_blocking)
-        blocking, suggestions = _split_issues(report)
+        # The writer may have opened the PR with an invalid draft; fix the
+        # structure before spending reviewer rounds on it.
+        structural = _structure_defects(draft)
+        if structural:
+            blocking, suggestions = structural, []
+        else:
+            # Prepend the title (rebuilt each round so the reviewer sees the
+            # latest fix) so the reviewer can check it matches the content.
+            report = _review_report(reviewer, title, f"# {title}\n\n{draft}", previous_blocking)
+            if report is None:
+                return escalate("El reviewer no devolvió un informe válido.", [])
+            blocking, suggestions = _split_issues(report)
         if not blocking:
             print(f"Approved after {fixes_done} fix(es). Merging.")
             return publish(fixes_done, suggestions)
@@ -169,7 +171,7 @@ def run(env: dict) -> int:
 
         round_number = fixes_done + 1
         print(f"Round {round_number}: blocking defects: {blocking}")
-        prs.comment_on_pr(
+        github.comment(
             pr_number, f"Cambios solicitados (ronda {round_number}):\n\n{_bullets(blocking)}"
         )
 
@@ -178,22 +180,24 @@ def run(env: dict) -> int:
             fixed = writer.generate(
                 SYSTEM_PROMPT, rewrite_prompt(topic, draft, blocking, attempt=rewrite_attempt + 1)
             )
-            try:
-                validate_body(fixed)
+            defects = _structure_defects(fixed)
+            if not defects:
                 break
-            except ValidationError as exc:
-                if rewrite_attempt == 2:
-                    return escalate(
-                        f"La corrección del writer rompió la estructura del artículo tras 3 intentos.",
-                        blocking + [f"[estructura] {exc}"],
-                    )
-                print(f"  Rewrite attempt {rewrite_attempt + 1} broke structure ({exc}), retrying...")
+            if rewrite_attempt == 2:
+                return escalate(
+                    "La corrección del writer rompió la estructura del artículo tras 3 intentos.",
+                    blocking + defects,
+                )
+            print(f"  Rewrite attempt {rewrite_attempt + 1} broke structure ({defects[0]}), retrying...")
 
-        prs.update_file(
+        github.update_file(
             branch, path, frontmatter + fixed, f"fix: review feedback (round {round_number})"
         )
         draft = fixed
-        previous_blocking = blocking
+        if not structural:
+            # The reviewer never judges structure, so it only gets its own
+            # past feedback back, not the validator's.
+            previous_blocking = blocking
 
     return 0
 

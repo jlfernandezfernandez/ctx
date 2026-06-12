@@ -6,27 +6,26 @@ LLM to merge, rename or delete tags. Commits and pushes changes directly.
 """
 import json
 import os
-import re
 import subprocess
 import sys
 from pathlib import Path
 
+from .article import parse_title_and_tags
 from .llm import LLMClient, LLMError
+from .prompts import MAX_TAGS_PER_ARTICLE:
 
 TAGS_FILE = Path("site/src/data/tags.json")
 BLOG_DIR = Path("site/src/content/blog")
 MAX_RECENT = 30  # enough for the curator to see patterns
-MAX_TAGS = 50  # generous safety cap; the prompt drives reduction
+MAX_TAXONOMY_TAGS = 50  # generous safety cap; the prompt drives reduction
 
-FRONTMATTER = re.compile(r"\A---\n(.*?)\n---", re.DOTALL)
-TAGS_LINE = re.compile(r'^tags:\s*\[(.+)\]$', re.MULTILINE)
+SYSTEM_PROMPT = f"""Eres el curador de etiquetas de Ctx, un blog técnico. Simplificas \
+la taxonomía de tags para que cada tag agrupe un concepto, no una librería o feature concreta. \
+Solo editas la taxonomía: los artículos ya publicados conservan sus tags.
 
-SYSTEM_PROMPT = """Eres el curador de etiquetas de Ctx (ctx), un blog técnico. Simplificas \
-la taxonomía de tags para que cada tag agrupe un concepto, no una librería o feature concreta.
-
-Tu objetivo es REDUCIR el número de tags siempre que puedas. Cada artículo debe llevar \
-2-3 tags como mucho. Si un artículo tiene más, los sobrantes son demasiado específicos \
-y deben absorberse en tags más genéricos.
+Tu objetivo es REDUCIR el número de tags siempre que puedas. Un artículo se describe con \
+2-{MAX_TAGS_PER_ARTICLE:} tags como mucho: si los artículos recientes necesitan más, la taxonomía es \
+demasiado específica y los tags sobrantes deben absorberse en otros más genéricos.
 
 Reglas:
 - Fusiona tags equivalentes sin piedad (ej: "raft", "kraft", "controller" → solo "kafka").
@@ -40,21 +39,6 @@ tecnologías distintas, 8 tags está bien.
 
 Responde únicamente con un objeto JSON:
 - "tags": lista actualizada de tags canónicos"""
-
-
-def _parse_tags_from_article(path: Path) -> tuple[str, list[str]]:
-    text = path.read_text(encoding="utf-8")
-    m = FRONTMATTER.search(text)
-    if not m:
-        return "", []
-    fm = m.group(1)
-    title_match = re.search(r'^title:\s*"(.+)"$', fm, re.MULTILINE)
-    title = title_match.group(1) if title_match else path.stem
-    tag_match = TAGS_LINE.search(fm)
-    tags = []
-    if tag_match:
-        tags = [t.strip().strip('"') for t in tag_match.group(1).split(",") if t.strip()]
-    return title, tags
 
 
 def _build_prompt(canonical: list[str], articles: list[dict]) -> str:
@@ -81,9 +65,9 @@ def run(env: dict) -> int:
     md_files = sorted(BLOG_DIR.glob("*.md"), reverse=True)[:MAX_RECENT]
     articles = []
     for f in md_files:
-        title, tags = _parse_tags_from_article(f)
+        title, tags = parse_title_and_tags(f.read_text(encoding="utf-8"))
         if tags:
-            articles.append({"title": title, "tags": tags})
+            articles.append({"title": title or f.stem, "tags": tags})
 
     if not articles:
         print("No articles found; nothing to curate.")
@@ -92,7 +76,7 @@ def run(env: dict) -> int:
     llm = LLMClient(
         base_url=env["LLM_BASE_URL"],
         api_key=env["LLM_API_KEY"],
-        model=env.get("LLM_TRIAGE_MODEL", env.get("LLM_WRITER_MODEL", "")),
+        model=env["LLM_TRIAGE_MODEL"],
         timeout=60,
     )
 
@@ -108,7 +92,7 @@ def run(env: dict) -> int:
         return 0
 
     new_tags = sorted(set(t.strip().lower() for t in new_tags if isinstance(t, str) and t.strip()))
-    new_tags = new_tags[:MAX_TAGS]
+    new_tags = new_tags[:MAX_TAXONOMY_TAGS]
 
     if new_tags == sorted(canonical):
         print("Tag taxonomy unchanged.")

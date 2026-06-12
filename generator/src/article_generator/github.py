@@ -1,9 +1,12 @@
-"""Opens and manages article pull requests.
+"""GitHub API client: the topic queue (issues) and article pull requests.
 
-Uses the GitHub contents API instead of local git: the run must not leave
-uncommitted files behind for the publish step, and the PR is the approval
-mechanism (merge = publish, close = discard). A PR left open means the
-reviewer could not approve it and a human has to decide.
+An open issue labeled `topic` is a pending topic. `priority` jumps the
+queue. Closing the issue with a link marks it published.
+
+Article PRs use the contents API instead of local git: the run must not
+leave uncommitted files behind for the publish step, and the PR is the
+approval mechanism (merge = publish, close = discard). A PR left open
+means the reviewer could not approve it and a human has to decide.
 """
 import base64
 import re
@@ -11,15 +14,22 @@ import time
 
 import requests
 
+TOPIC_LABEL = "topic"
+TRIAGE_LABEL = "triage"
+PRIORITY_LABEL = "priority"
+PUBLISHED_LABEL = "published"
+REJECTED_LABEL = "rejected"
+
 BRANCH_PATTERN = re.compile(r"^article/issue-(\d+)$")
 
 
-class PRError(Exception):
+class GitHubError(Exception):
     pass
 
 
-class PRClient:
+class GitHubClient:
     def __init__(self, repo: str, token: str):
+        self.repo = repo
         self.base = f"https://api.github.com/repos/{repo}"
         self.session = requests.Session()
         self.session.headers.update({
@@ -30,10 +40,90 @@ class PRClient:
 
     def _require(self, response, expected: tuple[int, ...], action: str) -> None:
         if response.status_code not in expected:
-            raise PRError(
+            raise GitHubError(
                 f"Failed to {action}: GitHub API error {response.status_code}: "
                 f"{response.text[:500]}"
             )
+
+    # --- Topic queue (issues) ---
+
+    def next_topic(self, skip: set[int] = frozenset()) -> dict | None:
+        """Next topic to publish; `skip` holds issues whose article PR is already open."""
+        resp = self.session.get(
+            f"{self.base}/issues",
+            params={"state": "open", "labels": TOPIC_LABEL, "per_page": 100},
+        )
+        self._require(resp, (200,), "list open topics")
+        issues = [
+            i
+            for i in resp.json()
+            if "pull_request" not in i and i["number"] not in skip
+        ]
+        if not issues:
+            return None
+        priority = [
+            i for i in issues
+            if any(label["name"] == PRIORITY_LABEL for label in i["labels"])
+        ]
+        pool = priority or issues
+        # Most 👍 reactions wins; ties go to the oldest issue.
+        return sorted(
+            pool,
+            key=lambda i: (-i.get("reactions", {}).get("+1", 0), i["created_at"]),
+        )[0]
+
+    def get_issue(self, number: int) -> dict:
+        resp = self.session.get(f"{self.base}/issues/{number}")
+        self._require(resp, (200,), f"get issue #{number}")
+        return resp.json()
+
+    def update_issue(self, number: int, *, title: str = None, body: str = None) -> None:
+        data = {}
+        if title is not None:
+            data["title"] = title
+        if body is not None:
+            data["body"] = body
+        if not data:
+            return
+        resp = self.session.patch(
+            f"{self.base}/issues/{number}",
+            json=data,
+        )
+        self._require(resp, (200,), f"update issue #{number}")
+
+    def set_labels(self, number: int, labels: list[str]) -> None:
+        resp = self.session.put(
+            f"{self.base}/issues/{number}/labels",
+            json={"labels": labels},
+        )
+        self._require(resp, (200,), f"set labels on issue #{number}")
+
+    def comment(self, number: int, body: str) -> None:
+        """Comment on an issue or a PR (PRs are issues in the GitHub API)."""
+        resp = self.session.post(
+            f"{self.base}/issues/{number}/comments",
+            json={"body": body},
+        )
+        self._require(resp, (200, 201), f"comment on #{number}")
+
+    def close(self, number: int) -> None:
+        resp = self.session.patch(
+            f"{self.base}/issues/{number}",
+            json={"state": "closed"},
+        )
+        self._require(resp, (200,), f"close issue #{number}")
+
+    def close_with_comment(self, number: int, comment: str) -> None:
+        self.comment(number, comment)
+        # Best effort: a missing label must not block publishing.
+        resp = self.session.post(
+            f"{self.base}/issues/{number}/labels", json={"labels": [PUBLISHED_LABEL]}
+        )
+        if resp.status_code not in (200, 201):
+            print(f"Could not label issue #{number} as {PUBLISHED_LABEL}: {resp.status_code}")
+        self.close(number)
+
+    # --- Article pull requests ---
 
     def open_pr(
         self, branch: str, path: str, content: str, title: str, body: str, base: str = "main"
@@ -48,18 +138,16 @@ class PRClient:
         )
         if created.status_code == 422:
             # Branch already exists (likely a re-run). Return the existing PR.
-            owner = self.base.rsplit("/", 2)[-2]
-            repo = self.base.rsplit("/", 1)[-1]
             existing = self.session.get(
                 f"{self.base}/pulls",
-                params={"state": "open", "head": f"{owner}/{repo}:{branch}"},
+                params={"state": "open", "head": f"{self.repo}:{branch}"},
             )
             self._require(existing, (200,), f"find existing PR for branch {branch}")
             prs_list = existing.json()
             if prs_list:
                 pr = prs_list[0]
                 return pr["html_url"], pr["number"]
-            raise PRError(
+            raise GitHubError(
                 f"Branch {branch} exists but no open PR found; close or delete it first"
             )
         self._require(created, (201,), f"create branch {branch}")
@@ -103,7 +191,7 @@ class PRClient:
         for f in resp.json():
             if f["filename"].startswith("site/src/content/blog/") and f["filename"].endswith(".md"):
                 return f["filename"]
-        raise PRError(f"No article .md found in PR #{pr_number}")
+        raise GitHubError(f"No article .md found in PR #{pr_number}")
 
     def read_file(self, ref: str, path: str) -> str:
         """Read file content from a branch via the contents API."""
@@ -150,10 +238,3 @@ class PRClient:
             json={"message": message, "content": encoded, "branch": branch, "sha": sha},
         )
         self._require(put, (200,), f"update {path} on {branch}")
-
-    def comment_on_pr(self, number: int, body: str) -> None:
-        resp = self.session.post(
-            f"{self.base}/issues/{number}/comments",
-            json={"body": body},
-        )
-        self._require(resp, (200, 201), f"comment on PR #{number}")

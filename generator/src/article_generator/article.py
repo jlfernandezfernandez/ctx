@@ -18,6 +18,8 @@ VAGUE_REFERENCE = re.compile(
 
 
 FRONTMATTER = re.compile(r"\A(---\n.*?\n---\n+)", re.DOTALL)
+_TITLE_LINE = re.compile(r'^title:\s*"(.+)"$', re.MULTILINE)
+_TAGS_LINE = re.compile(r"^tags:\s*\[(.+)\]$", re.MULTILINE)
 
 
 class ValidationError(Exception):
@@ -30,6 +32,25 @@ def split_frontmatter(content: str) -> tuple[str, str]:
     if not match:
         return "", content
     return match.group(1), content[match.end():]
+
+
+def parse_title_and_tags(content: str) -> tuple[str, list[str]]:
+    """(title, tags) from the frontmatter; empty values when missing."""
+    frontmatter, _ = split_frontmatter(content)
+    title_match = _TITLE_LINE.search(frontmatter)
+    title = title_match.group(1) if title_match else ""
+    tags_match = _TAGS_LINE.search(frontmatter)
+    tags = []
+    if tags_match:
+        tags = [t.strip().strip('"') for t in tags_match.group(1).split(",") if t.strip()]
+    return title, tags
+
+
+def sign_reviewer(frontmatter: str, reviewer_model: str) -> str:
+    """Record which model reviewed the article, next to the writer's line."""
+    if not frontmatter or "\nreviewer:" in frontmatter:
+        return frontmatter
+    return frontmatter.replace("\n---", f"\nreviewer: {_yaml_str(reviewer_model)}\n---", 1)
 
 
 def slugify(title: str) -> str:

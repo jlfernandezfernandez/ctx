@@ -12,7 +12,7 @@ const { limit = 4, compact = false } = Astro.props;
 <section class:list={['topic-queue', { compact }]} data-topic-queue data-limit={limit}>
 	<div class="queue-head">
 		<div>
-			<p class="queue-command">next_topic --live</p>
+			<p class="queue-command term-command">next_topic --live</p>
 			<h2>Próximos temas</h2>
 		</div>
 		<span class="queue-status"><i></i><span data-queue-status>conectando con GitHub…</span></span>
@@ -160,13 +160,7 @@ const { limit = 4, compact = false } = Astro.props;
 	}
 	.queue-command {
 		margin: 0 0 0.2em;
-		font-family: var(--font-mono);
 		font-size: 0.75em;
-		color: var(--accent);
-	}
-	.queue-command::before {
-		content: '$ ';
-		color: rgb(var(--gray));
 	}
 	.topic-queue h2 {
 		margin: 0;

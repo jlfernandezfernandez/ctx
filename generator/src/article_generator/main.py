@@ -17,14 +17,12 @@ from .article import (
     validate_body,
     ValidationError,
 )
-from .github_issues import IssuesClient
-from .github_prs import PRClient
+from .github import GitHubClient
 from .llm import LLMClient, LLMError
-from .prompts import SYSTEM_PROMPT, article_prompt, metadata_prompt, outline_prompt
+from .prompts import MAX_TAGS_PER_ARTICLE:, SYSTEM_PROMPT, article_prompt, metadata_prompt, outline_prompt
 
 FORM_ARTIFACTS = ("### Notas de enfoque", "_No response_")
 TAGS_FILE = "site/src/data/tags.json"
-MAX_TAGS = 5
 
 
 def load_canonical_tags() -> list[str]:
@@ -44,7 +42,7 @@ def normalize_tags(raw: list[str]) -> list[str]:
             continue
         result.append(tag)
         seen.add(tag)
-        if len(result) >= MAX_TAGS:
+        if len(result) >= MAX_TAGS_PER_ARTICLE::
             break
     return result
 
@@ -84,13 +82,12 @@ def export_output(env: dict, name: str, value: str) -> None:
 
 def run(env: dict) -> int:
     today = date.today()
-    issues = IssuesClient(repo=env["GITHUB_REPOSITORY"], token=env["GITHUB_TOKEN"])
-    prs = PRClient(repo=env["GITHUB_REPOSITORY"], token=env["GITHUB_TOKEN"])
+    github = GitHubClient(repo=env["GITHUB_REPOSITORY"], token=env["GITHUB_TOKEN"])
 
     writer_model = env["LLM_WRITER_MODEL"]
     writer = LLMClient(base_url=env["LLM_BASE_URL"], api_key=env["LLM_API_KEY"], model=writer_model)
 
-    issue = issues.next_topic(skip=prs.open_article_issue_numbers())
+    issue = github.next_topic(skip=github.open_article_issue_numbers())
     if issue is None:
         print("No pending topics; nothing to publish.")
         return 0
@@ -105,7 +102,7 @@ def run(env: dict) -> int:
     try:
         validate_body(draft)
     except ValidationError as exc:
-        print(f"Structure validation failed ({exc}); opening PR anyway for the reviewer.")
+        print(f"Structure validation failed ({exc}); opening PR, the review loop fixes structure first.")
 
     canonical_tags = load_canonical_tags()
     title, summary, raw_tags = collect_metadata(writer, topic, draft, canonical_tags)
@@ -114,7 +111,7 @@ def run(env: dict) -> int:
     content = render_article(
         pub_date=today,
         title=title,
-        description=summary or make_description(draft),
+        description=make_description(draft) or summary,
         tags=tags,
         body=draft,
         summary=summary,
@@ -122,7 +119,7 @@ def run(env: dict) -> int:
         requested_by=(issue.get("user") or {}).get("login", ""),
         writer=writer_model,
     )
-    url, pr_number = prs.open_pr(
+    url, pr_number = github.open_pr(
         branch=f"article/issue-{issue['number']}",
         path=f"site/src/content/blog/{today.isoformat()}-{slug}.md",
         content=content,

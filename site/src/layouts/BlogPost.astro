@@ -51,7 +51,7 @@ const {
 			<slot />
 		</div>
 		<aside class="continue">
-			<p class="command">continuar</p>
+			<p class="command term-command">continuar</p>
 			<h2>¿Has encontrado un error?</h2>
 			<p>
 				Este artículo se genera automáticamente. Comenta la corrección en la issue original
@@ -139,13 +139,7 @@ const {
 	}
 	.continue .command {
 		margin: 0 0 0.6em;
-		font-family: var(--font-mono);
 		font-size: 0.8em;
-		color: var(--accent);
-	}
-	.continue .command::before {
-		content: '$ ';
-		color: rgb(var(--gray));
 	}
 	.continue h2 {
 		margin: 0 0 0.35em;

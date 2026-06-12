@@ -6,6 +6,8 @@ import pytest
 from article_generator.article import (
     ValidationError,
     make_description,
+    parse_title_and_tags,
+    sign_reviewer,
     slugify,
     validate_body,
 )
@@ -94,7 +96,6 @@ def test_make_description_truncates_at_200_chars():
 
 
 def test_render_article_returns_frontmatter_and_body():
-    from datetime import date
 
     from article_generator.article import render_article
 
@@ -130,3 +131,29 @@ def test_split_frontmatter_without_block_returns_body_untouched():
     fm, body = split_frontmatter("## Sección\n\nTexto.")
     assert fm == ""
     assert body == "## Sección\n\nTexto."
+
+
+def test_parse_title_and_tags_reads_frontmatter():
+    content = (
+        '---\ntitle: "Vistas materializadas en Snowflake"\ndate: 2026-06-11\n'
+        'tags: ["snowflake", "sql"]\n---\n\n## Contexto\n\ncuerpo\n'
+    )
+    assert parse_title_and_tags(content) == (
+        "Vistas materializadas en Snowflake", ["snowflake", "sql"]
+    )
+
+
+def test_parse_title_and_tags_without_frontmatter():
+    assert parse_title_and_tags("## Contexto\n\ncuerpo\n") == ("", [])
+
+
+def test_sign_reviewer_adds_line_before_closing():
+    fm = '---\ntitle: "X"\nwriter: "writer-m"\n---\n\n'
+    signed = sign_reviewer(fm, "reviewer-m")
+    assert '\nreviewer: "reviewer-m"\n---\n' in signed
+
+
+def test_sign_reviewer_is_idempotent():
+    fm = '---\ntitle: "X"\nreviewer: "reviewer-m"\n---\n\n'
+    assert sign_reviewer(fm, "reviewer-m") == fm
+    assert sign_reviewer("", "reviewer-m") == ""

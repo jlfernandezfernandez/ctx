@@ -35,19 +35,18 @@ jobs:
 
       - name: Writer — pick topic, write article, open PR
         id: writer
-        if: inputs.pr_number == ''
+        if: ${{ !inputs.pr_number }}
         env:
           LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
           LLM_WRITER_MODEL: ${{ vars.LLM_WRITER_MODEL }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          OUTPUT_DIR: site/src/content/blog
           SITE_URL: https://${{ github.repository_owner }}.github.io/ctx
         run: generate-article
 
       - name: Review loop — reviewer judges, writer fixes, merge or leave open
-        if: inputs.pr_number != '' || steps.writer.outputs.pr_number != ''
+        if: ${{ inputs.pr_number || steps.writer.outputs.pr_number }}
         env:
           LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
           LLM_REVIEWER_MODEL: ${{ vars.LLM_REVIEWER_MODEL }}

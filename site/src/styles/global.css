@@ -199,16 +199,19 @@ hr {
 	border-top: 1px solid rgb(var(--gray-light));
 	margin: 2em 0;
 }
+/* `$ command` line in amber, shared by every terminal-style element */
+.term-command {
+	font-family: var(--font-mono);
+	color: var(--accent);
+}
+.term-command::before {
+	content: '$ ';
+	color: rgb(var(--gray));
+}
 /* Terminal-prompt page kicker, shared by all pages */
 .kicker {
 	margin: 0 0 0.8em 0;
-	font-family: var(--font-mono);
 	font-size: 0.85em;
-	color: var(--accent);
-}
-.kicker::before {
-	content: '$ ';
-	color: rgb(var(--gray));
 }
 /* Typewriter cursor, used on the homepage headline */
 .typing-cursor {

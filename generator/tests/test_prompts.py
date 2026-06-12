@@ -30,7 +30,6 @@ def test_reviewer_prompt_includes_article_and_json_contract():
     p = reviewer_prompt("Project Reactor", "cuerpo del articulo")
     assert "cuerpo del articulo" in p
     assert "Project Reactor" in p
-    assert '"approved"' in p
     assert '"issues"' in p
     assert '"category"' in p
     assert '"blocking"' in p

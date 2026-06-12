@@ -60,7 +60,7 @@ def test_parse_classification_rejects_invalid_response(data):
 
 
 @patch("article_generator.triage.LLMClient")
-@patch("article_generator.triage.IssuesClient")
+@patch("article_generator.triage.GitHubClient")
 def test_run_approves_and_updates_title_and_description(issues_cls, llm_cls, tmp_path):
     issues = issues_cls.return_value
     llm_cls.return_value.generate_json.return_value = {
@@ -79,7 +79,7 @@ def test_run_approves_and_updates_title_and_description(issues_cls, llm_cls, tmp
 
 
 @patch("article_generator.triage.LLMClient")
-@patch("article_generator.triage.IssuesClient")
+@patch("article_generator.triage.GitHubClient")
 def test_run_approves_without_changes_when_identical(issues_cls, llm_cls, tmp_path):
     issue = {
         "number": 17,
@@ -103,7 +103,7 @@ def test_run_approves_without_changes_when_identical(issues_cls, llm_cls, tmp_pa
 
 
 @patch("article_generator.triage.LLMClient")
-@patch("article_generator.triage.IssuesClient")
+@patch("article_generator.triage.GitHubClient")
 def test_run_rejects_clear_spam(issues_cls, llm_cls, tmp_path):
     issues = issues_cls.return_value
     llm_cls.return_value.generate_json.return_value = {
@@ -120,7 +120,7 @@ def test_run_rejects_clear_spam(issues_cls, llm_cls, tmp_path):
 
 
 @patch("article_generator.triage.LLMClient")
-@patch("article_generator.triage.IssuesClient")
+@patch("article_generator.triage.GitHubClient")
 def test_run_leaves_doubtful_topic_for_review(issues_cls, llm_cls, tmp_path):
     issues = issues_cls.return_value
     llm_cls.return_value.generate_json.return_value = {
@@ -139,7 +139,7 @@ def test_run_leaves_doubtful_topic_for_review(issues_cls, llm_cls, tmp_path):
 
 
 @patch("article_generator.triage.LLMClient")
-@patch("article_generator.triage.IssuesClient")
+@patch("article_generator.triage.GitHubClient")
 def test_run_fails_safe_when_curator_response_is_invalid(issues_cls, llm_cls, tmp_path):
     issues = issues_cls.return_value
     llm_cls.return_value.generate_json.return_value = {"action": "APPROVE"}
@@ -152,7 +152,7 @@ def test_run_fails_safe_when_curator_response_is_invalid(issues_cls, llm_cls, tm
 
 
 @patch("article_generator.triage.LLMClient")
-@patch("article_generator.triage.IssuesClient")
+@patch("article_generator.triage.GitHubClient")
 def test_manual_run_fetches_requested_issue(issues_cls, llm_cls, tmp_path):
     issue = {
         "number": 3,

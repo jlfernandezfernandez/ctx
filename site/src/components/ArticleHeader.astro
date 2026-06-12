@@ -15,7 +15,7 @@ const { title, date, tags = [], issue, requestedBy, writer, reviewer } = Astro.p
 ---
 
 <div class="title">
-	<p class="article-command">ctx article --read</p>
+	<p class="article-command term-command">ctx article --read</p>
 	<h1>{title}</h1>
 	<div class="meta">
 		<span class="fence">---</span>
@@ -50,15 +50,9 @@ const { title, date, tags = [], issue, requestedBy, writer, reviewer } = Astro.p
 	}
 	.article-command {
 		margin: 0 0 0.65em;
-		font-family: var(--font-mono);
 		font-size: 0.72em;
-		color: var(--accent);
 		text-transform: uppercase;
 		letter-spacing: 0.08em;
-	}
-	.article-command::before {
-		content: '$ ';
-		color: rgb(var(--gray));
 	}
 	.title h1 {
 		margin: 0 0 0.8em 0;

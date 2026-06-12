@@ -26,7 +26,7 @@ const maxModelCount = Math.max(...models.map(([, count]) => count), 1);
 
 <section class="activity" aria-label="Actividad de Ctx">
 	<div class="activity-head">
-		<span class="activity-command">ctx --status</span>
+		<span class="term-command">ctx --status</span>
 		<span>actividad pública</span>
 	</div>
 	<div class="activity-grid">
@@ -120,13 +120,6 @@ const maxModelCount = Math.max(...models.map(([, count]) => count), 1);
 		border-bottom: 1px solid rgb(var(--gray-light));
 		font-family: var(--font-mono);
 		font-size: 0.75em;
-		color: rgb(var(--gray));
-	}
-	.activity-command {
-		color: var(--accent);
-	}
-	.activity-command::before {
-		content: '$ ';
 		color: rgb(var(--gray));
 	}
 	.activity-grid {
