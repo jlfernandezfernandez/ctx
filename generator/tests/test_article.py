@@ -69,18 +69,13 @@ def test_validate_body_rejects_unclosed_code_fence():
         validate_body(valid_body() + "\n\n```python\nprint('hola')")
 
 
-def test_validate_tags_accepts_only_canonical_tags():
-    validate_tags(["java", "reactive"], ["java", "reactive", "kafka"])
-
-
-def test_validate_tags_rejects_unknown_tags():
-    with pytest.raises(ValidationError, match="unknown"):
-        validate_tags(["inventado"], ["java"])
+def test_validate_tags_accepts_new_tags():
+    validate_tags(["auth"])
 
 
 def test_validate_tags_rejects_more_than_three():
     with pytest.raises(ValidationError, match="more than 3"):
-        validate_tags(["a", "b", "c", "d"], ["a", "b", "c", "d"])
+        validate_tags(["a", "b", "c", "d"])
 
 
 def test_make_description_uses_first_paragraph_stripped():

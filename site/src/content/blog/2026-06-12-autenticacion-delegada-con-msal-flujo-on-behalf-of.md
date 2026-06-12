@@ -2,7 +2,7 @@
 title: "Autenticación delegada con MSAL: flujo On-Behalf-Of"
 description: "El flujo On-Behalf-Of (OBO) permite a una API intermedia actuar en nombre del usuario original para llamar a una API descendente, intercambiando un token de acceso entrante por uno nuevo dirigido al recurso destino. Se implementa con MSAL usando el token como aserción, requiere permisos delegados y consentimiento, y exige estrategias de caché distribuida y validación estricta para evitar riesgos de seguridad."
 date: 2026-06-12
-tags: ["agents"]
+tags: ["auth"]
 summary: "El flujo On-Behalf-Of (OBO) permite a una API intermedia actuar en nombre del usuario original para llamar a una API descendente, intercambiando un token de acceso entrante por uno nuevo dirigido al recurso destino. Se implementa con MSAL usando el token como aserción, requiere permisos delegados y consentimiento, y exige estrategias de caché distribuida y validación estricta para evitar riesgos de seguridad."
 issue: 19
 requestedBy: "jlfernandezfernandez"

@@ -33,7 +33,7 @@ def setup_llms(llm_cls):
     writer.generate_json.return_value = {
         "title": "Project Reactor y backpressure",
         "summary": "Cómo funciona el control de demanda.",
-        "tags": ["reactive", "desconocido"],
+        "tags": ["auth"],
     }
     reviewer = MagicMock()
     reviewer.generate_json.return_value = {"issues": []}
@@ -59,7 +59,7 @@ def test_pipeline_opens_draft_pr_before_review_and_merges(
     }
     github.get_article_path.return_value = "site/src/content/blog/reactor.md"
     github.read_file.return_value = (
-        '---\ntitle: "Project Reactor y backpressure"\ntags: ["reactive"]\nwriter: "writer-m"\n---\n\n'
+        '---\ntitle: "Project Reactor y backpressure"\ntags: ["auth"]\nwriter: "writer-m"\n---\n\n'
         "## Contexto\n\nArtículo."
     )
     setup_llms(llm_cls)
@@ -68,11 +68,46 @@ def test_pipeline_opens_draft_pr_before_review_and_merges(
 
     github.open_pr.assert_called_once()
     created = github.open_pr.call_args.kwargs["content"]
-    assert 'tags: ["reactive"]' in created
-    assert "desconocido" not in created
+    assert 'tags: ["auth"]' in created
+    taxonomy_update = next(
+        call for call in github.update_file.call_args_list if call.args[1] == "site/src/data/tags.json"
+    )
+    assert taxonomy_update.args[2] == '[\n  "auth",\n  "reactive"\n]\n'
     calls = [method[0] for method in github.method_calls]
     assert calls.index("open_pr") < calls.index("get_pr")
     github.merge_pr.assert_called_once_with(9, branch="article/issue-5")
+
+
+@patch("article_generator.pipeline._body_defects", return_value=[])
+@patch("article_generator.pipeline._canonical_tags", return_value=["reactive"])
+@patch("article_generator.pipeline.LLMClient")
+@patch("article_generator.pipeline.GitHubClient")
+def test_pipeline_does_not_update_taxonomy_when_writer_reuses_tag(
+    github_cls, llm_cls, _canonical_tags, _body_defects
+):
+    github = github_cls.return_value
+    github.next_topic.return_value = topic_issue()
+    github.open_article_issue_numbers.return_value = set()
+    github.open_pr.return_value = ("https://github.com/owner/repo/pull/9", 9)
+    github.get_pr.return_value = {
+        "body": "Closes #5",
+        "head": {"ref": "article/issue-5"},
+        "title": "article: Project Reactor",
+    }
+    github.get_article_path.return_value = "site/src/content/blog/reactor.md"
+    github.read_file.return_value = (
+        '---\ntitle: "Project Reactor"\ntags: ["reactive"]\nwriter: "writer-m"\n---\n\n'
+        "## Contexto\n\nArtículo."
+    )
+    writer, _ = setup_llms(llm_cls)
+    writer.generate_json.return_value["tags"] = ["reactive"]
+
+    assert run(env()) == 0
+
+    taxonomy_updates = [
+        call for call in github.update_file.call_args_list if call.args[1] == "site/src/data/tags.json"
+    ]
+    assert taxonomy_updates == []
 
 
 @patch("article_generator.pipeline.LLMClient")
