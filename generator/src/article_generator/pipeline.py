@@ -44,6 +44,10 @@ def _canonical_tags() -> list[str]:
         return []
 
 
+def _updated_taxonomy(canonical_tags: list[str], article_tags: list[str]) -> list[str]:
+    return sorted(set(canonical_tags) | set(article_tags))
+
+
 def _body_defects(body: str) -> list[str]:
     try:
         validate_body(body)
@@ -76,7 +80,7 @@ def _open_draft(env: dict, github: GitHubClient) -> int | None:
     writer = _client(env, writer_model)
     canonical_tags = _canonical_tags()
     draft = write_article(writer, issue["title"], issue.get("body") or "", canonical_tags)
-    validate_tags(draft.tags, canonical_tags)
+    validate_tags(draft.tags)
     content = render_article(
         pub_date=date.today(),
         title=draft.title,
@@ -95,6 +99,14 @@ def _open_draft(env: dict, github: GitHubClient) -> int | None:
         title=f"article: {draft.title}",
         body=f"Closes #{issue['number']}",
     )
+    taxonomy = _updated_taxonomy(canonical_tags, draft.tags)
+    if taxonomy != sorted(canonical_tags):
+        github.update_file(
+            f"article/issue-{issue['number']}",
+            str(TAGS_FILE),
+            json.dumps(taxonomy, indent=2, ensure_ascii=False) + "\n",
+            "chore: add article tags",
+        )
     print(f"Draft PR #{pr_number} opened before review: {url}")
     return pr_number
 

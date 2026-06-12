@@ -3,6 +3,8 @@ from article_generator.agents.reviewer import reviewer_prompt
 from article_generator.agents.writer import (
     SYSTEM_PROMPT,
     article_prompt,
+    metadata_prompt,
+    normalize_tags,
     outline_prompt,
     rewrite_prompt,
 )
@@ -17,6 +19,13 @@ def test_system_prompts_are_loaded_verbatim():
     assert SYSTEM_PROMPT == load_system_prompt("writer")
     assert "{" not in load_system_prompt("triage")
     assert "{" not in load_system_prompt("reviewer")
+
+
+def test_writer_prefers_few_existing_tags_but_can_create_one():
+    prompt = metadata_prompt("MSAL", "cuerpo", ["agents", "java"])
+    assert "menor número posible" in prompt
+    assert "Crea un único tag nuevo" in prompt
+    assert normalize_tags(["Auth", "auth", "OAuth", "agents"], ["agents"]) == ["auth", "agents"]
 
 
 def test_outline_prompt_includes_topic_and_notes():

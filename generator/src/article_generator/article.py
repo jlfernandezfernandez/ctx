@@ -63,12 +63,9 @@ def validate_body(body: str) -> None:
     _validate_code_fences(body)
 
 
-def validate_tags(tags: list[str], canonical_tags: list[str]) -> None:
+def validate_tags(tags: list[str]) -> None:
     if len(tags) > MAX_TAGS_PER_ARTICLE:
         raise ValidationError(f"Article has more than {MAX_TAGS_PER_ARTICLE} tags")
-    unknown = sorted(set(tags) - set(canonical_tags))
-    if unknown:
-        raise ValidationError(f"Article uses unknown tags: {', '.join(unknown)}")
 
 
 def _heading_lines(body: str) -> list[tuple[int, int, str]]:

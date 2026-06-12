@@ -7,6 +7,8 @@ from ..prompt import load_system_prompt
 
 
 SYSTEM_PROMPT = load_system_prompt("writer")
+
+
 @dataclass(frozen=True)
 class Draft:
     title: str
@@ -55,12 +57,13 @@ def metadata_prompt(topic: str, body: str, canonical_tags: list[str]) -> str:
 {body}
 </articulo>
 
-Taxonomía permitida: {taxonomy}
+Tags existentes, reutilízalos siempre que representen correctamente el tema: {taxonomy}
 
 Devuelve SOLO un objeto JSON con:
 - "title": título final concreto y descriptivo
 - "summary": TL;DR técnico en 2-3 frases, sin empezar por "El artículo" o "Este artículo"
-- "tags": hasta {MAX_TAGS_PER_ARTICLE} valores elegidos exclusivamente de la taxonomía permitida"""
+- "tags": el menor número posible de tags, normalmente uno y nunca más de \
+{MAX_TAGS_PER_ARTICLE}. Crea un único tag nuevo y general solo si ninguno existente encaja"""
 
 
 def rewrite_prompt(topic: str, body: str, feedback: list[str], attempt: int = 1) -> str:
@@ -82,12 +85,18 @@ principal. Devuelve SOLO el cuerpo completo corregido en markdown.{retry}"""
 
 
 def normalize_tags(raw: list[str], canonical_tags: list[str]) -> list[str]:
-    allowed = set(canonical_tags)
+    canonical = set(canonical_tags)
+    new_tag_added = False
     result = []
     for tag in raw:
         normalized = slugify(str(tag))
-        if normalized in allowed and normalized not in result:
-            result.append(normalized)
+        if not normalized or normalized in result:
+            continue
+        if normalized not in canonical:
+            if new_tag_added:
+                continue
+            new_tag_added = True
+        result.append(normalized)
         if len(result) == MAX_TAGS_PER_ARTICLE:
             break
     return result

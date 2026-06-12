@@ -30,14 +30,14 @@ Todo el flujo vive en un único workflow ([`publish.yml`](.github/workflows/publ
 
 Cada agente tiene un único system prompt estático en `generator/src/article_generator/system_prompts/`. No se comparten ni interpolan reglas entre agentes. El writer y el reviewer usan modelos distintos para evitar que un modelo apruebe sus propios vicios.
 
-El resto no son agentes: `pipeline.py` coordina rondas y GitHub; `article.py` valida Markdown, frontmatter y que el writer elija como máximo tres tags de la taxonomía manual.
+El resto no son agentes: `pipeline.py` coordina rondas y GitHub; `article.py` valida Markdown, frontmatter y el máximo de tags.
 
 ## Estructura
 
 - `generator/` — generador Python (LLM agnóstico vía API OpenAI-compatible)
 - `site/` — web Astro (GitHub Pages)
 - `.github/workflows/` — `triage-topic` (cura propuestas), `publish` (pipeline editorial), `deploy` (Pages), `ci` (tests y build)
-- `site/src/data/tags.json` — taxonomía canónica mantenida manualmente; el writer solo puede elegir tags de esta lista
+- `site/src/data/tags.json` — taxonomía canónica: el writer reutiliza tags existentes siempre que encajen y el pipeline añade a la misma PR un tag nuevo solo cuando hace falta
 
 Los únicos labels requeridos por el producto son `triage`, `topic`, `priority`, `published` y `rejected`.
 
