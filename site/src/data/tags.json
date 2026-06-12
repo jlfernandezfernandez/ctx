@@ -1,12 +1,6 @@
 [
-  "agents",
   "auth",
   "java",
   "kafka",
-  "langchain",
-  "llm",
-  "pydantic",
-  "reactive",
-  "snowflake",
-  "virtual-threads"
+  "reactive"
 ]

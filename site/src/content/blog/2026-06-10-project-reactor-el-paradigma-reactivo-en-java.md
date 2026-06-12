@@ -9,7 +9,7 @@ writer: "deepseek-v4-pro"
 summary: "Project Reactor es una librería para construir aplicaciones asíncronas y no bloqueantes en la JVM, implementando la especificación Reactive Streams. Resuelve el cuello de botella del modelo hilo-por-petición al usar un número reducido de hilos para manejar alta concurrencia I/O, gracias a flujos reactivos con backpressure. Usar cuando se requiera bajo consumo de recursos y alta escalabilidad, pero no si la lógica es inherentemente bloqueante o la depuración de pipelines reactivos añade una complejidad injustificada."
 ---
 
-## Contexto: qué problema existe y por qué este tema importa
+## Cuando añadir más hilos deja de ayudar
 
 El modelo imperativo y bloqueante ha sido la columna vertebral del desarrollo backend durante años. La premisa es simple: llega una petición HTTP, el servidor le asigna un hilo del pool, ese hilo ejecuta la lógica de negocio —que puede incluir llamadas a base de datos, a otros servicios o a disco— y devuelve una respuesta. Mientras la lógica espera una operación de I/O, el hilo queda bloqueado, inactivo, consumiendo memoria y recursos del sistema operativo. Si el pool tiene 200 hilos y todos están esperando respuestas de servicios externos, la aplicación deja de aceptar nuevas conexiones, aunque la CPU esté prácticamente ociosa.
 
@@ -19,7 +19,7 @@ La raíz del problema está en la naturaleza síncrona de las APIs: cuando un m�
 
 El paradigma reactivo lleva esta idea al extremo, organizándola en torno a flujos de datos asíncronos gobernados por un modelo de empuje (push). En lugar de que el consumidor tire (pull) de los datos llamando a un método y quedándose bloqueado, es el productor quien empuja los datos hacia el consumidor cuando están disponibles. Así nace la especificación Reactive Streams (reactive-streams.org), un estándar mínimo que define la interacción entre un `Publisher` (fuente de datos asíncrona) y un `Subscriber` (consumidor), con un mecanismo de control de flujo no bloqueante llamado *backpressure*. Project Reactor es la implementación de referencia de esta especificación para la JVM y el núcleo reactivo de todo el ecosistema Spring.
 
-## Concepto central
+## `Mono`, `Flux` y el contrato de backpressure
 
 Project Reactor introduce dos tipos principales: `Mono<T>` y `Flux<T>`. Ambos representan secuencias asíncronas de datos, pero `Mono` emite de 0 a 1 elemento (análogo a un `CompletableFuture<T>` pero con semántica reactiva completa) y `Flux` emite de 0 a N elementos (equivalente a un `Iterable<T>` push-based). A diferencia de `CompletableFuture`, que es eager y comienza a ejecutarse inmediatamente, `Mono` y `Flux` son lazy: no sucede nada hasta que alguien se suscribe.
 
@@ -110,7 +110,7 @@ public class ReactiveLineCounter {
 
 Aquí el `Subscriber` controla cuántas líneas recibe del `Publisher`. Si el consumidor fuera más lento (por ejemplo porque escribe en disco), simplemente retrasaría las llamadas a `request()`, y el productor esperaría, sin ocupar hilos ni buffers intermedios.
 
-## En profundidad: internals, trade-offs y comparativas
+## Lo que ocurre debajo de un pipeline
 
 ### Ensamblaje de operadores y cadena de decoradores
 
@@ -164,7 +164,7 @@ RxJava (versiones 2 y 3) también implementa Reactive Streams, pero con diferenc
 
 La naturaleza lazy y anidada de los operadores hace que los stacktraces por defecto sean crípticos: una excepción muestra una larga cadena de decoradores anónimos con poca información sobre dónde se declaró el ensamblaje. Reactor ofrece `Hooks.onOperatorDebug()`, que activa un modo de debugging en el que cada operador captura la traza de ensamblaje y la adjunta a los eventos. El coste en rendimiento es significativo (puede multiplicar por 5 o 10 el tiempo de ejecución), por lo que no debe usarse en producción. Como alternativa más ligera, se pueden usar checkpoints: `.checkpoint("después-consulta-bd")` añade una etiqueta que aparece en el stacktrace sin el overhead masivo de capturar toda la traza. En producción, las trazas de ensamblaje se pueden obtener con el agente Java de Reactor (`reactor-tools`), que las construye bajo demanda con un costo mucho menor.
 
-## Ejemplos de código completos
+## Reactor en código
 
 **Ejemplo 1: Creación y suscripción básica**
 
@@ -303,7 +303,7 @@ public class ResilientService {
 
 `Mono.fromCallable` difiere la ejecución hasta la suscripción. `Retry.backoff` espera 100 ms entre el primer y segundo intento, 200 ms entre el segundo y el tercero, etc. Si agotados los reintentos aún falla, `onErrorResume` proporciona un fallback.
 
-## Trampas comunes
+## Dónde suele romperse el modelo
 
 **Bloquear dentro de operadores reactivos**
 

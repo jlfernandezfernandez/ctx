@@ -26,10 +26,11 @@ def _notes_block(notes: str) -> str:
 def outline_prompt(topic: str, notes: str) -> str:
     return f"""Diseña el mejor esquema para un artículo técnico profundo sobre: {topic}{_notes_block(notes)}
 
-Decide qué necesita este tema para explicarse con claridad: fundamentos, internals, trade-offs, \
-ejemplos completos, trampas reales y fuentes útiles.
+Formula la pregunta central que resolverá el artículo y la tesis que defenderá. Decide qué conceptos \
+necesita el lector para seguir el argumento y qué detalles, ejemplos y trade-offs aportan criterio. \
+Descarta los subtemas que solo convertirían el texto en un catálogo.
 
-Devuelve SOLO el esquema con secciones y bullets concretos."""
+Devuelve SOLO la tesis y el esquema con secciones y bullets concretos."""
 
 
 def article_prompt(topic: str, notes: str, outline: str) -> str:
@@ -44,6 +45,8 @@ Requisitos:
 - Markdown puro con encabezados descriptivos y bloques de código con su lenguaje.
 - Sin frontmatter YAML ni título principal: empieza por la primera sección.
 - Profundidad suficiente para que un ingeniero pueda tomar decisiones técnicas.
+- Desarrolla un argumento coherente; no recorras mecánicamente una lista de características.
+- Explica los conceptos del ecosistema que sean necesarios para entender el tema.
 - Incluye fuentes directas cuando aporten valor.
 
 Devuelve SOLO el cuerpo del artículo en markdown."""
