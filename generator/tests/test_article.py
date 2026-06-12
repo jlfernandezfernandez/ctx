@@ -10,6 +10,7 @@ from article_generator.article import (
     sign_reviewer,
     slugify,
     validate_body,
+    validate_tags,
 )
 
 
@@ -40,9 +41,8 @@ def test_validate_body_accepts_long_body():
     validate_body(valid_body())
 
 
-def test_validate_body_rejects_short_body():
-    with pytest.raises(ValidationError, match="short"):
-        validate_body("demasiado corto")
+def test_validate_body_accepts_short_valid_markdown():
+    validate_body("## Una sección\n\nBreve y suficiente.")
 
 
 def test_validate_body_rejects_leftover_frontmatter():
@@ -55,14 +55,8 @@ def test_validate_body_rejects_h1():
         validate_body("# Título\n\n" + valid_body())
 
 
-def test_validate_body_rejects_numbered_h2():
-    with pytest.raises(ValidationError, match="numbered"):
-        validate_body(valid_body().replace("## Contexto", "## 1. Contexto"))
-
-
-def test_validate_body_rejects_missing_section():
-    with pytest.raises(ValidationError, match="exactly 6"):
-        validate_body(valid_body().replace("## Trampas comunes", "### Trampas comunes"))
+def test_validate_body_accepts_any_useful_structure():
+    validate_body("## Única sección\n\nContenido.")
 
 
 def test_validate_body_ignores_headings_inside_code_fences():
@@ -75,14 +69,18 @@ def test_validate_body_rejects_unclosed_code_fence():
         validate_body(valid_body() + "\n\n```python\nprint('hola')")
 
 
-def test_validate_body_rejects_too_few_references():
-    with pytest.raises(ValidationError, match="3 to 5"):
-        validate_body(valid_body().replace("3. [Fuente 3](https://example.com/3)", ""))
+def test_validate_tags_accepts_only_canonical_tags():
+    validate_tags(["java", "reactive"], ["java", "reactive", "kafka"])
 
 
-def test_validate_body_rejects_vague_reference():
-    with pytest.raises(ValidationError, match="vague"):
-        validate_body(valid_body() + "\n\nDisponible en el blog oficial.")
+def test_validate_tags_rejects_unknown_tags():
+    with pytest.raises(ValidationError, match="unknown"):
+        validate_tags(["inventado"], ["java"])
+
+
+def test_validate_tags_rejects_more_than_three():
+    with pytest.raises(ValidationError, match="more than 3"):
+        validate_tags(["a", "b", "c", "d"], ["a", "b", "c", "d"])
 
 
 def test_make_description_uses_first_paragraph_stripped():

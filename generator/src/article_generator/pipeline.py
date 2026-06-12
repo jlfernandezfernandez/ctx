@@ -44,10 +44,9 @@ def _canonical_tags() -> list[str]:
         return []
 
 
-def _defects(body: str, tags: list[str], canonical_tags: list[str]) -> list[str]:
+def _body_defects(body: str) -> list[str]:
     try:
         validate_body(body)
-        validate_tags(tags, canonical_tags)
         return []
     except ValidationError as exc:
         return [f"[validacion] {exc}"]
@@ -77,6 +76,7 @@ def _open_draft(env: dict, github: GitHubClient) -> int | None:
     writer = _client(env, writer_model)
     canonical_tags = _canonical_tags()
     draft = write_article(writer, issue["title"], issue.get("body") or "", canonical_tags)
+    validate_tags(draft.tags, canonical_tags)
     content = render_article(
         pub_date=date.today(),
         title=draft.title,
@@ -106,9 +106,8 @@ def _review_draft(env: dict, github: GitHubClient, pr_number: int) -> int:
     path = github.get_article_path(pr_number)
     content = github.read_file(branch, path)
     frontmatter, body = split_frontmatter(content)
-    title, tags = parse_title_and_tags(content)
+    title, _ = parse_title_and_tags(content)
     topic = title or pr["title"].removeprefix("article: ").strip()
-    canonical_tags = _canonical_tags()
 
     reviewer_model = env["LLM_REVIEWER_MODEL"]
     reviewer = _client(env, reviewer_model)
@@ -126,7 +125,7 @@ def _review_draft(env: dict, github: GitHubClient, pr_number: int) -> int:
 
     previous_blocking: list[str] | None = None
     for fixes_done in range(max_rounds + 1):
-        blocking = _defects(body, tags, canonical_tags)
+        blocking = _body_defects(body)
         suggestions: list[str] = []
         if not blocking:
             report = review_article(reviewer, topic, f"# {topic}\n\n{body}", previous_blocking)
@@ -164,7 +163,7 @@ def _review_draft(env: dict, github: GitHubClient, pr_number: int) -> int:
         fixed = None
         for attempt in range(1, 4):
             fixed = revise_article(writer, topic, body, blocking, attempt)
-            if not _defects(fixed, tags, canonical_tags):
+            if not _body_defects(fixed):
                 break
         else:
             return escalate("La corrección del writer produjo Markdown inválido tras 3 intentos.", blocking)

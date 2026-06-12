@@ -1,15 +1,12 @@
 """Writer agent: creates an article and applies reviewer feedback."""
 from dataclasses import dataclass
 
-from ..article import make_description, slugify
+from ..article import MAX_TAGS_PER_ARTICLE, make_description, slugify
 from ..llm import LLMClient, LLMError
 from ..prompt import load_system_prompt
 
 
 SYSTEM_PROMPT = load_system_prompt("writer")
-MAX_TAGS_PER_ARTICLE = 3
-
-
 @dataclass(frozen=True)
 class Draft:
     title: str

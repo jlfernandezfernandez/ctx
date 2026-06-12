@@ -1,116 +1,92 @@
-"""Tests for the writer orchestration."""
-from unittest.mock import patch
+"""Tests for the end-to-end editorial pipeline."""
+from unittest.mock import MagicMock, patch
 
-import pytest
-
-from article_generator.agents.writer import run
+from article_generator.pipeline import run
 
 
-@pytest.fixture(autouse=True)
-def avoid_reference_network():
-    with patch("article_generator.agents.writer.validate_body"):
-        yield
-
-
-def env():
+def env(pr_number=""):
     return {
         "GITHUB_REPOSITORY": "owner/repo",
         "GITHUB_TOKEN": "tok",
         "LLM_BASE_URL": "https://llm.example/v1",
         "LLM_API_KEY": "k",
         "LLM_WRITER_MODEL": "writer-m",
+        "LLM_REVIEWER_MODEL": "reviewer-m",
+        "MAX_REVIEW_ROUNDS": "2",
+        "PR_NUMBER": pr_number,
         "SITE_URL": "https://owner.github.io/repo",
     }
 
 
-def topic_issue(number=5, title="Project Reactor"):
+def topic_issue():
     return {
-        "number": number,
-        "title": title,
-        "body": "no entendemos el paradigma",
-        "created_at": "2026-06-01T00:00:00Z",
-        "labels": [{"name": "topic"}, {"name": "java"}],
+        "number": 5,
+        "title": "Project Reactor",
+        "body": "Explica backpressure y trade-offs.",
         "user": {"login": "jordi"},
     }
 
 
-def setup_github(github_cls, issue=None):
+def setup_llms(llm_cls):
+    writer = MagicMock()
+    writer.generate.side_effect = ["outline", "## Contexto\n\nArtículo.", "## Contexto\n\nCorregido."]
+    writer.generate_json.return_value = {
+        "title": "Project Reactor y backpressure",
+        "summary": "Cómo funciona el control de demanda.",
+        "tags": ["reactive", "desconocido"],
+    }
+    reviewer = MagicMock()
+    reviewer.generate_json.return_value = {"issues": []}
+    llm_cls.side_effect = lambda base_url, api_key, model: reviewer if model == "reviewer-m" else writer
+    return writer, reviewer
+
+
+@patch("article_generator.pipeline._body_defects", return_value=[])
+@patch("article_generator.pipeline._canonical_tags", return_value=["reactive"])
+@patch("article_generator.pipeline.LLMClient")
+@patch("article_generator.pipeline.GitHubClient")
+def test_pipeline_opens_draft_pr_before_review_and_merges(
+    github_cls, llm_cls, _canonical_tags, _body_defects
+):
     github = github_cls.return_value
-    github.next_topic.return_value = issue
+    github.next_topic.return_value = topic_issue()
+    github.open_article_issue_numbers.return_value = set()
     github.open_pr.return_value = ("https://github.com/owner/repo/pull/9", 9)
-    return github
-
-
-@patch("article_generator.agents.writer.LLMClient")
-@patch("article_generator.agents.writer.GitHubClient")
-def test_writer_generates_and_opens_pr(github_cls, llm_cls, tmp_path):
-    github = setup_github(github_cls, topic_issue())
-    writer = llm_cls.return_value
-    writer.generate.side_effect = ["outline", "palabra " * 1200]
-    writer.generate_json.return_value = {"summary": "El TL;DR.", "tags": ["reactive"]}
-    output_file = tmp_path / "github_output"
-    e = {**env(), "GITHUB_OUTPUT": str(output_file)}
-
-    assert run(e) == 0
-
-    assert writer.generate.call_count == 2  # outline + article
-    github.open_pr.assert_called_once()
-    kwargs = github.open_pr.call_args.kwargs
-    assert kwargs["branch"] == "article/issue-5"
-    assert kwargs["path"].startswith("site/src/content/blog/")
-    assert "Closes #5" in kwargs["body"]
-    assert "title: " in kwargs["content"]
-    assert 'tags: ["reactive"]' in kwargs["content"]
-    assert '"java"' not in kwargs["content"]
-    assert "pr_number=9" in output_file.read_text()
-
-
-@patch("article_generator.agents.writer.LLMClient")
-@patch("article_generator.agents.writer.GitHubClient")
-def test_writer_skips_topics_with_open_article_pr(github_cls, llm_cls):
-    github = setup_github(github_cls)
-    github.open_article_issue_numbers.return_value = {2}
+    github.get_pr.return_value = {
+        "body": "Closes #5",
+        "head": {"ref": "article/issue-5"},
+        "title": "article: Project Reactor y backpressure",
+    }
+    github.get_article_path.return_value = "site/src/content/blog/reactor.md"
+    github.read_file.return_value = (
+        '---\ntitle: "Project Reactor y backpressure"\ntags: ["reactive"]\nwriter: "writer-m"\n---\n\n'
+        "## Contexto\n\nArtículo."
+    )
+    setup_llms(llm_cls)
 
     assert run(env()) == 0
-
-    github.next_topic.assert_called_once_with(skip={2})
-
-
-@patch("article_generator.agents.writer.LLMClient")
-@patch("article_generator.agents.writer.GitHubClient")
-def test_metadata_failure_falls_back_to_description(github_cls, llm_cls):
-    from article_generator.llm import LLMError
-
-    github = setup_github(github_cls, topic_issue())
-    writer = llm_cls.return_value
-    writer.generate.side_effect = ["outline", "palabra " * 1200]
-    writer.generate_json.side_effect = LLMError("bad json")
-
-    assert run(env()) == 0
-
-    kwargs = github.open_pr.call_args.kwargs
-    assert "content" in kwargs
-
-
-@patch("article_generator.agents.writer.LLMClient")
-@patch("article_generator.agents.writer.GitHubClient")
-def test_run_exits_zero_when_no_topics(github_cls, llm_cls):
-    setup_github(github_cls)
-    assert run(env()) == 0
-    llm_cls.return_value.generate.assert_not_called()
-
-
-@patch("article_generator.agents.writer.LLMClient")
-@patch("article_generator.agents.writer.GitHubClient")
-def test_validation_failure_still_opens_pr(github_cls, llm_cls):
-    from article_generator.article import ValidationError
-
-    github = setup_github(github_cls, topic_issue())
-    writer = llm_cls.return_value
-    writer.generate.side_effect = ["outline", "palabra " * 1200]
-    writer.generate_json.return_value = {"summary": "s", "tags": []}
-
-    with patch("article_generator.agents.writer.validate_body", side_effect=ValidationError("Body too short")):
-        assert run(env()) == 0
 
     github.open_pr.assert_called_once()
+    created = github.open_pr.call_args.kwargs["content"]
+    assert 'tags: ["reactive"]' in created
+    assert "desconocido" not in created
+    calls = [method[0] for method in github.method_calls]
+    assert calls.index("open_pr") < calls.index("get_pr")
+    github.merge_pr.assert_called_once_with(9, branch="article/issue-5")
+
+
+@patch("article_generator.pipeline.LLMClient")
+@patch("article_generator.pipeline.GitHubClient")
+def test_pipeline_skips_when_queue_is_empty(github_cls, llm_cls):
+    github_cls.return_value.next_topic.return_value = None
+
+    assert run(env()) == 0
+
+    llm_cls.assert_not_called()
+
+
+@patch("article_generator.pipeline._review_draft", return_value=0)
+@patch("article_generator.pipeline.GitHubClient")
+def test_manual_run_reviews_existing_pr(github_cls, review):
+    assert run(env("17")) == 0
+    review.assert_called_once_with(env("17"), github_cls.return_value, 17)

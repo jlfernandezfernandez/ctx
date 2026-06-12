@@ -6,8 +6,8 @@ El flujo editorial completo (triaje → votos → writer → reviewer) está doc
 
 Abre una issue con la plantilla **"Proponer tema"** y vota con 👍 las aceptadas (label `topic`):
 
-- El **título de la issue** es el tema del artículo. Sé concreto: mejor "Kafka sin ZooKeeper: KRaft" que "Kafka".
-- Las **notas de enfoque** (opcionales) se inyectan al prompt del writer: qué no entiendes, con qué compararlo, qué casos cubrir.
+- El **título de la issue** identifica el tema. El writer decide el título final del artículo.
+- Las **notas de enfoque** ayudan al agente de triaje a preparar el briefing: qué no entiendes, con qué compararlo, qué casos cubrir.
 - Un colaborador puede añadir `priority` para saltar la cola.
 
 ## Contribuir código
@@ -18,6 +18,9 @@ Ver [README.md → Desarrollo local](README.md#desarrollo-local) para el setup.
 2. Generador (`generator/`): Python, TDD. Ejecuta `pytest`; los tests deben pasar.
 3. Web (`site/`): Astro. `npm run build` debe compilar.
 4. Las PRs de forks **no** reciben secrets: no puedes (ni necesitas) probar contra el LLM real. Mockea como hacen los tests existentes.
+
+Los system prompts viven como texto estático en `generator/src/article_generator/system_prompts/`.
+Cada agente tiene un único rol; la orquestación y las reglas verificables pertenecen a código normal.
 
 ## Lo que no se puede hacer
 
