@@ -12,7 +12,7 @@ from pathlib import Path
 
 from .article import parse_title_and_tags
 from .llm import LLMClient, LLMError
-from .prompts import MAX_TAGS_PER_ARTICLE:
+from .prompts import MAX_TAGS_PER_ARTICLE
 
 TAGS_FILE = Path("site/src/data/tags.json")
 BLOG_DIR = Path("site/src/content/blog")
@@ -24,7 +24,7 @@ la taxonomía de tags para que cada tag agrupe un concepto, no una librería o f
 Solo editas la taxonomía: los artículos ya publicados conservan sus tags.
 
 Tu objetivo es REDUCIR el número de tags siempre que puedas. Un artículo se describe con \
-2-{MAX_TAGS_PER_ARTICLE:} tags como mucho: si los artículos recientes necesitan más, la taxonomía es \
+2-{MAX_TAGS_PER_ARTICLE} tags como mucho: si los artículos recientes necesitan más, la taxonomía es \
 demasiado específica y los tags sobrantes deben absorberse en otros más genéricos.
 
 Reglas:

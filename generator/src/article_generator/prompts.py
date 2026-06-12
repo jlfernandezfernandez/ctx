@@ -47,7 +47,7 @@ documentación oficial sirve); toda referencia lleva su enlace directo."""
 
 # Tags per article: stated in the prompts and enforced as a cap in main.py,
 # from this single source.
-MAX_TAGS_PER_ARTICLE: = 3
+MAX_TAGS_PER_ARTICLE = 3
 
 # Title rules shared with the triage curator: a single source so both agents
 # improve titles with the same criteria.

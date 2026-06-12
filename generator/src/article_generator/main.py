@@ -19,7 +19,7 @@ from .article import (
 )
 from .github import GitHubClient
 from .llm import LLMClient, LLMError
-from .prompts import MAX_TAGS_PER_ARTICLE:, SYSTEM_PROMPT, article_prompt, metadata_prompt, outline_prompt
+from .prompts import MAX_TAGS_PER_ARTICLE, SYSTEM_PROMPT, article_prompt, metadata_prompt, outline_prompt
 
 FORM_ARTIFACTS = ("### Notas de enfoque", "_No response_")
 TAGS_FILE = "site/src/data/tags.json"
@@ -42,7 +42,7 @@ def normalize_tags(raw: list[str]) -> list[str]:
             continue
         result.append(tag)
         seen.add(tag)
-        if len(result) >= MAX_TAGS_PER_ARTICLE::
+        if len(result) >= MAX_TAGS_PER_ARTICLE:
             break
     return result
 
