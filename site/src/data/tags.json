@@ -3,5 +3,6 @@
   "java",
   "kafka",
   "reactive",
-  "snowflake"
+  "snowflake",
+  "typed-agents"
 ]
