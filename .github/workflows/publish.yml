@@ -3,6 +3,7 @@ name: Publish daily article
 on:
   schedule:
     # 04:30 UTC Mon-Fri = 06:30 Madrid (summer) / 05:30 (winter)
+    # Touched 2026-06-15 to re-register the scheduled trigger after it stopped firing.
     - cron: "30 4 * * 1-5"
   workflow_dispatch:
     inputs:
