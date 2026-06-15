@@ -7,6 +7,7 @@ summary: "Las vistas materializadas ofrecen frescura automática para agregacion
 issue: 26
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"
+reviewer: "minimax-m3"
 ---
 
 El problema: mantener datos derivados frescos sin disparar costes ni complejidad
