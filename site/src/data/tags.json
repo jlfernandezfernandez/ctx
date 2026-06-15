@@ -2,5 +2,6 @@
   "auth",
   "java",
   "kafka",
-  "reactive"
+  "reactive",
+  "snowflake"
 ]
