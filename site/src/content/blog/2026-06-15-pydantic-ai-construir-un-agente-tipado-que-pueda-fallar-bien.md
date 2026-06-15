@@ -64,6 +64,9 @@ El JSON Schema generado por Pydantic para este `Union` incluye una propiedad `st
 Un trade-off importante: schemas demasiado estrictos provocan alucinaciones de campos. Si el modelo no tiene información para rellenar un campo requerido, puede inventarla. La defensa está en usar `Optional` con defaults sensatos y describir en `Field` cuándo es aceptable omitir un valor:
 
 ```python
+from pydantic import BaseModel, Field
+from typing import Union, Literal, Optional
+
 class Success(BaseModel):
     status: Literal["success"] = "success"
     account_id: str
@@ -102,7 +105,7 @@ from pydantic_ai import Agent, RunContext
 agent = Agent(
     "openai:gpt-4o",
     deps_type=Deps,
-    result_type=AgentResponse,
+    output_type=AgentResponse,
 )
 
 @agent.tool
@@ -192,21 +195,20 @@ class PermanentFailure(BaseModel):
 AgentResponse = Union[Success, ClarificationNeeded, ToolFailure, PermanentFailure]
 
 async def run_agent(deps: Deps, user_input: str) -> AgentResponse:
-    try:
-        result = await agent.run(user_input, deps=deps)
-        return result.data
-    except UnexpectedModelBehavior as e:
-        # Registrar el historial completo para diagnóstico
-        messages = e.run_messages  # si se usó capture_run_messages
-        logger.error("Agent run exhausted retries", extra={
-            "messages": messages,
-            "retries": agent.max_retries,
-        })
-        return PermanentFailure(
-            reason="El agente no pudo generar una respuesta válida "
-                   "después de varios intentos.",
-            retries_exhausted=agent.max_retries,
-        )
+    with agent.capture_run_messages() as messages:
+        try:
+            result = await agent.run(user_input, deps=deps)
+            return result.data
+        except UnexpectedModelBehavior:
+            logger.error("Agent run exhausted retries", extra={
+                "messages": messages,
+                "retries": agent.max_retries,
+            })
+            return PermanentFailure(
+                reason="El agente no pudo generar una respuesta válida "
+                       "después de varios intentos.",
+                retries_exhausted=agent.max_retries,
+            )
 ```
 
 El caller de `run_agent` siempre recibe un objeto de tipo `AgentResponse`, nunca una excepción. Puede hacer pattern matching sobre `status` para decidir qué hacer: devolver `Success` al usuario, mostrar `ClarificationNeeded.question`, registrar `ToolFailure` y ofrecer un fallback, o escalar `PermanentFailure`.
@@ -289,12 +291,12 @@ async def test_transfer_insufficient_funds():
 
 ```python
 from pydantic_ai.models.function import FunctionModel, AgentInfo
-from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
+from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart, ModelMessage
 
 @pytest.mark.asyncio
 async def test_agent_handles_malformed_tool_call():
     # Simular un LLM que devuelve una tool call con amount negativo
-    def bad_response(info: AgentInfo) -> ModelResponse:
+    def bad_response(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         return ModelResponse(
             parts=[
                 ToolCallPart(
@@ -307,7 +309,7 @@ async def test_agent_handles_malformed_tool_call():
     test_agent = Agent(
         FunctionModel(bad_response),
         deps_type=Deps,
-        result_type=AgentResponse,
+        output_type=AgentResponse,
         tools=[transfer],
     )
     
@@ -326,7 +328,7 @@ Para probar que el agente agota reintentos y termina en `PermanentFailure`, se p
 async def test_exhausts_retries_on_invalid_output():
     call_count = 0
     
-    def stubborn_model(info: AgentInfo) -> ModelResponse:
+    def stubborn_model(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         nonlocal call_count
         call_count += 1
         # Devuelve siempre un JSON que no cumple el schema
@@ -337,7 +339,7 @@ async def test_exhausts_retries_on_invalid_output():
     test_agent = Agent(
         FunctionModel(stubborn_model),
         deps_type=Deps,
-        result_type=AgentResponse,
+        output_type=AgentResponse,
         max_retries=2,
     )
     
