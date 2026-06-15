@@ -7,6 +7,7 @@ summary: "Pydantic AI aplica tipado fuerte en cada frontera del agente —respue
 issue: 27
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"
+reviewer: "minimax-m3"
 ---
 
 ## El problema: fallos que el sistema no ve venir
