@@ -1,610 +1,384 @@
 ---
-title: "Autenticación delegada con MSAL: flujo On-Behalf-Of"
-description: "El flujo On-Behalf-Of (OBO) permite a una API intermedia actuar en nombre del usuario original para llamar a una API descendente, intercambiando un token de acceso entrante por uno nuevo dirigido al recurso destino. Se implementa con MSAL usando el token como aserción, requiere permisos delegados y consentimiento, y exige estrategias de caché distribuida y validación estricta para evitar riesgos de seguridad."
+title: "De SPN a OBO: cómo cambiar de autenticación de servicio a delegada en Azure AD"
+description: "Cuando un BFF autentica con SPN (client credentials) la API downstream no sabe quién es el usuario. El flujo On-Behalf-Of (OBO) permite al BFF actuar en nombre del usuario, pero cambia el JWT, los permisos y la configuración. Este artículo recorre ambos flujos desde cero, explica la terminología de Azure (appId, SPN, tenant, resource ID), compara los JWTs claim por claim, y muestra cómo migrar de uno a otro."
 date: 2026-06-12
-tags: ["auth"]
-summary: "El flujo On-Behalf-Of (OBO) permite a una API intermedia actuar en nombre del usuario original para llamar a una API descendente, intercambiando un token de acceso entrante por uno nuevo dirigido al recurso destino. Se implementa con MSAL usando el token como aserción, requiere permisos delegados y consentimiento, y exige estrategias de caché distribuida y validación estricta para evitar riesgos de seguridad."
+tags: ["auth", "azure"]
+summary: "Cuando un BFF autentica con SPN (client credentials) la API downstream no sabe quién es el usuario. El flujo On-Behalf-Of (OBO) permite al BFF actuar en nombre del usuario, pero cambia el JWT, los permisos y la configuración. Este artículo recorre ambos flujos desde cero, explica la terminología de Azure, compara los JWTs claim por claim, y muestra cómo migrar de uno a otro."
 issue: 19
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"
 reviewer: "minimax-m3"
 ---
 
-## El problema de la identidad en cadenas de APIs
+## El escenario: SPA, BFF y una API downstream
 
-En una arquitectura de microservicios o en aplicaciones con múltiples capas, es frecuente que una API intermedia necesite actuar en nombre del usuario original para llamar a otra API descendente. El escenario típico es:
+Tenéis un SPA en TypeScript que llama a un BFF (Python). El BFF, a su vez, llama a una API downstream —por ejemplo, Microsoft Graph, o vuestra propia API protegida por Azure AD.
 
-1. Un cliente (SPA, aplicación móvil, daemon) se autentica y obtiene un token de acceso para la **API intermedia**.
-2. La API intermedia recibe la petición, valida el token y necesita, a su vez, llamar a una **API descendente** (por ejemplo, Microsoft Graph, otra API interna o un servicio de terceros) con la identidad del usuario original.
+Hoy el BFF se autentica con su propia identidad de servicio (SPN). El flujo funciona, pero la API downstream ve que la llama *el BFF*, no *el usuario*. Si Pedro pide ver su perfil, el BFF llama a Graph con su SPN, y Graph devuelve los datos de la aplicación, no los de Pedro.
 
-Pasar el token recibido directamente a la API descendente no funciona: el token está emitido para la API intermedia (su audiencia es esa API), no para la descendente. La API descendente lo rechazaría porque la audiencia (`aud`) no coincide con su identificador. Además, el token podría contener scopes que solo son válidos para la API intermedia.
+Necesitáis que el BFF actúe en nombre del usuario: que la API downstream sepa que es Pedro quien pide, no el BFF. Eso cambia el flujo de autenticación de *client credentials* (SPN) a *On-Behalf-Of* (OBO).
 
-Reemitir el token con la identidad del usuario pero dirigido a otro recurso requiere un mecanismo de delegación controlada. En el ecosistema de Microsoft Identity Platform, ese mecanismo es el flujo **On-Behalf-Of (OBO)**, definido en la especificación OAuth 2.0 Token Exchange (RFC 8693) y soportado por MSAL (Microsoft Authentication Library) y Azure AD.
+Pero antes de compararlos, hay que entender qué significa cada nombre que aparece en el portal de Azure, porque la documentación usa términos como *appId*, *resourceId*, *SPN*, *service principal*, *enterprise application* y *tenant* como si fueran obvios —y no lo son.
 
-## Fundamentos de delegación en Microsoft Identity Platform
+## El diccionario de Azure que nadie te explica junto
 
-### Delegación no es impersonación sin límites
+Azure AD (ahora Microsoft Entra ID) usa varios nombres para cosas que se parecen pero no son lo mismo. La confusión empieza en el portal, donde una misma aplicación aparece en dos sitios distintos con nombres distintos.
 
-Se suele describir OBO como un mecanismo de impersonación porque la API descendente recibe una llamada asociada al usuario original. Esa simplificación es útil, pero también peligrosa: la API intermedia no se convierte en el usuario ni hereda todos sus permisos. OBO implementa una **delegación acotada**. La llamada conserva la identidad del usuario, pero solo puede ejercer los scopes delegados que la API intermedia tenga configurados y que hayan sido consentidos.
+### App Registration (application object)
 
-Por ejemplo, si una API recibe un token para `api://orders/access_as_user` y necesita consultar Microsoft Graph, no puede reutilizarlo ni solicitar cualquier permiso del usuario. Debe canjearlo por un token dirigido a Graph y pedir un scope concreto, como `User.Read`. Microsoft Entra ID solo emitirá ese segundo token si la aplicación, el usuario y el consentimiento permiten exactamente esa delegación.
+Es la **definición global** de tu aplicación: su nombre, sus redirect URIs, los scopes que expone, los permisos que necesita, sus claves. Se crea en *App registrations* en el portal. Tiene un identificador público y estable: el **Application (client) ID**, también llamado **appId** o **client ID**. Este ID es el que se envía como `client_id` en OAuth. No es un secreto.
 
-La distinción importa al diseñar la autorización:
+Una app registration existe en un *tenant origen* (el tenant donde la creaste). Si otra organización quiere usar tu aplicación, la instala en su tenant —y ahí aparece el service principal.
 
-- **Autenticación**: OBO mantiene quién es el usuario original a lo largo de la cadena.
-- **Delegación**: limita qué puede hacer cada API en nombre de ese usuario.
-- **Autorización**: cada API sigue decidiendo si las claims y scopes del token permiten la operación solicitada.
+### Service Principal (Enterprise Application)
 
-OBO tampoco convierte permisos de aplicación en permisos del usuario. El flujo trabaja con scopes delegados y requiere un usuario presente; para procesos sin usuario se utiliza normalmente `client_credentials`.
+Es la **instancia local** de una aplicación dentro de un tenant. Piensa en ello como la app registration *puesta en marcha* en un directorio concreto. El service principal es donde se almacenan:
 
-### El mapa de objetos de Azure que evita la mayoría de confusiones
+- Los permisos consentidos (delegados y de aplicación)
+- Las asignaciones de usuarios y grupos
+- La configuración de acceso condicional
 
-En el portal aparecen varios identificadores parecidos. Entender qué representa cada uno facilita mucho la configuración y el diagnóstico:
+En el portal, el service principal aparece en *Enterprise applications*. Tiene su propio **Object ID** (distinto del appId) que lo identifica dentro del tenant.
 
-- **Tenant o directorio**: la frontera de identidad de una organización. Contiene usuarios, grupos, aplicaciones empresariales y sus asignaciones.
-- **App registration / application object**: la definición global de la aplicación en su tenant de origen. Es el plano o plantilla que declara redirect URIs, scopes expuestos y otros metadatos.
-- **Application (client) ID o `appId`**: identificador público y estable de esa aplicación. Se envía como `client_id` en OAuth y suele aparecer en la claim `aud` cuando la aplicación es el recurso. No es un secreto.
-- **Service principal / Enterprise application**: la identidad local de esa aplicación dentro de un tenant. Aquí viven el consentimiento, las asignaciones y el acceso efectivo en ese directorio. Una misma app registration puede tener service principals en varios tenants.
-- **Object ID**: identifica un objeto concreto dentro de un directorio. El application object y cada service principal tienen object IDs distintos; no debe usarse como sustituto del `client_id`.
-- **Client secret o certificado**: credencial con la que la API intermedia demuestra que es el cliente confidencial asociado al `client_id`. A diferencia del `appId`, sí debe protegerse.
+La relación es así de simple:
 
-En una cadena OBO hay, como mínimo, una app registration para el cliente, otra para la API intermedia y otra identidad para la API descendente. El `appId` responde a “qué aplicación es”; el service principal responde a “qué permisos tiene esa aplicación en este tenant”; y el object ID responde a “qué objeto exacto estoy mirando en este directorio”.
+| Concepto | Dónde está en el portal | Qué almacena | Identificador |
+|---|---|---|---|
+| App Registration | *App registrations* | Definición global de la app: scopes, redirect URIs, secretos | **appId** (Application client ID) |
+| Service Principal | *Enterprise applications* | Permisos consentidos, asignaciones, config local en este tenant | **Object ID** |
 
-### Permisos delegados vs. permisos de aplicación
+Una misma app registration puede tener service principals en muchos tenants (multi-tenant). El appId es el mismo en todos los tenants. El Object ID del service principal es distinto en cada uno.
 
-Antes de implementar OBO, hay que entender los dos tipos de permisos que una aplicación puede solicitar a Azure AD:
+### Terminología común y su traducción
 
-- **Permisos delegados**: la aplicación actúa en nombre de un usuario autenticado. El consentimiento puede ser otorgado por el propio usuario (si el permiso no requiere administrador) o por un administrador. El token de acceso contiene scopes (scp) que reflejan los permisos delegados concedidos. La audiencia (`aud`) es la API que expone los scopes.
-- **Permisos de aplicación**: la aplicación actúa con su propia identidad, sin usuario presente. Requiere consentimiento del administrador. El token de acceso contiene roles (`roles`) en lugar de scopes. La audiencia es la API destino.
+| Lo que lees en docs o en el portal | Qué es realmente |
+|---|---|
+| **appId** / **client ID** / **Application (client) ID** | El identificador público de la app registration. Se pasa como `client_id` en OAuth. |
+| **Object ID** (en App registrations) | Identifica el application object dentro de su tenant origen. No lo uses como `client_id`. |
+| **Object ID** (en Enterprise applications) | Identifica el service principal dentro del tenant. Tampoco lo uses como `client_id`. |
+| **resource ID** / **resource** | En el contexto de OAuth, el `aud` del token: la aplicación que recibe el token. Se expresa como su appId o como un URI (`api://mi-bff/access_as_user`). |
+| **SPN** / **service principal name** | A veces se usa como sinónimo de service principal, a veces como el nombre alternativo (URI) del service principal. En la práctica, cuando alguien dice "autenticar con SPN" se refiere a *client credentials*: la app se autentica con su propia identidad, sin usuario. |
+| **Tenant ID** / **Directory ID** | El identificador del directorio (organización) de Azure AD. Se pasa como parte de la authority en OAuth (`https://login.microsoftonline.com/{tenantId}`). |
+| **Client secret** / **Client certificate** | Credencial que demuestra que el llamante es realmente la aplicación identificada por el `client_id`. Es el equivalente a una contraseña de app. **Debe protegerse.** |
+| **Managed Identity** | Identidad asignada automáticamente por Azure a un recurso (App Service, VM, etc.). Evita tener que gestionar secrets. Se usa como client credentials sin secret en el código. |
 
-En el flujo OBO, la API intermedia usa un token de acceso delegado (recibido del cliente) para solicitar otro token delegado hacia la API descendente. Por tanto, la API intermedia debe tener permisos delegados sobre la API descendente, y el usuario original debe haber consentido esos permisos (directa o indirectamente).
+### Una metáfora para acordarse
 
-### El rol de la API intermedia como cliente confidencial
+- **App Registration** es el **plano** de un edificio: define qué hay, pero es papel.
+- **Service Principal** es el **edificio construido** en una ciudad concreta: tiene llaves asignadas, inquilinos, permisos.
+- **appId** es el **DNI del plano**: único, público, el mismo en todas las ciudades.
+- **Object ID (SP)** es la **dirección del edificio en esta ciudad**: distinta en cada una.
+- **Client Secret** es la **llave de la puerta principal**: privada, rotable, demuestra que eres el edificio.
 
-La API intermedia actúa como **cliente confidencial** en el flujo OBO. Para canjear el token entrante por uno nuevo, debe autenticarse frente a Azure AD usando su propio secreto de cliente (contraseña o certificado). Esto es necesario porque el flujo OBO es un intercambio de tokens que requiere que el llamante (la API intermedia) demuestre su identidad.
+## Client Credentials: cuando el BFF habla con su propia identidad
 
-### Propagación de identidad
+El flujo *client credentials* (OAuth 2.0) es el más simple: la aplicación se autentica con su `client_id` y `client_secret` (o certificado), sin ningún usuario. Azure AD devuelve un token donde la identidad es la de la aplicación, no la de ninguna persona.
 
-El token de acceso emitido para la API descendente contiene claims que identifican al usuario original: `sub`, `oid`, `upn`, `tid`, entre otros. De esta forma, la API descendente puede aplicar autorización basada en el usuario real, aunque la llamada provenga de la API intermedia. La claim `azp` identifica al cliente original (la aplicación que inició la cadena), mientras que `aud` identifica al destinatario inmediato (la API intermedia o descendente, según el tramo).
+### Flujo paso a paso
 
-## Anatomía del flujo On-Behalf-Of
+1. El BFF necesita llamar a la API downstream. No hay usuario en este flujo.
+2. El BFF envía una petición al endpoint `/token` de Azure AD con `grant_type=client_credentials`, su `client_id`, su `client_secret`, y el `scope` (o `resource`) de la API que quiere llamar.
+3. Azure AD verifica que la aplicación (identificada por `client_id`) existe, que el secret es correcto, y que tiene permisos de aplicación sobre el recurso solicitado.
+4. Azure AD emite un access token. El `sub` del token es el `appId` de la aplicación. El `aud` es el resourceId de la API downstream.
+5. El BFF usa el token en el header `Authorization: Bearer <token>` para llamar a la API.
+6. La API downstream valida el token (firma, emisor, audience, expiración) y ve que la llamada viene de la aplicación BFF.
 
-El flujo OBO consta de los siguientes pasos:
+### El JWT de Client Credentials
 
-1. El cliente obtiene un token de acceso para la API intermedia (recurso A), usando el flujo que corresponda (authorization code, device code, etc.). El token contiene scopes para A y aud = A.
-2. El cliente llama a la API intermedia incluyendo el token en el header `Authorization: Bearer <token>`.
-3. La API intermedia valida el token entrante (emisor, audiencia, firma, expiración, etc.).
-4. La API intermedia construye una aserción (`assertion`) a partir del token entrante (normalmente el `access_token` recibido) y solicita un nuevo token para la API descendente (recurso B) al endpoint `/token` de Azure AD, autenticándose con sus propias credenciales de cliente confidencial.
-5. Azure AD valida la aserción, verifica que la API intermedia tiene permisos delegados sobre B y que el usuario consintió esos permisos, y emite un nuevo token de acceso dirigido a B, junto con un refresh token opcional.
-6. La API intermedia usa el nuevo token para llamar a la API descendente.
-
-MSAL abstrae este proceso mediante el método `AcquireTokenOnBehalfOf` (MSAL.NET) o `acquire_token_on_behalf_of` (MSAL Python). Internamente, MSAL construye la aserción con el token entrante y el tipo de aserción `urn:ietf:params:oauth:grant-type:jwt-bearer`, y realiza la petición al endpoint `/token`.
-
-### OBO con token de acceso vs. con refresh token
-
-El flujo estándar usa el `access_token` entrante como aserción. Sin embargo, Azure AD también admite un flujo OBO en el que la API intermedia recibe un refresh token del cliente (en lugar del access token) y lo usa para solicitar tokens descendentes. Esto es menos común y requiere que el cliente comparta un refresh token con la API intermedia, lo cual introduce riesgos de seguridad adicionales. MSAL soporta ambos modos, pero la práctica recomendada es usar el access token como aserción y no propagar refresh tokens fuera del cliente confidencial original.
-
-## Configuración de consentimiento y scopes
-
-Para que el flujo OBO funcione, es necesario registrar correctamente las aplicaciones en Azure AD y configurar los permisos y la exposición de scopes.
-
-### Registro de la API intermedia
-
-- Exponer al menos un scope (por ejemplo, `access_as_user`) que los clientes solicitarán. Esto define la API como recurso.
-- Configurar permisos delegados hacia la API descendente (por ejemplo, Microsoft Graph: `User.Read`, `Mail.Read`). Estos permisos deben ser consentidos por el usuario o el administrador.
-- Si se desea que el consentimiento para la API intermedia incluya automáticamente los permisos para la descendente, se puede usar `knownClientApplications` en el manifiesto de la API descendente, listando el `appId` de la API intermedia. Esto permite el consentimiento en cascada: cuando un usuario consiente a la API intermedia, también consiente los permisos necesarios para la descendente.
-
-### Scopes efectivos en cada tramo
-
-El token que recibe la API intermedia contiene los scopes que el cliente solicitó para ella (por ejemplo, `api://intermedia/access_as_user`). El token que la API intermedia obtiene para la API descendente contiene los scopes que la intermedia solicitó en su petición OBO, que deben ser un subconjunto de los permisos delegados configurados y consentidos. No hay herencia automática de scopes: la API intermedia debe solicitar explícitamente los scopes que necesita para la descendente.
-
-## Implementación con MSAL: adquisición del token On-Behalf-Of
-
-### Inicialización del cliente confidencial
-
-En MSAL.NET, se crea un `IConfidentialClientApplication`:
-
-```csharp
-var app = ConfidentialClientApplicationBuilder
-    .Create(clientId)
-    .WithClientSecret(clientSecret) // o WithCertificate
-    .WithAuthority(authority) // https://login.microsoftonline.com/{tenantId}
-    .Build();
-```
-
-En MSAL Python:
-
-```python
-import msal
-app = msal.ConfidentialClientApplication(
-    client_id=client_id,
-    client_credential=client_secret,
-    authority=f"https://login.microsoftonline.com/{tenant_id}"
-)
-```
-
-### Extracción y validación del token entrante
-
-Antes de invocar OBO, la API intermedia debe validar el token recibido. En ASP.NET Core, se puede usar `Microsoft.Identity.Web` que automatiza la validación y expone el token a través de `ITokenAcquisition`. Si se prefiere un control manual, se puede validar con `JwtSecurityTokenHandler`:
-
-```csharp
-var handler = new JwtSecurityTokenHandler();
-var validationParameters = new TokenValidationParameters
-{
-    ValidateIssuer = true,
-    ValidIssuer = $"https://login.microsoftonline.com/{tenantId}/v2.0",
-    ValidateAudience = true,
-    ValidAudience = clientId, // App ID de la API intermedia
-    ValidateLifetime = true,
-    IssuerSigningKeys = ... // obtener de OpenID Connect discovery
-};
-SecurityToken validatedToken;
-var principal = handler.ValidateToken(token, validationParameters, out validatedToken);
-```
-
-Es crucial validar la audiencia (`aud`) para evitar que un token emitido para otra API se use como aserción en esta.
-
-### Adquisición del token OBO
-
-Con el token validado, se construye un `UserAssertion` y se llama al método OBO:
-
-**C# (MSAL.NET):**
-
-```csharp
-string incomingAccessToken = ...; // extraído del header Authorization
-var userAssertion = new UserAssertion(incomingAccessToken);
-var scopes = new[] { "https://graph.microsoft.com/User.Read" };
-
-AuthenticationResult result = await app.AcquireTokenOnBehalfOf(scopes, userAssertion)
-    .ExecuteAsync();
-string downstreamToken = result.AccessToken;
-```
-
-**Python (MSAL Python):**
-
-```python
-scopes = ["https://graph.microsoft.com/User.Read"]
-result = app.acquire_token_on_behalf_of(
-    user_assertion=incoming_access_token,
-    scopes=scopes
-)
-downstream_token = result['access_token']
-```
-
-### Ejemplo completo en C# (API intermedia con ASP.NET Core)
-
-A continuación, un controlador que recibe una petición, valida el token entrante, adquiere un token para Microsoft Graph y llama a Graph para leer el perfil del usuario.
-
-```csharp
-[ApiController]
-[Route("api/[controller]")]
-public class ProfileController : ControllerBase
-{
-    private readonly IConfiguration _config;
-    private readonly IConfidentialClientApplication _app;
-
-    public ProfileController(IConfiguration config)
-    {
-        _config = config;
-        _app = ConfidentialClientApplicationBuilder
-            .Create(config["AzureAd:ClientId"])
-            .WithClientSecret(config["AzureAd:ClientSecret"])
-            .WithAuthority($"{config["AzureAd:Instance"]}{config["AzureAd:TenantId"]}")
-            .Build();
-    }
-
-    [HttpGet]
-    public async Task<IActionResult> GetProfile()
-    {
-        // 1. Extraer token entrante
-        string authHeader = Request.Headers["Authorization"].FirstOrDefault();
-        if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
-            return Unauthorized();
-        string incomingToken = authHeader["Bearer ".Length..].Trim();
-
-        // 2. Validar token (simplificado; en producción usar Microsoft.Identity.Web)
-        var handler = new JwtSecurityTokenHandler();
-        // ... validación con TokenValidationParameters (omitted for brevity, but essential)
-        // Asumimos token válido.
-
-        // 3. Adquirir token OBO para Graph
-        var userAssertion = new UserAssertion(incomingToken);
-        var scopes = new[] { "https://graph.microsoft.com/User.Read" };
-        AuthenticationResult result;
-        try
-        {
-            result = await _app.AcquireTokenOnBehalfOf(scopes, userAssertion)
-                .ExecuteAsync();
-        }
-        catch (MsalUiRequiredException)
-        {
-            // El consentimiento falta o el token de aserción no es válido
-            return Challenge(); // o devolver 403 con instrucciones
-        }
-
-        // 4. Llamar a Microsoft Graph
-        using var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", result.AccessToken);
-        var graphResponse = await httpClient.GetAsync("https://graph.microsoft.com/v1.0/me");
-        graphResponse.EnsureSuccessStatusCode();
-        var content = await graphResponse.Content.ReadAsStringAsync();
-        return Content(content, "application/json");
-    }
-}
-```
-
-### Ejemplo en Python (FastAPI)
-
-```python
-from fastapi import FastAPI, Request, HTTPException
-import msal
-import httpx
-
-app = FastAPI()
-
-# Configuración
-CLIENT_ID = "your_api_client_id"
-CLIENT_SECRET = "your_api_secret"
-TENANT_ID = "your_tenant_id"
-AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
-
-msal_app = msal.ConfidentialClientApplication(
-    client_id=CLIENT_ID,
-    client_credential=CLIENT_SECRET,
-    authority=AUTHORITY
-)
-
-@app.get("/profile")
-async def get_profile(request: Request):
-    # 1. Extraer token
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=401)
-    incoming_token = auth_header[7:]
-
-    # 2. Validación básica (en producción usar librería como PyJWT con claves de Azure AD)
-    # ...
-
-    # 3. OBO
-    scopes = ["https://graph.microsoft.com/User.Read"]
-    result = msal_app.acquire_token_on_behalf_of(
-        user_assertion=incoming_token,
-        scopes=scopes
-    )
-    if "error" in result:
-        raise HTTPException(status_code=403, detail=result.get("error_description"))
-
-    # 4. Llamar a Graph
-    async with httpx.AsyncClient() as client:
-        graph_response = await client.get(
-            "https://graph.microsoft.com/v1.0/me",
-            headers={"Authorization": f"Bearer {result['access_token']}"}
-        )
-        graph_response.raise_for_status()
-        return graph_response.json()
-```
-
-## Caché de tokens: estrategias y desafíos en entornos distribuidos
-
-MSAL incluye una caché de tokens en memoria por defecto. Cuando se adquiere un token OBO, MSAL almacena el resultado (access token, refresh token, expiración) asociado a la aserción (usuario) y los scopes. En llamadas posteriores con la misma aserción y scopes, MSAL devuelve el token de la caché sin llamar a Azure AD, reduciendo latencia y carga en el STS.
-
-### El problema de la caché en memoria en APIs multi-instancia
-
-En una API desplegada en múltiples instancias (horizontal scaling), la caché en memoria no se comparte. Una instancia puede tener un token válido en caché, pero otra instancia que recibe una petición del mismo usuario tendrá que solicitar un token nuevo. Esto no es un error funcional, pero aumenta las llamadas al STS y la latencia. Peor aún, si se usa el flujo OBO con refresh token, la rotación de refresh tokens puede causar problemas de sincronización: una instancia puede usar un refresh token que otra instancia ya ha reemplazado, provocando fallos de autenticación.
-
-### Serialización de la caché
-
-MSAL permite personalizar el almacenamiento de la caché mediante los delegados `BeforeAccess` y `AfterAccess` (en MSAL.NET) o el `token_cache` con serialización personalizada (en MSAL Python). La caché se serializa como un blob binario (MSAL.NET) o JSON (MSAL Python). Para entornos distribuidos, se debe persistir en un almacén compartido.
-
-**Ejemplo de serialización en Redis con MSAL.NET:**
-
-```csharp
-var app = ConfidentialClientApplicationBuilder.Create(clientId)
-    .WithClientSecret(clientSecret)
-    .WithAuthority(authority)
-    .WithCacheOptions(CacheOptions.EnableSharedCacheOptions) // opcional
-    .Build();
-
-// Configurar serialización a Redis
-var redisConnection = ConnectionMultiplexer.Connect("redis-connection-string");
-var cache = app.UserTokenCache;
-cache.SetBeforeAccess(async (args) =>
-{
-    var db = redisConnection.GetDatabase();
-    var key = $"msal:cache:{args.SuggestedCacheKey}";
-    var data = await db.StringGetAsync(key);
-    if (data.HasValue)
-        args.TokenCache.DeserializeMsalV3(data);
-});
-cache.SetAfterAccess(async (args) =>
-{
-    if (args.HasStateChanged)
-    {
-        var db = redisConnection.GetDatabase();
-        var key = $"msal:cache:{args.SuggestedCacheKey}";
-        var data = args.TokenCache.SerializeMsalV3();
-        await db.StringSetAsync(key, data, TimeSpan.FromDays(30));
-    }
-});
-```
-
-En MSAL Python, se puede pasar un `token_cache` personalizado que persista en Redis, base de datos, etc.
-
-### Particionado por tenant y cuenta
-
-Para evitar fugas de tokens entre tenants (en aplicaciones multi-tenant), la clave de caché debe incluir el `home_account_id` o el `tenant_id`. MSAL.NET expone `SuggestedCacheKey` que ya incluye el identificador de cuenta y tenant. Al serializar, se debe usar esa clave para aislar correctamente.
-
-### Trade-offs
-
-- **Latencia**: la caché distribuida añade una llamada de red (Redis, SQL) en cada acceso, pero evita la llamada al STS, que es más lenta. El balance es positivo si la tasa de aciertos es alta.
-- **Consistencia**: en escenarios con refresh token rotation, varias instancias pueden competir por actualizar la caché. Se debe implementar bloqueo optimista o usar almacenes con consistencia fuerte.
-- **Seguridad en reposo**: los tokens almacenados deben estar encriptados. MSAL.NET puede integrarse con la Data Protection API (ASP.NET Core) para encriptar la caché antes de enviarla a Redis. En MSAL Python, se debe encriptar manualmente o usar un almacén seguro.
-
-## Seguridad en el intercambio de tokens
-
-El flujo OBO introduce riesgos específicos que deben mitigarse:
-
-### Validación estricta del token entrante
-
-- **Audiencia**: el `aud` debe coincidir con el `clientId` de la API intermedia. Si se acepta un token con `aud` de otra API, un atacante podría usar un token robado de otra aplicación para suplantar al usuario en esta API.
-- **Emisor**: debe ser `https://login.microsoftonline.com/{tenantId}/v2.0` (o el emisor correspondiente). No se deben aceptar tokens de otros tenants no confiables.
-- **Firma**: validar con las claves públicas del emisor (obtenidas del endpoint `jwks_uri` del discovery document).
-- **Nonce y expiración**: aunque el nonce es más relevante en el flujo de autorización, se debe verificar `exp`, `nbf` y opcionalmente `iat` con una ventana temporal para mitigar replay attacks. Azure AD emite tokens con una validez típica de 1 hora; la API intermedia puede rechazar tokens con `iat` demasiado antiguo (por ejemplo, más de 5 minutos) si se requiere frescura.
-
-### Uso de access_token vs. id_token como aserción
-
-El flujo OBO está diseñado para usar el `access_token` como aserción. Un `id_token` no es adecuado porque su audiencia es el cliente, no la API, y no contiene scopes. Usar un `id_token` puede permitir suplantación si no se valida correctamente. MSAL espera un `access_token` en el `UserAssertion`.
-
-### Protección contra replay
-
-Azure AD incluye un claim `nonce` en algunos tokens, pero no en todos. Para mitigar replay, se puede registrar el `jti` (JWT ID) del token entrante en una caché de un solo uso con un TTL igual a la ventana de validez. Si un token con el mismo `jti` se recibe más de una vez, se rechaza.
-
-### Confidencialidad del secreto de cliente
-
-El secreto usado por la API intermedia para autenticarse en el flujo OBO debe protegerse como cualquier credencial: almacenado en Azure Key Vault, variables de entorno seguras, o mejor, usando Managed Identities cuando la API se ejecuta en Azure (App Service, Functions, AKS). MSAL soporta `WithClientAssertion` para usar certificados o Managed Identity (a través de `Azure.Identity`).
-
-### Rotación de secretos
-
-Los secretos de cliente deben rotarse periódicamente. Azure AD permite múltiples secretos activos para facilitar la rotación sin downtime.
-
-## Errores comunes y diagnóstico
-
-### AADSTS50013: Assertion failed signature validation
-
-Causas típicas:
-- El token entrante ha expirado.
-- La audiencia del token no coincide con la API intermedia (el `aud` es incorrecto).
-- El token está mal formado o fue manipulado.
-- Se está usando un `id_token` en lugar de `access_token`.
-
-Solución: validar el token antes de usarlo como aserción; comprobar `exp`, `aud` y la firma.
-
-### AADSTS65001: Consent missing
-
-El usuario (o administrador) no ha consentido los permisos delegados que la API intermedia solicita para la API descendente. Puede ocurrir si el consentimiento incremental no se ha completado o si la configuración de `knownClientApplications` no está correcta.
-
-Solución: asegurar que el consentimiento se otorga antes de la llamada. En desarrollo, se puede usar el endpoint de consentimiento del administrador (`/adminconsent`). En producción, redirigir al usuario para que consienta si se recibe este error (MSAL lanza `MsalUiRequiredException`).
-
-### AADSTS70011: Invalid scope
-
-El scope solicitado en la llamada OBO no está expuesto por la API descendente o está mal escrito (por ejemplo, `https://graph.microsoft.com/User.Read` vs `User.Read`). Verificar el manifiesto de la API descendente.
-
-### Tokens expirados en caché
-
-MSAL maneja la expiración automáticamente: si el token en caché está expirado, intenta usar el refresh token para obtener uno nuevo. Si el refresh token también expiró o es inválido, lanza `MsalUiRequiredException` (en MSAL.NET) o devuelve un error en el diccionario (MSAL Python). La API intermedia debe capturar esta excepción y devolver un error 401 o 403 al cliente, indicando que necesita reautenticarse.
-
-### Logging y telemetría
-
-MSAL proporciona logging configurable. En MSAL.NET:
-
-```csharp
-var app = ConfidentialClientApplicationBuilder.Create(clientId)
-    .WithLogging((level, message, containsPii) =>
-    {
-        Console.WriteLine($"{level}: {message}");
-    }, LogLevel.Verbose, enablePiiLogging: false)
-    .Build();
-```
-
-En MSAL Python, se puede habilitar logging estándar de Python para el módulo `msal`. Esto ayuda a diagnosticar errores silenciosos como fallos de red, respuestas inesperadas del STS, etc.
-
-## Trade-offs y consideraciones de diseño
-
-### OBO vs. flujo de credenciales de cliente
-
-- **OBO**: la API descendente ve la identidad del usuario original. Permite autorización granular basada en el usuario. Requiere consentimiento y tokens delegados.
-- **Client credentials**: la API intermedia usa su propia identidad (sin usuario) para llamar a la descendente. Más simple, no requiere consentimiento de usuario, pero pierde el contexto de usuario. Adecuado para operaciones de background o cuando la API descendente no necesita distinguir usuarios.
-
-### Impacto en latencia
-
-Cada salto OBO implica una llamada adicional al STS (Azure AD). En una cadena de 3 APIs (A → B → C), B hace OBO para llamar a C, añadiendo latencia. Si la cadena es profunda, la latencia acumulada puede ser significativa. La caché de tokens mitiga esto en llamadas repetidas, pero la primera llamada siempre paga el costo.
-
-### Límites de la cadena de delegación
-
-No hay un límite técnico estricto en el número de saltos OBO, pero cada salto requiere que la API intermedia tenga permisos delegados sobre la siguiente. A partir de cierta profundidad, la gestión de consentimiento y la latencia se vuelven problemáticas. Se recomienda no exceder 2 o 3 saltos. Alternativas como eventos asíncronos o desacoplamiento con colas pueden reducir la necesidad de cadenas profundas.
-
-### Alternativas
-
-- **Token exchange con otros proveedores**: la RFC 8693 define un marco general. Azure AD implementa un perfil específico. Otros proveedores (Auth0, Okta) tienen sus propios mecanismos.
-- **SPIFFE/SPIRE**: en mallas de servicio, se puede usar identidad basada en certificados SPIFFE para la comunicación entre servicios, manteniendo la identidad del usuario en metadata. No es un reemplazo directo de OBO, pero puede combinarse.
-- **Arquitectura event-driven**: en lugar de llamadas encadenadas, la API intermedia puede publicar un evento con la identidad del usuario, y la API descendente lo consume y actúa con sus propios permisos de aplicación. Esto desacopla y elimina la necesidad de OBO, pero requiere un mecanismo de autorización diferente.
-
-### Cuándo usar OBO
-
-OBO es la opción correcta cuando:
-- La API descendente necesita aplicar permisos delegados basados en el usuario original.
-- La cadena de llamadas es corta (1-2 saltos).
-- Se requiere auditoría completa de la identidad del usuario en todos los niveles.
-- El ecosistema es Microsoft Identity Platform y las APIs son Azure AD protegidas.
-
-Si la API descendente solo necesita datos que no dependen del usuario, o si la cadena es profunda, considerar client credentials o rediseñar la arquitectura.
-
-## Ejemplo completo: API intermedia en C# que llama a Microsoft Graph
-
-A continuación se presenta un proyecto completo que demuestra el flujo OBO con caché en Redis, validación de tokens y propagación de identidad.
-
-### Estructura del proyecto y registro de apps
-
-1. **API intermedia** (App ID: `api-intermedia`): expone un scope `access_as_user`. Configura permisos delegados a Microsoft Graph: `User.Read`, `Mail.Read`.
-2. **Cliente** (App ID: `cliente-spa`): autorizado para solicitar `api://api-intermedia/access_as_user`.
-3. **Microsoft Graph**: API descendente.
-
-En Azure AD, en el manifiesto de la API intermedia, se establece `knownClientApplications` con el App ID del cliente para consentimiento combinado.
-
-### Código de la API intermedia
-
-Se usa ASP.NET Core 6+, con `Microsoft.Identity.Web` para validación automática y `Microsoft.Identity.Client` para OBO. La caché se serializa a Redis.
-
-**Program.cs:**
-
-```csharp
-using Microsoft.Identity.Web;
-using Microsoft.Identity.Client;
-using StackExchange.Redis;
-
-var builder = WebApplication.CreateBuilder(args);
-
-// Configurar autenticación JWT con Microsoft.Identity.Web
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
-
-builder.Services.AddAuthorization();
-
-// Registrar IConfidentialClientApplication como singleton con caché en Redis
-builder.Services.AddSingleton<IConfidentialClientApplication>(sp =>
-{
-    var config = sp.GetRequiredService<IConfiguration>();
-    var app = ConfidentialClientApplicationBuilder
-        .Create(config["AzureAd:ClientId"])
-        .WithClientSecret(config["AzureAd:ClientSecret"])
-        .WithAuthority($"{config["AzureAd:Instance"]}{config["AzureAd:TenantId"]}")
-        .Build();
-
-    // Configurar serialización a Redis
-    var redis = ConnectionMultiplexer.Connect(config["Redis:ConnectionString"]);
-    var cache = app.UserTokenCache;
-    cache.SetBeforeAccess(async (args) =>
-    {
-        var db = redis.GetDatabase();
-        var key = $"msal:obo:{args.SuggestedCacheKey}";
-        var data = await db.StringGetAsync(key);
-        if (data.HasValue)
-            args.TokenCache.DeserializeMsalV3(data);
-    });
-    cache.SetAfterAccess(async (args) =>
-    {
-        if (args.HasStateChanged)
-        {
-            var db = redis.GetDatabase();
-            var key = $"msal:obo:{args.SuggestedCacheKey}";
-            var data = args.TokenCache.SerializeMsalV3();
-            await db.StringSetAsync(key, data, TimeSpan.FromDays(30));
-        }
-    });
-
-    return app;
-});
-
-builder.Services.AddHttpClient();
-
-var app = builder.Build();
-app.UseAuthentication();
-app.UseAuthorization();
-app.MapControllers();
-app.Run();
-```
-
-**Controlador ProfileController.cs:**
-
-```csharp
-[Authorize]
-[ApiController]
-[Route("api/[controller]")]
-public class ProfileController : ControllerBase
-{
-    private readonly IConfidentialClientApplication _app;
-    private readonly IHttpClientFactory _httpClientFactory;
-
-    public ProfileController(IConfidentialClientApplication app, IHttpClientFactory httpClientFactory)
-    {
-        _app = app;
-        _httpClientFactory = httpClientFactory;
-    }
-
-    [HttpGet]
-    public async Task<IActionResult> Get()
-    {
-        // Obtener el token entrante validado por Microsoft.Identity.Web
-        string incomingToken = await HttpContext.GetTokenAsync("access_token");
-        if (string.IsNullOrEmpty(incomingToken))
-            return Unauthorized();
-
-        var userAssertion = new UserAssertion(incomingToken);
-        var scopes = new[] { "https://graph.microsoft.com/User.Read" };
-
-        AuthenticationResult result;
-        try
-        {
-            result = await _app.AcquireTokenOnBehalfOf(scopes, userAssertion)
-                .ExecuteAsync();
-        }
-        catch (MsalUiRequiredException ex)
-        {
-            // El consentimiento falta o el token de aserción no es válido
-            return StatusCode(403, new { error = "consent_required", claims = ex.Claims });
-        }
-        catch (MsalServiceException ex) when (ex.ErrorCode == "invalid_grant")
-        {
-            return StatusCode(401, new { error = "invalid_assertion" });
-        }
-
-        // Llamar a Microsoft Graph
-        var client = _httpClientFactory.CreateClient();
-        client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", result.AccessToken);
-        var response = await client.GetAsync("https://graph.microsoft.com/v1.0/me");
-        if (!response.IsSuccessStatusCode)
-            return StatusCode((int)response.StatusCode, await response.Content.ReadAsStringAsync());
-
-        var content = await response.Content.ReadAsStringAsync();
-        return Content(content, "application/json");
-    }
-}
-```
-
-**appsettings.json:**
+Un token de client credentials decodificado se ve así:
 
 ```json
 {
-  "AzureAd": {
-    "Instance": "https://login.microsoftonline.com/",
-    "TenantId": "your-tenant-id",
-    "ClientId": "api-intermedia-app-id",
-    "ClientSecret": "your-secret"
-  },
-  "Redis": {
-    "ConnectionString": "your-redis-connection-string"
-  }
+  "aud": "api://mi-api-downstream",
+  "iss": "https://login.microsoftonline.com/{tenantId}/v2.0",
+  "sub": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "appid": "bff-client-id-aaaa-bbbb-cccc",
+  "idtyp": "app",
+  "roles": ["Api.Read", "Api.Write"],
+  "tid": "{tenantId}",
+  "iat": 1718146800,
+  "exp": 1718150400
 }
 ```
 
-### Demostración de propagación de identidad
+Claims clave:
 
-El token emitido para Graph contiene los claims del usuario original (`oid`, `upn`, etc.). La respuesta de `/me` refleja el usuario autenticado inicialmente, no la identidad de la API intermedia. Si se añade el scope `Mail.Read`, la API intermedia podría leer el correo del usuario, demostrando que actúa en su nombre.
+| Claim | Qué significa | Nota |
+|---|---|---|
+| `sub` | Identifica *quién* hace la petición | En client credentials, es igual al `appid`. Es la aplicación, no un usuario. |
+| `aud` | Para quién se emitió el token | El appId o scope URI de la API downstream. |
+| `appid` | El appId de la aplicación que pidió el token | El BFF en este caso. |
+| `idtyp` | Tipo de identidad del token | `"app"` significa que es una aplicación, no un usuario. |
+| `roles` | Permisos de aplicación concedidos al BFF sobre la API | Se configuran como *Application Permissions* en Azure. |
+| `tid` | Tenant del que se emitió el token | Útil en escenarios multi-tenant. |
 
-### Prueba con Postman
+**Lo que NO tiene este JWT**: `oid`, `upn`, `name`, `scp`, `azp`. No hay usuario. No hay identidad de persona. No hay scopes delegados.
 
-1. Obtener un token para la API intermedia usando el cliente (por ejemplo, con authorization code flow).
-2. Llamar a `GET /api/profile` con el token.
-3. La respuesta contiene el perfil del usuario desde Graph.
+### Configuración en Azure
 
-## Referencias y recursos adicionales
+1. Crear una app registration para el BFF.
+2. En *API Permissions*, añadir *Application Permissions* sobre la API downstream (por ejemplo, `Api.Read`).
+3. Un administrador debe conceder consentimiento (admin consent), porque los permisos de aplicación siempre requieren aprobación.
+4. Generar un client secret (o subir un certificado) en *Certificates & secrets*.
+5. El BFF usa `client_id` + `client_secret` para pedir el token.
+
+## El problema: SPN no impersona
+
+El BFF con client credentials funciona perfectamente para operaciones donde no importa **quién** hace la petición, solo **que** la aplicación autorizada la hace. Ejemplos:
+
+- Un job nocturno que sincroniza datos
+- Un servicio que envía notificaciones
+- Una API que lee configuración compartida
+
+Pero falla cuando la API downstream necesita saber **quién es el usuario**:
+
+- "Devuélveme el perfil de Pedro" → Graph devuelve el perfil de la aplicación, no de Pedro
+- "¿Tiene este usuario permiso para ver este recurso?" → No hay usuario en el token
+- "Registra en auditoría qué usuario accedió" → Solo puedes registrar el appId del BFF
+
+El BFF con SPN es como un mensajero que va al banco con su propio DNI: el banco atiende al mensajero, pero no sabe en nombre de quién va. Lo que necesitamos es que el mensajero lleve una autorización firmada de Pedro: el flujo On-Behalf-Of.
+
+## On-Behalf-Of: cuando el BFF habla en nombre del usuario
+
+El flujo On-Behalf-Of (OBO) es el mecanismo de Azure AD para que una API intermedia (el BFF) reciba un token del usuario y lo intercambie por otro token dirigido a una API downstream, manteniendo la identidad del usuario.
+
+### Flujo paso a paso
+
+1. El usuario se autentica en el SPA (typicamente con authorization code flow + PKCE). El SPA obtiene un access token dirigido al BFF (`aud: api://mi-bff/access_as_user`).
+2. El SPA llama al BFF con ese token en `Authorization: Bearer <token>`.
+3. El BFF valida el token entrante (firma, audience, expiración).
+4. El BFF envía una petición al endpoint `/token` de Azure AD con:
+   - `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer` (el tipo OBO)
+   - `assertion=<token entrante>` (el access token del usuario)
+   - `client_id=<appId del BFF>` + `client_secret=<secreto del BFF>`
+   - `scope=<scopes de la API downstream>` (por ejemplo, `https://graph.microsoft.com/User.Read`)
+   - `requested_token_use=on_behalf_of`
+5. Azure AD verifica: el token entrante es válido, el BFF tiene permisos delegados sobre la API downstream, y el usuario consintió esos permisos.
+6. Azure AD emite un nuevo access token dirigido a la API downstream (`aud: https://graph.microsoft.com` o `api://mi-api-downstream`), que contiene la identidad del usuario original.
+7. El BFF usa este nuevo token para llamar a la API downstream.
+8. La API downstream valida el token y ve tanto la identidad del usuario (`oid`, `upn`) como la del BFF (`azp`).
+
+### El JWT de On-Behalf-Of
+
+Un token obtenido vía OBO, decodificado:
+
+```json
+{
+  "aud": "https://graph.microsoft.com",
+  "iss": "https://login.microsoftonline.com/{tenantId}/v2.0",
+  "sub": "x9y8z7w6-v5u4-t3s2-r1q0-ponmlkjihgfe",
+  "oid": "pedro-user-id-1111-2222-3333",
+  "upn": "pedro@midominio.com",
+  "name": "Pedro García",
+  "appid": "bff-client-id-aaaa-bbbb-cccc",
+  "azp": "spa-client-id-dddd-eeee-ffff",
+  "scp": "User.Read",
+  "tid": "{tenantId}",
+  "iat": 1718146800,
+  "exp": 1718150400
+}
+```
+
+Claims clave:
+
+| Claim | Qué significa | Nota |
+|---|---|---|
+| `sub` | Identifica *quién* hace la petición | En OBO, es un hash derivado del `oid` del usuario y el `tid`. Es distinto al `sub` del token de client credentials. |
+| `aud` | Para quién se emitió el token | La API downstream (Graph, vuestra API). |
+| `oid` | Object ID del usuario en Azure AD | Identifica unívocamente al usuario en este tenant. Es la claim que usar para autorización. |
+| `upn` | User Principal Name | El email del usuario. Útil para display y logging. |
+| `name` | Nombre del usuario | Display name del usuario en Azure AD. |
+| `appid` | El appId de la aplicación que pidió el token (el BFF) | Es el intermediario que hizo la petición OBO. |
+| `azp` | El appId de la aplicación original (el SPA) | Identifica quién inició la cadena de autenticación. |
+| `scp` | Scopes delegados consentidos | Los permisos específicos concedidos. Solo existen en tokens delegados. |
+| `idtyp` | Tipo de identidad | En tokens OBO no aparece siempre, pero si aparece es `"user"`. |
+
+**Lo que SÍ tiene este JWT y el de SPN no tiene**: `oid`, `upn`, `name`, `scp`. La identidad del usuario está presente.
+
+### Configuración en Azure
+
+1. Crear app registrations para el SPA y el BFF.
+2. En la app registration del BFF, exponer un scope (`api://mi-bff/access_as_user`). El SPA solicitará este scope.
+3. En la app registration del BFF, añadir **Delegated Permissions** sobre la API downstream (por ejemplo, `User.Read` de Microsoft Graph).
+4. En la app registration del SPA, añadir el scope del BFF (`api://mi-bff/access_as_user`) como permiso delegado.
+5. Consentimiento: el usuario (o un administrador) debe consentir los permisos delegados. En la app registration del BFF, se puede configurar `knownClientApplications` para que el consentimiento sea en cascada: al consentir el SPA, se consienten automáticamente los permisos del BFF sobre la API downstream.
+
+## Anatomía comparativa: JWT de SPN vs JWT de OBO
+
+La diferencia fundamental se ve decodificando ambos tokens. Aquí están lado a lado:
+
+### Claims que aparecen en ambos
+
+| Claim | Client Credentials (SPN) | On-Behalf-Of (delegado) | Qué cambia |
+|---|---|---|---|
+| `aud` | `api://mi-api-downstream` | `https://graph.microsoft.com` | El audience cambia porque cada token está dirigido a un recurso distinto. En una cadena OBO, el primer token tiene `aud: api://mi-bff`, el segundo `aud: api://mi-api-downstream`. |
+| `iss` | `https://login.microsoftonline.com/{tenantId}/v2.0` | Igual | El issuer siempre es Azure AD. |
+| `sub` | Igual al `appid` del BFF | Hash derivado del `oid` del usuario y `tid` | `sub` es diferente en cada flujo y por cada par (usuario, aplicación). No uses `sub` para identificar de forma estable; usa `oid`. |
+| `tid` | Tenant ID | Igual | El tenant es el mismo. |
+| `iat` / `exp` | Timestamps | Igual | Validez típica de 1 hora. |
+
+### Claims exclusivos de cada flujo
+
+| Claim | Client Credentials (SPN) | On-Behalf-Of (delegado) |
+|---|---|---|
+| `idtyp` | `"app"` | Ausente o `"user"` |
+| `roles` | Presente (ej: `["Api.Read"]`) | Ausente |
+| `scp` | Ausente | Presente (ej: `"User.Read"`) |
+| `oid` | Ausente | Presente (ej: `"pedro-user-id-1111..."`) |
+| `upn` | Ausente | Presente (ej: `"pedro@midominio.com"`) |
+| `name` | Ausente | Presente (ej: `"Pedro García"`) |
+| `appid` | Presente (BFF) | Presente (BFF, el intermediario OBO) |
+| `azp` | Ausente | Presente (SPA, la aplicación original) |
+
+### Cómo saber de un vistazo qué tipo de token tienes
+
+1. Mira `idtyp`: si es `"app"`, es client credentials. Si no está o es `"user"`, es delegado.
+2. Mira `scp` vs `roles`: scopes delegados (`scp`) = usuario presente. roles de aplicación (`roles`) =Sin usuario.
+3. Mira `oid`: si está, hay un usuario. Si no, es una aplicación actuando sola.
+
+### La claim que causa más confusión: `sub`
+
+En client credentials, `sub` es igual a `appid` (la aplicación). En OBO, `sub` es un hash distinto para cada par (usuario, aplicación). Esto significa que el mismo usuario que llama a dos APIs distintas tendrá dos `sub` diferentes. Si necesitas identificar al usuario de forma estable entre APIs, usa `oid`, no `sub`.
+
+### Otra confusión común: `appid` vs `azp`
+
+En un token OBO, hay dos claims de aplicación:
+
+- `appid`: la aplicación que hizo la petición al endpoint `/token`. En OBO, es el BFF (el intermediario).
+- `azp`: la aplicación original que inició el flujo de autenticación. En OBO, es el SPA.
+
+Si el SPA obtiene el token directamente (sin BFF), `appid` y `azp` son iguales. Solo cuando hay un intermediario OBO se diferencian.
+
+## Consentimiento y configuración: de SPN a OBO sin morir en el intento
+
+Migrar de client credentials a OBO implica cambios en tres sitios: la app registration del BFF, la app registration del SPA, y el consentimiento.
+
+### Qué cambiar en la app registration del BFF
+
+1. **Permisos**: quitar *Application Permissions* y añadir *Delegated Permissions* sobre la API downstream. Por ejemplo, quitar `Application.Read.All` y añadir `User.Read delegated`.
+2. **Exponer un scope**: en *Expose an API*, crear un scope como `api://mi-bff/access_as_user`. Este es el scope que el SPA solicitará para obtener el token dirigido al BFF.
+3. **`knownClientApplications`**: en el manifiesto de la app registration del BFF (o de la API downstream), listar el appId del SPA. Esto permite consentimiento en cascada: cuando el usuario consiente al SPA, automáticamente consiente los permisos que el BFF necesita sobre la API downstream.
+
+### Qué cambiar en la app registration del SPA
+
+1. **Permisos delegados**: añadir el scope del BFF (`api://mi-bff/access_as_user`) como permiso delegado.
+2. Sin este permiso, el SPA no puede obtener un token con `aud: api://mi-bff`.
+
+### Consentimiento
+
+Los permisos delegados pueden requerir consentimiento de usuario o de administrador, dependiendo del permiso:
+
+- **Permisos de bajo impacto** (por ejemplo, `User.Read`): el usuario puede consentir la primera vez que se autentica.
+- **Permisos de alto impacto** (por ejemplo, `Mail.Read`): requieren consentimiento de administrador.
+
+Si falta el consentimiento, la llamada OBO devuelve el error **AADSTS65001**. La resolución es consentir los permisos, ya sea mediante el flujo interactivo del SPA o a través del endpoint de consentimiento de administrador (`/adminconsent`).
+
+### El error más común al migrar
+
+El error **AADSTS50013** (Assertion failed signature validation) suele aparecer cuando el BFF intenta usar un token que no está dirigido a él como assertion. Recuerda: el BFF solo puede intercambiar un token cuyo `aud` es el propio BFF (`api://mi-bff/access_as_user`). Si intentas usar un token con `aud: https://graph.microsoft.com` como assertion, Azure AD lo rechazará.
+
+## Ejemplo mínimo: SPA (TypeScript) + BFF (Python)
+
+Esto es lo mínimo para ver el flujo completo. Sin Redis, sin caché, sin setup extenso. Solo el camino crítico.
+
+### SPA: obtener el token para el BFF
+
+```typescript
+import { PublicClientApplication } from "@azure/msal-browser";
+
+const msal = new PublicClientApplication({
+  auth: {
+    clientId: "spa-client-id",
+    authority: "https://login.microsoftonline.com/{tenantId}",
+  },
+});
+
+// Tras login interactivo:
+const result = await msal.acquireTokenSilent({
+  scopes: ["api://mi-bff/access_as_user"],
+});
+
+// result.accessToken tiene aud = api://mi-bff
+// Se envía al BFF en Authorization: Bearer <token>
+```
+
+### BFF: intercambiar el token por otro para la API downstream
+
+```python
+import msal
+import httpx
+
+app = msal.ConfidentialClientApplication(
+    client_id="bff-client-id",
+    client_credential="bff-client-secret",
+    authority="https://login.microsoftonline.com/{tenantId}",
+)
+
+def call_downstream(incoming_token: str):
+    # OBO: intercambiar el token del usuario por otro para la API downstream
+    result = app.acquire_token_on_behalf_of(
+        user_assertion=incoming_token,
+        scopes=["https://graph.microsoft.com/User.Read"],
+    )
+    if "error" in result:
+        raise Exception(result["error_description"])
+
+    downstream_token = result["access_token"]
+
+    # Llamar a la API downstream con el nuevo token
+    response = httpx.get(
+        "https://graph.microsoft.com/v1.0/me",
+        headers={"Authorization": f"Bearer {downstream_token}"},
+    )
+    return response.json()
+
+# En el endpoint del BFF:
+# incoming_token = request.headers["Authorization"].removeprefix("Bearer ")
+# profile = call_downstream(incoming_token)
+```
+
+### Qué cambia respecto al flujo SPN
+
+En client credentials, el BFF haría:
+
+```python
+# SPN: obtener token con su propia identidad, sin usuario
+result = app.acquire_token_for_client(scopes=["api://mi-api-downstream/.default"])
+# Este token tiene idtyp=app, roles, sin oid/upn/scp
+```
+
+En OBO, el BFF intercambia el token del usuario:
+
+```python
+# OBO: intercambiar el token del usuario por otro para la API downstream
+result = app.acquire_token_on_behalf_of(
+    user_assertion=incoming_token,
+    scopes=["https://graph.microsoft.com/User.Read"],
+)
+# Este token tiene oid, upn, scp, azp — identidad del usuario
+```
+
+La diferencia esentral: `acquire_token_for_client` (SPN) vs `acquire_token_on_behalf_of` (OBO). El primero no necesita token entrante. El segundo lo requiere como `user_assertion`.
+
+## Cuándo usar cada flujo
+
+| Criterio | Client Credentials (SPN) | On-Behalf-Of (delegado) |
+|---|---|---|
+| ¿Hay usuario? | No | Sí, el usuario original |
+| ¿La API downstream necesita saber quién es el usuario? | No | Sí |
+| Tipo de permisos | Application Permissions | Delegated Permissions |
+| Consentimiento | Solo admin | Admin o usuario |
+| Token contiene | `roles`, `idtyp=app` | `scp`, `oid`, `upn`, `azp` |
+| Caso de uso típico | Jobs, daemons, servicios de background | APIs que actúan en nombre de un usuario |
+| Configuración | app registration + secret + app permissions | app registration + secret + delegated permissions + scope expuesto + consentimiento |
+
+**La regla práctica**: si la API downstream necesita responder "¿quién es este usuario?" o actuar con los permisos de un usuario concreto, usa OBO. Si solo necesita verificar "¿tiene esta aplicación permiso para hacer esto?", usa client credentials. Y si hoy usáis SPN pero necesitáis impersonar al usuario, la migración consiste en cambiar Application Permissions por Delegated Permissions, exponer un scope en el BFF, y usar `acquire_token_on_behalf_of` en lugar de `acquire_token_for_client`.
+
+## Referencias
 
 - [Microsoft Identity Platform y OAuth 2.0 On-Behalf-Of flow](https://learn.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-on-behalf-of-flow)
+- [Microsoft Identity Platform y OAuth 2.0 Client Credentials flow](https://learn.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-client-creds-grant-flow)
+- [Application and service principal objects in Microsoft Entra ID](https://learn.microsoft.com/en-us/azure/active-directory/develop/app-objects-and-service-principals)
 - [MSAL.NET documentation](https://learn.microsoft.com/en-us/azure/active-directory/develop/msal-net-overview)
 - [MSAL Python documentation](https://learn.microsoft.com/en-us/azure/active-directory/develop/msal-python)
-- [RFC 8693 – OAuth 2.0 Token Exchange](https://datatracker.ietf.org/doc/html/rfc8693)
-- [Azure-Samples: active-directory-dotnet-native-aspnetcore-v2](https://github.com/Azure-Samples/active-directory-dotnet-native-aspnetcore-v2) (incluye OBO)
-- [Herramienta jwt.ms para decodificar tokens](https://jwt.ms)
-- [Microsoft.Identity.Web](https://github.com/AzureAD/microsoft-identity-web)
+- [jwt.ms para decodificar tokens](https://jwt.ms)
