@@ -71,6 +71,10 @@ def _publish_url(site_url: str, path: str) -> str:
 
 
 def _open_draft(env: dict, github: GitHubClient) -> int | None:
+    today = date.today().isoformat()
+    if github.article_exists_for_date(today):
+        print(f"Article for {today} already exists; skipping.")
+        return None
     issue = github.next_topic(skip=github.open_article_issue_numbers())
     if issue is None:
         print("No pending topics; nothing to publish.")

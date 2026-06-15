@@ -49,6 +49,7 @@ def test_pipeline_opens_draft_pr_before_review_and_merges(
     github_cls, llm_cls, _canonical_tags, _body_defects
 ):
     github = github_cls.return_value
+    github.article_exists_for_date.return_value = False
     github.next_topic.return_value = topic_issue()
     github.open_article_issue_numbers.return_value = set()
     github.open_pr.return_value = ("https://github.com/owner/repo/pull/9", 9)
@@ -86,6 +87,7 @@ def test_pipeline_does_not_update_taxonomy_when_writer_reuses_tag(
     github_cls, llm_cls, _canonical_tags, _body_defects
 ):
     github = github_cls.return_value
+    github.article_exists_for_date.return_value = False
     github.next_topic.return_value = topic_issue()
     github.open_article_issue_numbers.return_value = set()
     github.open_pr.return_value = ("https://github.com/owner/repo/pull/9", 9)
@@ -113,10 +115,22 @@ def test_pipeline_does_not_update_taxonomy_when_writer_reuses_tag(
 @patch("article_generator.pipeline.LLMClient")
 @patch("article_generator.pipeline.GitHubClient")
 def test_pipeline_skips_when_queue_is_empty(github_cls, llm_cls):
+    github_cls.return_value.article_exists_for_date.return_value = False
     github_cls.return_value.next_topic.return_value = None
 
     assert run(env()) == 0
 
+    llm_cls.assert_not_called()
+
+
+@patch("article_generator.pipeline.LLMClient")
+@patch("article_generator.pipeline.GitHubClient")
+def test_pipeline_skips_when_article_already_published_today(github_cls, llm_cls):
+    github_cls.return_value.article_exists_for_date.return_value = True
+
+    assert run(env()) == 0
+
+    github_cls.return_value.next_topic.assert_not_called()
     llm_cls.assert_not_called()
 
 

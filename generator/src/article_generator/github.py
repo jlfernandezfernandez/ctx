@@ -45,6 +45,20 @@ class GitHubClient:
                 f"{response.text[:500]}"
             )
 
+    def article_exists_for_date(self, date_prefix: str) -> bool:
+        """Return True if an article file for the given date already exists on main."""
+        resp = self.session.get(
+            f"{self.base}/contents/site/src/content/blog",
+            params={"ref": "main", "per_page": 100},
+        )
+        if resp.status_code == 404:
+            return False
+        self._require(resp, (200,), "list blog directory")
+        for entry in resp.json():
+            if entry.get("type") == "file" and entry["name"].startswith(date_prefix) and entry["name"].endswith(".md"):
+                return True
+        return False
+
     # --- Topic queue (issues) ---
 
     def next_topic(self, skip: set[int] = frozenset()) -> dict | None:
