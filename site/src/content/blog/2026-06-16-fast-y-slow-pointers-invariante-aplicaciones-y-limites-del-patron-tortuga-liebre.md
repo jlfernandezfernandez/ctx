@@ -7,6 +7,7 @@ summary: "Dos punteros que avanzan a distinta velocidad crean una relación de d
 issue: 30
 requestedBy: "charliecgu"
 writer: "deepseek-v4-pro"
+reviewer: "minimax-m3"
 ---
 
 La técnica de fast and slow pointers —también conocida como tortoise and hare— resuelve múltiples problemas sobre secuencias con una idea sorprendentemente simple: dos referencias que avanzan a distinta velocidad crean una relación de distancia predecible. Esa relación permite detectar ciclos, encontrar puntos medios o localizar entradas de ciclo sin memoria adicional. El patrón no se limita a listas enlazadas; cualquier estructura con una función `next` determinista y un único sucesor por elemento puede analizarse con él. Su potencia está en el invariante matemático que gobierna el encuentro de los punteros, y sus limitaciones aparecen cuando la secuencia no es unidireccional o se rompe la relación de pasos.
