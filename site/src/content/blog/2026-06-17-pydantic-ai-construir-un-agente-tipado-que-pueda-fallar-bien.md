@@ -7,6 +7,7 @@ summary: "Pydantic AI modela los fallos de agentes de IA como estados tipados, p
 issue: 27
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"
+reviewer: "minimax-m3"
 ---
 
 Los agentes de IA en producción se enfrentan a una realidad incómoda: los modelos de lenguaje son inherentemente estocásticos. Un *tool call* malformado, un JSON que no respeta el esquema prometido o una alucinación en los parámetros pueden descarrilar un flujo de trabajo sin previo aviso. Los SDK nativos de los proveedores delegan en el desarrollador la responsabilidad de detectar, tipificar y recuperar estos fallos, lo que suele traducirse en bloques *try/except* frágiles, reintentos manuales y una ausencia total de contratos programáticos. En el otro extremo, frameworks de orquestación como LangGraph ofrecen grafos potentes pero opacos: los errores se propagan por nodos y aristas sin una representación explícita, y depurar un fallo en producción se convierte en arqueología de trazas.
