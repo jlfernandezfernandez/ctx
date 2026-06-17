@@ -2,6 +2,7 @@
 import type { CollectionEntry } from 'astro:content';
 import { BASE } from '../consts';
 import FormattedDate from './FormattedDate.astro';
+import { getReadingTime } from '../utils/reading-time';
 
 interface Props {
 	posts: CollectionEntry<'blog'>[];
@@ -16,7 +17,7 @@ const { posts } = Astro.props;
 			<li>
 				<span class="index">{String(index + 1).padStart(2, '0')}</span>
 				<span class="date">
-					<FormattedDate date={post.data.date} />
+					<FormattedDate date={post.data.date} /> · {getReadingTime(post.body)} min
 				</span>
 				<a href={`${BASE}/blog/${post.id}/`}>{post.data.title}</a>
 				<span class="arrow" aria-hidden="true">→</span>

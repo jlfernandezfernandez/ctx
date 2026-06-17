@@ -6,7 +6,7 @@ import TopicQueue from '../components/TopicQueue.astro';
 import Page from './Page.astro';
 import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 
-type Props = CollectionEntry<'blog'>['data'] & { headings?: MarkdownHeading[] };
+type Props = CollectionEntry<'blog'>['data'] & { headings?: MarkdownHeading[]; readingTime?: number };
 
 const {
 	title,
@@ -19,13 +19,14 @@ const {
 	writer,
 	reviewer,
 	headings = [],
+	readingTime,
 } = Astro.props;
 ---
 
 <Page title={`${SITE_TITLE} — ${title}`} description={description}>
 	<article>
 		<div class="prose" data-pagefind-body>
-			<ArticleHeader {title} {date} {tags} {issue} {requestedBy} {writer} {reviewer} />
+			<ArticleHeader {title} {date} {tags} {issue} {requestedBy} {writer} {reviewer} {readingTime} />
 			{
 				summary && (
 					<aside class="tldr">
