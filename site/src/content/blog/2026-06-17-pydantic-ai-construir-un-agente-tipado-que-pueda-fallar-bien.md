@@ -38,19 +38,26 @@ Si el modelo devuelve un JSON que no respeta el esquema —por ejemplo, omite el
 El tipo `RunResult` es el contenedor central de la librería. Cada ejecución del agente produce una instancia con:
 
 - `data`: el modelo Pydantic validado, o `None` si la validación falló.
-- `_all_messages`: la historia completa de mensajes intercambiados con el LLM, incluyendo los *tool calls* y sus resultados.
-- `_usage`: consumo de tokens.
-- Métodos auxiliares como `result.retry()` o `result.new_messages()` para construir reintentos sin perder el contexto.
+- `all_messages()`: la historia completa de mensajes intercambiados con el LLM, incluyendo los *tool calls* y sus resultados.
+- `usage()`: consumo de tokens y número de peticiones realizadas.
+- Métodos como `new_messages()` para obtener solo los mensajes generados en la última ejecución y continuar una conversación.
 
 Esta estructura obliga a manejar explícitamente el caso de fallo. No hay excepciones ocultas: si `result.data` es `None`, el desarrollador debe decidir qué hacer. El tipado estático de Python (con `mypy` o `pyright`) refuerza esta disciplina en tiempo de desarrollo.
 
 ## Herramientas que fallan bien
 
-Las herramientas son la principal fuente de errores en un agente: APIs externas que no responden, parámetros inválidos, *rate limiting*. El patrón tradicional de lanzar excepciones rompe el flujo del LLM y dificulta la recuperación automática. Pydantic AI introduce `ToolResult` como tipo de retorno para las herramientas, permitiendo que el fallo sea un valor más en el diálogo.
+Las herramientas son la principal fuente de errores en un agente: APIs externas que no responden, parámetros inválidos, *rate limiting*. El patrón tradicional de lanzar excepciones rompe el flujo del LLM y dificulta la recuperación automática. Pydantic AI permite que las herramientas devuelvan información estructurada sobre el fallo, de modo que el error sea un valor más en el diálogo. Una forma eficaz es definir un modelo de respuesta que encapsule tanto el éxito como el fracaso.
 
 ```python
-from pydantic_ai import Agent, ToolResult, RunContext
+from pydantic import BaseModel
+from pydantic_ai import Agent, RunContext
 import httpx
+
+class ToolResponse(BaseModel):
+    success: bool
+    data: str | None = None
+    error_type: str | None = None
+    error_message: str | None = None
 
 class SupportDeps(BaseModel):
     client_id: str
@@ -58,7 +65,7 @@ class SupportDeps(BaseModel):
 
 async def search_knowledge_base(
     ctx: RunContext[SupportDeps], query: str
-) -> ToolResult[str]:
+) -> ToolResponse:
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
@@ -69,55 +76,55 @@ async def search_knowledge_base(
             )
             response.raise_for_status()
             data = response.json()
-            return ToolResult(data["answer"])
+            return ToolResponse(success=True, data=data["answer"])
     except httpx.TimeoutException:
-        return ToolResult(
+        return ToolResponse(
             success=False,
             error_type="timeout",
             error_message="La búsqueda excedió el tiempo límite."
         )
     except httpx.HTTPStatusError as e:
-        return ToolResult(
+        return ToolResponse(
             success=False,
             error_type="upstream_error",
             error_message=f"Error del servicio: {e.response.status_code}"
         )
 ```
 
-El agente recibe el `ToolResult` como parte del historial de mensajes. Si `success=False`, el LLM puede interpretar el error y decidir reintentar, usar otra herramienta o pedir ayuda al usuario. El contrato tipado de la herramienta (`ToolResult[str]`) garantiza que el agente siempre recibe una respuesta con la misma forma, ya sea un éxito o un fallo estructurado.
+El agente recibe el `ToolResponse` como parte del historial de mensajes. Si `success=False`, el LLM puede interpretar el error y decidir reintentar, usar otra herramienta o pedir ayuda al usuario. El contrato tipado de la herramienta (`ToolResponse`) garantiza que el agente siempre recibe una respuesta con la misma forma, ya sea un éxito o un fallo estructurado. Alternativamente, para errores que deben forzar un reintento inmediato, se puede lanzar `ModelRetry` desde la herramienta, lo que indica al runtime que reintente la llamada al modelo con un mensaje de error.
 
 ## Estrategias de recuperación tipadas
 
-Pydantic AI ofrece reintentos configurables a nivel de agente y de herramienta, pero el verdadero valor está en la capacidad de implementar lógica de recuperación basada en el tipo de error, no en heurísticas frágiles.
+Pydantic AI ofrece reintentos configurables a nivel de agente para fallos de validación, pero el verdadero valor está en la capacidad de implementar lógica de recuperación basada en el tipo de error, no en heurísticas frágiles.
 
-Cuando una herramienta devuelve `ToolResult(success=False, error_type="timeout")`, el agente puede decidir reintentar automáticamente porque el error es transitorio. Si el error es `"upstream_error"` con código 403, probablemente sea permanente y requiera un *fallback*.
+Cuando una herramienta devuelve `ToolResponse(success=False, error_type="timeout")`, el agente puede decidir reintentar automáticamente porque el error es transitorio. Si el error es `"upstream_error"` con código 403, probablemente sea permanente y requiera un *fallback*.
 
 ```python
-from pydantic_ai import Agent, RetryPolicy
+from pydantic_ai import Agent
 
 support_agent = Agent(
     "openai:gpt-4o",
     deps_type=SupportDeps,
     result_type=SupportResponse,
     tools=[search_knowledge_base, create_ticket],
-    retry_policy=RetryPolicy(max_retries=2, delay=1.0)
+    retries=2  # reintentos ante fallo de validación del result_type
 )
 ```
 
-El *retry policy* del agente reintenta automáticamente cuando el modelo produce una respuesta que no pasa la validación Pydantic. Para errores de herramienta, la decisión de reintentar recae en el LLM, que ve el `ToolResult` fallido y puede invocar la herramienta de nuevo con parámetros ajustados. Esto evita reintentos ciegos que consumen tokens sin sentido.
+El parámetro `retries` controla cuántas veces el agente reintenta automáticamente cuando el modelo produce una respuesta que no pasa la validación Pydantic. Para errores de herramienta, la decisión de reintentar recae en el LLM, que ve el `ToolResponse` fallido y puede invocar la herramienta de nuevo con parámetros ajustados. Esto evita reintentos ciegos que consumen tokens sin sentido.
 
 Para fallos permanentes, se pueden definir *fallbacks* declarativos. Un agente de soporte puede escalar de una FAQ a una búsqueda en base de conocimiento y, si ambas fallan, crear un ticket para un operador humano:
 
 ```python
-async def faq_lookup(ctx: RunContext[SupportDeps], question: str) -> ToolResult[str]:
+async def faq_lookup(ctx: RunContext[SupportDeps], question: str) -> ToolResponse:
     # ...
 
-async def kb_search(ctx: RunContext[SupportDeps], query: str) -> ToolResult[str]:
+async def kb_search(ctx: RunContext[SupportDeps], query: str) -> ToolResponse:
     # ...
 
-async def escalate_to_human(ctx: RunContext[SupportDeps], summary: str) -> ToolResult[str]:
+async def escalate_to_human(ctx: RunContext[SupportDeps], summary: str) -> ToolResponse:
     # siempre éxito, crea ticket
-    return ToolResult(f"Ticket creado: {ticket_id}")
+    return ToolResponse(success=True, data=f"Ticket creado: {ticket_id}")
 
 support_agent = Agent(
     "openai:gpt-4o",
@@ -127,32 +134,31 @@ support_agent = Agent(
 )
 ```
 
-El *system prompt* puede instruir al modelo para que intente primero `faq_lookup`, luego `kb_search` y finalmente `escalate_to_human`. Como cada herramienta devuelve un `ToolResult` con información de error, el LLM tiene contexto suficiente para decidir la escalación sin lógica adicional en código.
+El *system prompt* puede instruir al modelo para que intente primero `faq_lookup`, luego `kb_search` y finalmente `escalate_to_human`. Como cada herramienta devuelve un `ToolResponse` con información de error, el LLM tiene contexto suficiente para decidir la escalación sin lógica adicional en código.
 
 ## Observabilidad: fallos visibles y trazables
 
-En producción, un agente que falla silenciosamente es un riesgo. Pydantic AI integra OpenTelemetry de forma nativa, exponiendo trazas detalladas de cada paso: llamadas al modelo, ejecuciones de herramientas, validaciones y reintentos.
+En producción, un agente que falla silenciosamente es un riesgo. Pydantic AI se integra con Logfire —una capa de observabilidad basada en OpenTelemetry— para exponer trazas detalladas de cada paso: llamadas al modelo, ejecuciones de herramientas, validaciones y reintentos.
 
 ```python
-from pydantic_ai import Agent
-from opentelemetry.instrumentation.pydantic_ai import PydanticAIInstrumentor
+import logfire
 
-PydanticAIInstrumentor().instrument()
+logfire.instrument_pydantic_ai()
 ```
 
 Cada ejecución genera una traza con spans para:
 - La llamada al LLM (incluyendo tokens consumidos y modelo usado).
 - Cada *tool call* (con parámetros y resultado, éxito o fallo).
 - La validación del resultado estructurado (con detalles del error de validación si ocurre).
-- Los reintentos automáticos por `ModelRetry`.
+- Los reintentos automáticos por `ModelRetry` o por fallo de validación.
 
-Los errores de herramienta aparecen como eventos dentro del span de la herramienta, con atributos `error_type` y `error_message`. Esto permite construir dashboards que monitoricen tasas de fallo por tipo de error, latencia de herramientas y frecuencia de reintentos, sin necesidad de parsear logs informales.
+Los errores de herramienta aparecen como eventos dentro del span de la herramienta, con atributos `error_type` y `error_message` si se utiliza un modelo como `ToolResponse`. Esto permite construir dashboards que monitoricen tasas de fallo por tipo de error, latencia de herramientas y frecuencia de reintentos, sin necesidad de parsear logs informales.
 
-Además, el objeto `RunResult` puede inspeccionarse directamente para diagnóstico *post-mortem*. `result.all_messages()` devuelve la conversación completa, incluyendo los `ToolResult` fallidos, lo que facilita entender por qué el agente tomó una decisión equivocada.
+Además, el objeto `RunResult` puede inspeccionarse directamente para diagnóstico *post-mortem*. `result.all_messages()` devuelve la conversación completa, incluyendo las respuestas fallidas de las herramientas, lo que facilita entender por qué el agente tomó una decisión equivocada.
 
 ## Pruebas que abrazan el fallo
 
-Probar agentes de IA es notoriamente difícil por la no determinismo de los LLM. Pydantic AI proporciona `TestModel`, un modelo determinista que permite simular respuestas específicas del LLM, incluyendo salidas malformadas, *tool calls* erróneos y fallos de validación.
+Probar agentes de IA es notoriamente difícil por el no determinismo de los LLM. Pydantic AI proporciona `TestModel`, un modelo determinista que permite simular respuestas específicas del LLM, incluyendo salidas malformadas, *tool calls* erróneos y fallos de validación.
 
 ```python
 from pydantic_ai import Agent
@@ -162,13 +168,14 @@ test_model = TestModel()
 agent = Agent("openai:gpt-4o", model=test_model, result_type=WeatherReport)
 
 # Simular una respuesta que falla la validación
-test_model.set_output(
+test_model.custom_output_text = (
     '{"temperature_celsius": "veinte", "conditions": "soleado"}'
 )
 
 result = await agent.run("¿Qué tiempo hace en Madrid?")
 assert result.data is None
-assert "humidity_percent" in str(result._validation_error)
+# El agente habrá reintentado según la configuración; podemos verificarlo
+assert result.usage().request_count > 1
 ```
 
 Para probar herramientas con dependencias, se inyectan dobles de prueba:
@@ -182,7 +189,7 @@ async def test_kb_search_timeout():
     assert result.error_type == "timeout"
 ```
 
-Las pruebas de integración pueden verificar caminos de recuperación completos. Por ejemplo, se puede simular que `faq_lookup` falla con `ToolResult(success=False, error_type="not_found")` y verificar que el agente escala correctamente a `kb_search` y finalmente a `escalate_to_human`, validando el `SupportResponse` final.
+Las pruebas de integración pueden verificar caminos de recuperación completos. Por ejemplo, se puede simular que `faq_lookup` falla con `ToolResponse(success=False, error_type="not_found")` y verificar que el agente escala correctamente a `kb_search` y finalmente a `escalate_to_human`, validando el `SupportResponse` final.
 
 La evaluación sistemática con datasets de casos de fallo —preguntas ambiguas, dependencias caídas, *rate limits*— se convierte en una práctica de CI. Al no depender de un LLM real, las pruebas son rápidas, repetibles y no consumen tokens.
 
@@ -197,7 +204,7 @@ Ofrecen acceso directo a la API, pero delegan todo el manejo de errores al desar
 LangGraph permite construir agentes como grafos dirigidos, con nodos que representan pasos y aristas que modelan transiciones. Es potente para flujos complejos, pero los errores quedan atrapados en la topología del grafo. Un fallo en un nodo puede requerir lógica condicional para redirigir el flujo, y el estado del error no está tipado de forma uniforme. La depuración se basa en inspeccionar el estado del grafo, que suele ser un diccionario opaco. La observabilidad depende de *callbacks* y logging manual. La resiliencia se construye caso a caso, sin un modelo de fallo reutilizable.
 
 **Pydantic AI**  
-Trata los errores como ciudadanos de primera clase. Cada interacción produce un resultado tipado que el programa puede examinar. La validación de salidas es automática y está integrada en el ciclo de vida del agente. Las herramientas devuelven `ToolResult`, encapsulando el éxito y el fracaso en un mismo tipo. Los reintentos y *fallbacks* se expresan con políticas declarativas o lógica ordinaria, no con malabares de excepciones. La observabilidad es nativa y estructurada. El *trade-off* es una capa de abstracción adicional, pero elimina el *boilerplate* repetitivo que los SDK nativos exigen y reduce la superficie de error que LangGraph oculta.
+Trata los errores como ciudadanos de primera clase. Cada interacción produce un resultado tipado que el programa puede examinar. La validación de salidas es automática y está integrada en el ciclo de vida del agente. Las herramientas pueden devolver modelos estructurados como `ToolResponse`, encapsulando el éxito y el fracaso en un mismo tipo. Los reintentos y *fallbacks* se expresan con políticas declarativas (`retries`) o lógica ordinaria, no con malabares de excepciones. La observabilidad es nativa y estructurada a través de Logfire. El *trade-off* es una capa de abstracción adicional, pero elimina el *boilerplate* repetitivo que los SDK nativos exigen y reduce la superficie de error que LangGraph oculta.
 
 ## De prototipo a producción
 
@@ -220,7 +227,7 @@ prod_deps = ProductionDeps(
 result = await support_agent.run(user_query, deps=prod_deps)
 ```
 
-Para observabilidad continua, además de las trazas de OpenTelemetry, conviene emitir métricas de negocio: tasa de fallos por tipo de error, latencia de herramientas, porcentaje de escalaciones a operador humano. Estas métricas pueden calcularse a partir de los `ToolResult` y `RunResult` producidos, y exponerse vía Prometheus o similar.
+Para observabilidad continua, además de las trazas de Logfire, conviene emitir métricas de negocio: tasa de fallos por tipo de error, latencia de herramientas, porcentaje de escalaciones a operador humano. Estas métricas pueden calcularse a partir de los `ToolResponse` y `RunResult` producidos, y exponerse vía Prometheus o similar.
 
 La degradación *graceful* es la propiedad de que el agente siempre devuelve una respuesta útil, incluso cuando algunas herramientas fallan. El tipo `SupportResponse` puede incluir un campo `fallback_used: bool` y un mensaje que informe al usuario de que la respuesta es parcial. El *system prompt* puede instruir al modelo para que, ante fallos irrecuperables, genere una respuesta honesta en lugar de alucinar.
 
