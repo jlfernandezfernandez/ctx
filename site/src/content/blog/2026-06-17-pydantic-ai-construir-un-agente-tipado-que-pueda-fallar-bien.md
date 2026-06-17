@@ -28,7 +28,7 @@ class WeatherReport(BaseModel):
 
 weather_agent = Agent(
     "openai:gpt-4o",
-    result_type=WeatherReport,
+    output_type=WeatherReport,
     system_prompt="Devuelve un informe meteorológico estructurado."
 )
 ```
@@ -105,9 +105,9 @@ from pydantic_ai import Agent
 support_agent = Agent(
     "openai:gpt-4o",
     deps_type=SupportDeps,
-    result_type=SupportResponse,
+    output_type=SupportResponse,
     tools=[search_knowledge_base, create_ticket],
-    retries=2  # reintentos ante fallo de validación del result_type
+    retries=2  # reintentos ante fallo de validación del output_type
 )
 ```
 
@@ -130,7 +130,7 @@ support_agent = Agent(
     "openai:gpt-4o",
     deps_type=SupportDeps,
     tools=[faq_lookup, kb_search, escalate_to_human],
-    result_type=SupportResponse
+    output_type=SupportResponse
 )
 ```
 
@@ -165,7 +165,7 @@ from pydantic_ai import Agent
 from pydantic_ai.models.test import TestModel
 
 test_model = TestModel()
-agent = Agent("openai:gpt-4o", model=test_model, result_type=WeatherReport)
+agent = Agent("openai:gpt-4o", model=test_model, output_type=WeatherReport)
 
 # Simular una respuesta que falla la validación
 test_model.custom_output_text = (
