@@ -9,10 +9,26 @@ body:
         Un curador automático corregirá errores obvios del título y comprobará que sea un tema técnico válido.
         Si hay dudas, la propuesta quedará pendiente de revisión humana.
   - type: textarea
-    id: notas
+    id: motivacion
     attributes:
-      label: Notas de enfoque
-      description: Opcional. Qué no entendéis, con qué compararlo, qué casos cubrir. Se inyectan al prompt del artículo.
-      placeholder: "No entendemos el paradigma reactivo. Partir de código imperativo y compararlo."
+      label: Motivación
+      description: Opcional. Qué te trae a este tema.
+      placeholder: "¿Qué problema o duda te motiva a proponer este tema?"
+    validations:
+      required: false
+  - type: textarea
+    id: que_ya_sabes
+    attributes:
+      label: Qué ya sabes
+      description: Opcional. Qué partes tienes claras y qué partes no.
+      placeholder: "¿Qué sabes ya del tema y qué te gustaría aprender?"
+    validations:
+      required: false
+  - type: textarea
+    id: caso_concreto
+    attributes:
+      label: Caso concreto
+      description: Opcional. Un caso o ejemplo concreto que te interese cubrir.
+      placeholder: "¿Hay algún caso de uso o ejemplo específico que quieras ver?"
     validations:
       required: false
