@@ -73,9 +73,7 @@ represente ese eje central"""
 
 def rewrite_prompt(topic: str, body: str, feedback: list[str], attempt: int = 1) -> str:
     issues = "\n".join(f"- {item}" for item in feedback)
-    retry = ""
-    if attempt >= 2:
-        retry = "\nEl intento anterior produjo Markdown inválido. Conserva intacto todo lo no afectado."
+    retry = "\nEl intento anterior produjo Markdown inválido. Conserva intacto todo lo no afectado." if attempt >= 2 else ""
     return f"""Corrige este artículo técnico sobre: {topic}
 
 <articulo>

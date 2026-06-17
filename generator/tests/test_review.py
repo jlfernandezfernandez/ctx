@@ -105,6 +105,24 @@ def test_suggestions_do_not_block_publication(github_cls, llm_cls, _body_defects
     github.merge_pr.assert_called_once()
 
 
+@patch("article_generator.pipeline.LLMClient")
+@patch("article_generator.pipeline.GitHubClient")
+def test_oversize_article_blocks_without_calling_reviewer(github_cls, llm_cls):
+    github = setup_github(github_cls)
+    long_body = "## Sección\n\n" + ("palabra " * 1400)
+    github.read_file.return_value = FRONTMATTER + long_body
+    reviewer, writer = setup_llms(llm_cls, [APPROVED])
+
+    assert run(env(max_rounds="0")) == 0
+
+    reviewer.generate_json.assert_not_called()
+    writer.generate.assert_not_called()
+    github.merge_pr.assert_not_called()
+    comment = github.comment.call_args.args[1]
+    assert "[legibilidad]" in comment
+    assert "1401" in comment and "1300" in comment
+
+
 @patch("article_generator.pipeline._body_defects", return_value=[])
 @patch("article_generator.pipeline.LLMClient")
 @patch("article_generator.pipeline.GitHubClient")
