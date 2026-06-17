@@ -108,19 +108,13 @@ def test_get_issue_returns_issue():
     assert c.get_issue(7) == payload
 
 
-def test_update_issue_sends_only_given_fields():
+def test_update_issue_patches_title_and_body():
     c = make_client()
     c.update_issue(7, title="Pydantic AI", body="Mejor descripción")
     c.session.patch.assert_called_once_with(
         "https://api.github.com/repos/owner/repo/issues/7",
         json={"title": "Pydantic AI", "body": "Mejor descripción"},
     )
-
-
-def test_update_issue_no_op_when_no_changes():
-    c = make_client()
-    c.update_issue(7)
-    c.session.patch.assert_not_called()
 
 
 def test_set_labels_replaces_all_issue_labels():

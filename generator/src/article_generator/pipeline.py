@@ -10,6 +10,7 @@ from .agents.reviewer import review_article, split_issues
 from .agents.triage import Classification, TriageError, classify
 from .agents.writer import revise_article, write_article
 from .article import (
+    MAX_WORDS_PER_ARTICLE,
     ValidationError,
     parse_title_and_tags,
     render_article,
@@ -18,6 +19,7 @@ from .article import (
     split_frontmatter,
     validate_body,
     validate_tags,
+    word_count,
 )
 from .github import (
     PRIORITY_LABEL,
@@ -49,11 +51,18 @@ def _updated_taxonomy(canonical_tags: list[str], article_tags: list[str]) -> lis
 
 
 def _body_defects(body: str) -> list[str]:
+    defects = []
     try:
         validate_body(body)
-        return []
     except ValidationError as exc:
-        return [f"[validacion] {exc}"]
+        defects.append(f"[validacion] {exc}")
+    words = word_count(body)
+    if words > MAX_WORDS_PER_ARTICLE:
+        defects.append(
+            f"[legibilidad] El artículo tiene {words} palabras; el techo es "
+            f"{MAX_WORDS_PER_ARTICLE} (~5 min). Recorta secciones secundarias."
+        )
+    return defects
 
 
 def _issue_number(pr_body: str) -> int | None:

@@ -11,6 +11,7 @@ from article_generator.article import (
     slugify,
     validate_body,
     validate_tags,
+    word_count,
 )
 
 
@@ -144,6 +145,24 @@ def test_sign_reviewer_adds_line_before_closing():
     fm = '---\ntitle: "X"\nwriter: "writer-m"\n---\n\n'
     signed = sign_reviewer(fm, "reviewer-m")
     assert '\nreviewer: "reviewer-m"\n---\n' in signed
+
+
+def test_word_count_ignores_frontmatter():
+    content = '---\ntitle: "Largo título con varias palabras"\ndate: 2026-06-17\n---\n\nDos palabras.'
+    assert word_count(content) == 2
+
+
+def test_word_count_excludes_fenced_code_blocks():
+    body = (
+        "## Sección\n\nUna línea de prosa.\n\n"
+        "```python\nfor i in range(100): print('hola mundo')\n```\n\n"
+        "Otra línea."
+    )
+    assert word_count(body) == 7
+
+
+def test_word_count_handles_unicode_words():
+    assert word_count("La función reduce el árbol a una hoja.") == 8
 
 
 def test_sign_reviewer_is_idempotent():

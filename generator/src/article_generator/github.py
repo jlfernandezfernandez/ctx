@@ -81,27 +81,16 @@ class GitHubClient:
         ]
         pool = priority or issues
         # Most 👍 reactions wins; ties go to the oldest issue.
-        return sorted(
-            pool,
-            key=lambda i: (-i.get("reactions", {}).get("+1", 0), i["created_at"]),
-        )[0]
+        return min(pool, key=lambda i: (-i.get("reactions", {}).get("+1", 0), i["created_at"]))
 
     def get_issue(self, number: int) -> dict:
         resp = self.session.get(f"{self.base}/issues/{number}")
         self._require(resp, (200,), f"get issue #{number}")
         return resp.json()
 
-    def update_issue(self, number: int, *, title: str = None, body: str = None) -> None:
-        data = {}
-        if title is not None:
-            data["title"] = title
-        if body is not None:
-            data["body"] = body
-        if not data:
-            return
+    def update_issue(self, number: int, *, title: str, body: str) -> None:
         resp = self.session.patch(
-            f"{self.base}/issues/{number}",
-            json=data,
+            f"{self.base}/issues/{number}", json={"title": title, "body": body}
         )
         self._require(resp, (200,), f"update issue #{number}")
 

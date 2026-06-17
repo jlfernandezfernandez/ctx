@@ -8,6 +8,10 @@ import unicodedata
 from datetime import date
 
 MAX_TAGS_PER_ARTICLE = 3
+MAX_WORDS_PER_ARTICLE = 1300
+
+_FENCED_CODE = re.compile(r"```.*?```", re.DOTALL)
+_WORD = re.compile(r"\w+")
 
 
 FRONTMATTER = re.compile(r"\A(---\n.*?\n---\n+)", re.DOTALL)
@@ -58,9 +62,16 @@ def validate_body(body: str) -> None:
     if not body.strip():
         raise ValidationError("Body is empty")
 
-    headings = _parse_headings(body)
-    _validate_headings(headings)
-    _validate_code_fences(body)
+    _validate_headings(_parse_headings(body))
+    if sum(1 for line in body.splitlines() if line.strip().startswith("```")) % 2:
+        raise ValidationError("Body contains an unclosed fenced code block")
+
+
+def word_count(markdown: str) -> int:
+    """Count prose words in markdown, excluding frontmatter and fenced code blocks."""
+    _, body = split_frontmatter(markdown)
+    prose = _FENCED_CODE.sub("", body)
+    return len(_WORD.findall(prose))
 
 
 def validate_tags(tags: list[str]) -> None:
@@ -99,20 +110,13 @@ def _validate_headings(headings: list[tuple[int, str]]) -> None:
         previous_level = level
 
 
-def _validate_code_fences(body: str) -> None:
-    if sum(1 for line in body.splitlines() if line.strip().startswith("```")) % 2:
-        raise ValidationError("Body contains an unclosed fenced code block")
-
-
 def make_description(body: str) -> str:
-    for paragraph in body.split("\n\n"):
-        text = paragraph.strip()
-        if not text or text.startswith("#") or text.startswith("```"):
-            continue
-        text = re.sub(r"[*_`]", "", text)
-        text = re.sub(r"\s+", " ", text)
-        return text[:200].strip()
-    return ""
+    paragraphs = (p.strip() for p in body.split("\n\n"))
+    prose = next(
+        (p for p in paragraphs if p and not p.startswith(("#", "```"))),
+        "",
+    )
+    return re.sub(r"\s+", " ", re.sub(r"[*_`]", "", prose))[:200].strip()
 
 
 def _yaml_str(value: str) -> str:
