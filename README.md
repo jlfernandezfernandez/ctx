@@ -4,9 +4,9 @@
 
 [![CI](https://github.com/jlfernandezfernandez/ctx/actions/workflows/ci.yml/badge.svg)](https://github.com/jlfernandezfernandez/ctx/actions/workflows/ci.yml) [![Deploy site](https://github.com/jlfernandezfernandez/ctx/actions/workflows/deploy.yml/badge.svg)](https://github.com/jlfernandezfernandez/ctx/actions/workflows/deploy.yml)
 
-Un deep dive técnico al día. Para vibe coders que quieren entender qué pasa por debajo.
+Una píldora técnica al día. Para vibe coders que quieren entender qué pasa por debajo.
 
-Cada día laborable, un artículo técnico en profundidad sobre un tema propuesto y votado por el equipo. Desde cero hasta donde una newsletter generalista no llega.
+Cada día laborable, un artículo técnico concentrado sobre un tema propuesto y votado por el equipo. Un concepto, bien explicado, en ~5 minutos.
 
 ## Cómo funciona
 

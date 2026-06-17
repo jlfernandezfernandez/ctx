@@ -9,9 +9,10 @@ interface Props {
 	requestedBy?: string;
 	writer?: string;
 	reviewer?: string;
+	readingTime?: number;
 }
 
-const { title, date, tags = [], issue, requestedBy, writer, reviewer } = Astro.props;
+const { title, date, tags = [], issue, requestedBy, writer, reviewer, readingTime } = Astro.props;
 ---
 
 <div class="title">
@@ -20,6 +21,9 @@ const { title, date, tags = [], issue, requestedBy, writer, reviewer } = Astro.p
 	<div class="meta">
 		<span class="fence">---</span>
 		<div><span class="key">date:</span> <span class="value">{date.toISOString().slice(0, 10)}</span></div>
+		{readingTime && (
+			<div><span class="key">reading_time:</span> <span class="value">{readingTime} min</span></div>
+		)}
 		{tags.length > 0 && (
 			<div>
 				<span class="key">tags:</span>
