@@ -7,6 +7,7 @@ summary: "Virtual threads eliminan la gestión manual de pools y simplifican la 
 issue: 25
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"
+reviewer: "minimax-m3"
 ---
 
 Un servicio concreto como hilo conductor
