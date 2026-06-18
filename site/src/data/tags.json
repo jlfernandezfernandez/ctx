@@ -3,6 +3,7 @@
   "algorithms",
   "auth",
   "azure",
+  "concurrency",
   "java",
   "kafka",
   "reactive",
