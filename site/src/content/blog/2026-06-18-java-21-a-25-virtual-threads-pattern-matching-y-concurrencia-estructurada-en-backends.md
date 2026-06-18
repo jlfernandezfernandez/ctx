@@ -80,7 +80,7 @@ El código usa `ScopedValue` y `StructuredTaskScope` (aún preview/incubator) pa
 - No sustituyen backpressure ni streaming reactivo. Si el servicio necesita control de flujo extremo a extremo (WebFlux, RSocket), los virtual threads no ofrecen mecanismos nativos de backpressure; el modelo reactivo sigue siendo la herramienta adecuada.
 - No aceleran tareas CPU-bound puras. El scheduler de virtual threads no añade paralelismo real para cálculos intensivos; ahí sigue siendo necesario un pool de plataforma o el ForkJoinPool.
 - Pinning: bloques `synchronized` o llamadas JNI que no liberan el carrier thread provocan que un virtual thread acapare un hilo de plataforma, degradando el rendimiento. Es necesario revisar librerías (drivers JDBC antiguos, clientes HTTP) y reemplazar `synchronized` por `ReentrantLock` donde sea posible.
-- Observabilidad: un thread dump tradicional puede contener miles de virtual threads, volviéndose ilegible. Java 21 introdujo eventos JFR (`jdk.VirtualThreadStart`, `jdk.VirtualThreadPinned`) y el comando `jcmd <pid> Thread.dump_to_file -format=json` para filtrar y analizar. Las herramientas de APM deben adaptarse.
+- Observabilidad: un thread dump tradicional puede contener miles de virtual threads, volviéndose ilegible. Java 21 introdujo eventos JFR (`jdk.VirtualThreadStart`, `jdk.VirtualThreadPinned`) y el comando `jcmd <pid> Thread.dump_to_file` para volcados en texto plano; Java 24 añadió `-format=json` para facilitar el análisis automatizado. Las herramientas de APM deben adaptarse.
 
 Pattern matching y modelado de datos: de la comprobación manual a la exhaustividad
 -----------------------------------------------------------------------------------
@@ -111,9 +111,9 @@ Structured concurrency y scoped values: lifetimes y contexto bajo control
 
 `CompletableFuture.allOf()` rompe la relación padre-hijo: si una tarea falla, las demás siguen ejecutándose a menos que se implemente cancelación manual. El manejo de errores se dispersa. `ThreadLocal` no se limpia automáticamente y, con virtual threads, su uso masivo genera presión de memoria y fugas si no se retira explícitamente.
 
-Structured concurrency (preview, cuarta incubación en Java 24, probable final en 25) confina las subtareas a un scope con un lifetime bien definido. `StructuredTaskScope` garantiza que al salir del bloque todas las tareas han terminado (o han sido canceladas). `ShutdownOnFailure` cancela las demás cuando una falla.
+Structured concurrency (preview en Java 24, finalizado en Java 25) confina las subtareas a un scope con un lifetime bien definido. `StructuredTaskScope` garantiza que al salir del bloque todas las tareas han terminado (o han sido canceladas). `ShutdownOnFailure` cancela las demás cuando una falla.
 
-Scoped values (incubator, cuarta incubación en Java 24) proporcionan un contexto inmutable y heredable con ámbito léxico, sin los problemas de `ThreadLocal`: se limpian automáticamente al salir del scope, son seguros con virtual threads y no requieren código de limpieza manual.
+Scoped values (preview desde Java 21, finalizado en Java 25) proporcionan un contexto inmutable y heredable con ámbito léxico, sin los problemas de `ThreadLocal`: se limpian automáticamente al salir del scope, son seguros con virtual threads y no requieren código de limpieza manual.
 
 En el ejemplo anterior, `ScopedValue` propaga el traceId y `StructuredTaskScope` coordina las tres llamadas: un fallo en el cobro cancela automáticamente las consultas de inventario y envío. El código es lineal y el razonamiento sobre concurrencia, local.
 
