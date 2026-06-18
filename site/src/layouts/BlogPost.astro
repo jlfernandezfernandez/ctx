@@ -77,7 +77,10 @@ const {
 <script>
 	import { KEY, markRead } from '../utils/reading';
 	const slug = document.querySelector('article')?.dataset.readSlug;
-	if (slug) localStorage.setItem(KEY, markRead(localStorage.getItem(KEY), slug));
+	if (slug) {
+		const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD, local timezone
+		localStorage.setItem(KEY, markRead(localStorage.getItem(KEY), slug, today));
+	}
 </script>
 
 <style>
