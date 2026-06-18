@@ -4,11 +4,7 @@
 
 export const KEY = 'ctx-reading';
 
-export interface Reading {
-	read: string[];
-}
-
-export function parseReading(raw: string | null): Reading {
+export function parseReading(raw: string | null): { read: string[] } {
 	if (!raw) return { read: [] };
 	try {
 		const v = JSON.parse(raw);

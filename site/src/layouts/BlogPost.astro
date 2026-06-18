@@ -76,7 +76,7 @@ const {
 
 <script>
 	import { KEY, markRead } from '../utils/reading';
-	const slug = document.querySelector('article[data-read-slug]')?.getAttribute('data-read-slug');
+	const slug = document.querySelector('article')?.dataset.readSlug;
 	if (slug) localStorage.setItem(KEY, markRead(localStorage.getItem(KEY), slug));
 </script>
 
