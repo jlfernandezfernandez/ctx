@@ -6,9 +6,14 @@ import TopicQueue from '../components/TopicQueue.astro';
 import Page from './Page.astro';
 import { BASE, REPO_URL, SITE_TITLE, TOPICS_URL } from '../consts';
 
-type Props = CollectionEntry<'blog'>['data'] & { headings?: MarkdownHeading[]; readingTime?: number };
+type Props = CollectionEntry<'blog'>['data'] & {
+	id: string;
+	headings?: MarkdownHeading[];
+	readingTime?: number;
+};
 
 const {
+	id,
 	title,
 	description,
 	date,
@@ -24,7 +29,7 @@ const {
 ---
 
 <Page title={`${SITE_TITLE} — ${title}`} description={description}>
-	<article>
+	<article data-read-slug={id}>
 		<div class="prose" data-pagefind-body>
 			<ArticleHeader {title} {date} {tags} {issue} {requestedBy} {writer} {reviewer} {readingTime} />
 			{
@@ -68,6 +73,12 @@ const {
 		<TopicQueue limit={3} compact />
 	</article>
 </Page>
+
+<script>
+	import { KEY, markRead } from '../utils/reading';
+	const slug = document.querySelector('article')?.dataset.readSlug;
+	if (slug) localStorage.setItem(KEY, markRead(localStorage.getItem(KEY), slug));
+</script>
 
 <style>
 	/* The article column is narrower than the 880px default for readability. */

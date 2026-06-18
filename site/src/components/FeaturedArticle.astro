@@ -11,7 +11,7 @@ interface Props {
 const { post } = Astro.props;
 ---
 
-<section class="today">
+<section class="today" data-read-slug={post.id}>
 	<p class="label">Último artículo</p>
 	<h2><a href={`${BASE}/blog/${post.id}/`}>{post.data.title}</a></h2>
 	<p class="date">
@@ -46,6 +46,12 @@ const { post } = Astro.props;
 		text-transform: uppercase;
 		letter-spacing: 0.08em;
 		color: rgb(var(--gray));
+	}
+	/* Read indicator: append a small accent check to the label. */
+	.is-read .label::after {
+		content: ' ✓ leído';
+		color: var(--accent);
+		opacity: 0.8;
 	}
 	.today h2 {
 		margin: 0 0 0.3em 0;

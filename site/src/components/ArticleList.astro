@@ -14,7 +14,7 @@ const { posts } = Astro.props;
 <ul class="article-list">
 	{
 		posts.map((post, index) => (
-			<li>
+			<li data-read-slug={post.id}>
 				<span class="index">{String(index + 1).padStart(2, '0')}</span>
 				<span class="date">
 					<FormattedDate date={post.data.date} /> · {getReadingTime(post.body)} min
@@ -67,6 +67,15 @@ const { posts } = Astro.props;
 	}
 	a:hover {
 		color: var(--accent);
+	}
+	/* Read indicator: subtle dimmed title prefixed with a small accent check. */
+	.is-read a {
+		color: rgb(var(--gray));
+	}
+	.is-read a::before {
+		content: '✓ ';
+		color: var(--accent);
+		opacity: 0.7;
 	}
 	.arrow {
 		color: var(--accent);

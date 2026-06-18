@@ -25,3 +25,12 @@ const { title, description } = Astro.props;
 		<Footer />
 	</body>
 </html>
+
+<script>
+	// Mark already-read articles in any listing on the page. No-JS fallback: nothing is marked.
+	import { KEY, parseReading } from '../utils/reading';
+	const read = new Set(parseReading(localStorage.getItem(KEY)).read);
+	document.querySelectorAll<HTMLElement>('[data-read-slug]').forEach((el) => {
+		if (el.dataset.readSlug && read.has(el.dataset.readSlug)) el.classList.add('is-read');
+	});
+</script>

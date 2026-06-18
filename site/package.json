@@ -9,6 +9,7 @@
     "dev": "astro dev",
     "build": "astro build && pagefind --site dist",
     "preview": "astro preview",
+    "test": "node --experimental-strip-types --test 'src/**/*.test.ts'",
     "astro": "astro"
   },
   "dependencies": {

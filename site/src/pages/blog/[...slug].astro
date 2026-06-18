@@ -17,6 +17,6 @@ const { Content, headings } = await render(post);
 const readingTime = getReadingTime(post.body);
 ---
 
-<BlogPost {...post.data} headings={headings.filter((h) => h.depth === 2)} {readingTime}>
+<BlogPost {...post.data} id={post.id} headings={headings.filter((h) => h.depth === 2)} {readingTime}>
 	<Content />
 </BlogPost>
