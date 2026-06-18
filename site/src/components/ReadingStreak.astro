@@ -1,0 +1,59 @@
+---
+// Reading streak badge. Value lives in localStorage (client-only), so the shell
+// renders empty and the inline script fills it on load.
+---
+
+<section class="streak" data-streak hidden>
+	<span class="term-command">ctx --streak</span>
+	<p class="streak-body"></p>
+</section>
+
+<script>
+	import { KEY, parseReading } from '../utils/reading';
+
+	const el = document.querySelector<HTMLElement>('[data-streak]');
+	const body = el?.querySelector<HTMLElement>('.streak-body');
+	if (el && body) {
+		const { current } = parseReading(localStorage.getItem(KEY)).streak;
+		if (current <= 0) {
+			body.textContent = 'Lee el artículo de hoy para empezar tu racha.';
+		} else {
+			const days = current === 1 ? 'día' : 'días';
+			body.innerHTML = `🔥 <strong>${current}</strong> ${days} seguidos leyendo`;
+			if (current >= 5) el.classList.add('hot');
+		}
+		el.hidden = false;
+	}
+</script>
+
+<style>
+	.streak {
+		display: flex;
+		align-items: baseline;
+		gap: 1em;
+		margin-top: 2em;
+		padding: 0.9em 1.2em;
+		border: 1px solid rgb(var(--gray-light));
+		border-radius: 8px;
+		background: rgba(17, 21, 28, 0.72);
+		box-shadow: var(--panel-shadow);
+		font-family: var(--font-mono);
+		font-size: 0.85em;
+	}
+	.streak.hot {
+		border-color: var(--accent);
+		background: linear-gradient(90deg, rgba(255, 180, 84, 0.08), rgba(17, 21, 28, 0.72) 40%);
+	}
+	.streak .term-command {
+		flex-shrink: 0;
+		color: rgb(var(--gray));
+	}
+	.streak-body {
+		margin: 0;
+		color: rgb(var(--gray-dark));
+	}
+	.streak-body strong {
+		color: var(--accent);
+		font-size: 1.15em;
+	}
+</style>
