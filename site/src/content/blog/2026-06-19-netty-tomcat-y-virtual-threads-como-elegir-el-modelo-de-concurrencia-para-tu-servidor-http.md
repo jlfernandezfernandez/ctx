@@ -86,8 +86,6 @@ Netty ofrece un control granular sobre buffers, protocolos y contrapresión que 
 
 Ese control tiene un precio. El código asíncrono con callbacks encadenados (`ChannelFutureListener`) es más difícil de escribir, leer y depurar. Los stacks truncados y los eventos fuera de orden complican el diagnóstico de errores. La contrapresión debe implementarse manualmente verificando `channel.isWritable()` y configurando `WriteBufferWaterMark`. La complejidad se justifica cuando los requisitos de rendimiento o de protocolo no admiten otra solución.
 
-Tomcat, en el extremo opuesto, ofrece la simplicidad del código bloqueante y la compatibilidad total con el ecosistema síncrono (JDBC, JPA, JMS). Pero esa simplicidad es frágil bajo carga: el pool de threads se agota, la latencia crece y las conexiones se rechazan. Escalar requiere más instancias o aumentar threads a costa de memoria y contención.
-
 Los virtual threads prometen eliminar esa disyuntiva: permiten escribir código bloqueante simple y escalar a millones de conexiones. Sin embargo, el scheduler introduce una latencia de scheduling que puede ser relevante en sistemas con deadlines estrictos. El *pinning* es un riesgo real: bibliotecas que usan `synchronized` internamente (como algunas versiones de drivers JDBC o clientes HTTP) pueden retener el carrier y degradar el rendimiento. Además, el ecosistema de monitoreo es inmaduro: `jstack` muestra carriers, no virtual threads individuales; se requieren `jcmd` y nuevas APIs para obtener volcados utilizables.
 
 ## Cuándo elegir cada modelo
