@@ -3,7 +3,7 @@ from article_generator.agents.reviewer import reviewer_prompt
 from article_generator.agents.writer import (
     SYSTEM_PROMPT,
     article_prompt,
-    metadata_prompt,
+    extras_prompt,
     normalize_tags,
     rewrite_prompt,
 )
@@ -21,9 +21,10 @@ def test_system_prompts_are_loaded_verbatim():
 
 
 def test_writer_selects_central_tags_and_can_create_one():
-    prompt = metadata_prompt("MSAL", "cuerpo", ["agents", "java"])
+    prompt = extras_prompt("MSAL", "cuerpo", ["agents", "java"])
     assert "Tags existentes para reutilizar" in prompt
     assert "agents" in prompt
+    assert "quiz" in prompt
     assert "ejes centrales" in SYSTEM_PROMPT
     assert "agradecería encontrar este artículo" in SYSTEM_PROMPT
     assert "como máximo un tag nuevo" in SYSTEM_PROMPT

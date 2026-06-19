@@ -94,12 +94,19 @@ def _open_draft(env: dict, github: GitHubClient) -> int | None:
     draft = write_article(
         writer_chat, writer_json, issue["title"], issue.get("body") or "", canonical_tags
     )
+    initial_defects = _body_defects(draft.body)
+    if initial_defects:
+        print("Generated article failed validation:")
+        for defect in initial_defects:
+            print(f"  - {defect}")
+        return None
     content = render_article(
         pub_date=date.today(),
         title=draft.title,
         description=draft.summary,
         tags=draft.tags,
         body=draft.body,
+        quiz=draft.quiz,
         issue_number=issue["number"],
         requested_by=(issue.get("user") or {}).get("login", ""),
         writer=config.agents["WRITER"].model,

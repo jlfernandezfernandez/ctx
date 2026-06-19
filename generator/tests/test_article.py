@@ -6,6 +6,7 @@ import pytest
 from article_generator.article import (
     ValidationError,
     parse_title_and_tags,
+    render_article,
     sign_reviewer,
     slugify,
     validate_body,
@@ -147,3 +148,29 @@ def test_sign_reviewer_is_idempotent():
     fm = '---\ntitle: "X"\nreviewer: "reviewer-m"\n---\n\n'
     assert sign_reviewer(fm, "reviewer-m") == fm
     assert sign_reviewer("", "reviewer-m") == ""
+
+
+def _valid_question(i: int = 0) -> dict:
+    return {
+        "question": f"Pregunta {i}?",
+        "options": ["A", "B", "C", "D"],
+        "correct": 1,
+        "explanation": "Porque B es correcta.",
+    }
+
+
+def test_render_article_includes_quiz_in_frontmatter():
+    quiz = [_valid_question(0), _valid_question(1), _valid_question(2)]
+    content = render_article(
+        pub_date=date(2026, 6, 20),
+        title="T",
+        description="D",
+        tags=["t"],
+        body="## S\n\nTexto.",
+        quiz=quiz,
+    )
+    assert "quiz:\n" in content
+    assert 'question: "Pregunta 0?"' in content
+    assert "correct: 1" in content
+    assert 'explanation: "Porque B es correcta."' in content
+    assert content.endswith("## S\n\nTexto.\n")

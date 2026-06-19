@@ -7,6 +7,31 @@ issue: 26
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"
 reviewer: "minimax-m3"
+quiz:
+  - question: "¿Cuál es una limitación dura de las Materialized Views en Snowflake?"
+    options:
+      - "No pueden usar créditos de warehouse"
+      - "No admiten window functions ni UDFs"
+      - "Requieren refresco manual mediante tasks"
+      - "Solo funcionan con consultas de una sola tabla"
+    correct: 1
+    explanation: "Las MV solo soportan agregaciones y joins simples; window functions y UDFs quedan fuera. Su refresco es automático y serverless, y pueden unir varias tablas base."
+  - question: "Para una tabla hourly_sales que necesita frescura inferior a un minuto, ¿qué opción es la más adecuada por defecto?"
+    options:
+      - "Task + stream"
+      - "Dynamic Table con lag de 5 minutos"
+      - "Materialized View"
+      - "External table"
+    correct: 2
+    explanation: "La MV ofrece frescura automática de segundos a un par de minutos. Un DT de 5 min incumple el SLA y una task tiene granularidad programada. La external table no aplica."
+  - question: "¿Por qué el MERGE de una Task que consume un Stream debe ser idempotente?"
+    options:
+      - "Para no consumir créditos de warehouse"
+      - "Porque si falla, el offset del stream no avanza y se reprocesan las mismas filas"
+      - "Para satisfacer al optimizador de Snowflake"
+      - "Porque los streams capturan cada cambio dos veces"
+    correct: 1
+    explanation: "Si la task falla, el offset del stream no avanza y las mismas filas aparecen en la siguiente ejecución. La idempotencia evita duplicados. Los streams entregan cada cambio una sola vez."
 ---
 
 ## El problema

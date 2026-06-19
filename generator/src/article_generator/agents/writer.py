@@ -9,8 +9,13 @@ from ..prompt import load_system_prompt
 SYSTEM_PROMPT = load_system_prompt("writer")
 
 
-METADATA_SCHEMA = {
-    "title": "article_metadata",
+# Everything the JSON agent derives from the body in one structured call:
+# metadata (title/summary/tags) + quiz, plus room for future fields.
+# ponytail: quiz is generated from the FIRST body, before review. If the reviewer
+# rewrites the body heavily the quiz can drift. Upgrade path if that bites:
+# move this call into _review_draft, post-approval, over the final body.
+EXTRAS_SCHEMA = {
+    "title": "article_extras",
     "type": "object",
     "properties": {
         "title": {"type": "string"},
@@ -19,8 +24,29 @@ METADATA_SCHEMA = {
             "type": "array",
             "items": {"type": "string"},
         },
+        "quiz": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "question": {"type": "string"},
+                    "options": {
+                        "type": "array",
+                        "minItems": 4,
+                        "maxItems": 4,
+                        "items": {"type": "string"},
+                    },
+                    "correct": {"type": "integer", "minimum": 0, "maximum": 3},
+                    "explanation": {"type": "string"},
+                },
+                "required": ["question", "options", "correct", "explanation"],
+                "additionalProperties": False,
+            },
+        },
     },
-    "required": ["title", "summary", "tags"],
+    "required": ["title", "summary", "tags", "quiz"],
     "additionalProperties": False,
 }
 
@@ -31,6 +57,7 @@ class Draft:
     summary: str
     tags: list[str]
     body: str
+    quiz: list[dict]
 
 
 def _notes_block(notes: str) -> str:
@@ -58,9 +85,9 @@ Requisitos:
 Devuelve SOLO el cuerpo del artículo en markdown."""
 
 
-def metadata_prompt(topic: str, body: str, canonical_tags: list[str]) -> str:
+def extras_prompt(topic: str, body: str, canonical_tags: list[str]) -> str:
     taxonomy = ", ".join(canonical_tags) if canonical_tags else "(sin tags disponibles)"
-    return f"""Prepara los metadatos finales de este artículo sobre "{topic}".
+    return f"""Prepara los metadatos y el quiz finales de este artículo sobre "{topic}".
 
 <articulo>
 {body}
@@ -71,7 +98,8 @@ Tags existentes para reutilizar: {taxonomy}
 Devuelve SOLO un objeto JSON con:
 - "title": título final concreto y descriptivo
 - "summary": TL;DR técnico en 2-3 frases, sin empezar por "El artículo" o "Este artículo"
-- "tags": entre 1 y {MAX_TAGS_PER_ARTICLE} tags"""
+- "tags": entre 1 y {MAX_TAGS_PER_ARTICLE} tags
+- "quiz": array de exactamente 3 objetos {{"question": "...", "options": ["...", "...", "...", "..."], "correct": 0, "explanation": "..."}}. Las preguntas exigen haber entendido el artículo y los distractores son plausibles."""
 
 
 def rewrite_prompt(topic: str, body: str, feedback: list[str]) -> str:
@@ -115,13 +143,13 @@ def write_article(
     canonical_tags: list[str],
 ) -> Draft:
     body = chat_llm.generate(SYSTEM_PROMPT, article_prompt(topic, notes))
-    metadata = json_llm.generate_structured(
-        SYSTEM_PROMPT, metadata_prompt(topic, body, canonical_tags), METADATA_SCHEMA
+    extras = json_llm.generate_structured(
+        SYSTEM_PROMPT, extras_prompt(topic, body, canonical_tags), EXTRAS_SCHEMA
     )
-    title = metadata["title"].strip()
-    summary = metadata["summary"].strip()
-    tags = normalize_tags(metadata["tags"], canonical_tags)
-    return Draft(title=title, summary=summary, tags=tags, body=body)
+    title = extras["title"].strip()
+    summary = extras["summary"].strip()
+    tags = normalize_tags(extras["tags"], canonical_tags)
+    return Draft(title=title, summary=summary, tags=tags, body=body, quiz=extras["quiz"])
 
 
 def revise_article(

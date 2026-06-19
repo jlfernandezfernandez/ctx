@@ -6,6 +6,31 @@ tags: ["java", "reactive"]
 issue: 1
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"
+quiz:
+  - question: "¿Cuál es el beneficio principal del backpressure en Reactive Streams?"
+    options:
+      - "Permite ejecutar operaciones bloqueantes dentro de pipelines reactivos"
+      - "El consumidor controla el ritmo de emisión sin bloquearse"
+      - "Aumenta automáticamente el tamaño del pool de hilos"
+      - "Elimina la necesidad de llamar a subscribe()"
+    correct: 1
+    explanation: "Backpressure permite al suscriptor pedir datos con request(n) a su propio ritmo, evitando saturación. Bloquear dentro del pipeline destruye la escalabilidad, el tamaño del pool no depende de backpressure y Mono/Flux siguen siendo lazy, por lo que subscribe sigue siendo necesario."
+  - question: "¿Qué Scheduler de Reactor se usa para envolver APIs bloqueantes heredadas?"
+    options:
+      - "Schedulers.parallel()"
+      - "Schedulers.single()"
+      - "Schedulers.boundedElastic()"
+      - "Schedulers.immediate()"
+    correct: 2
+    explanation: "boundedElastic está pensado para APIs bloqueantes legacy. parallel es para computación, single para tareas secuenciales e immediate ejecuta en el hilo actual."
+  - question: "¿Qué ocurre si un Flux.create ignora la demanda downstream?"
+    options:
+      - "El productor se pausa automáticamente"
+      - "La cadena pasa de lazy a eager"
+      - "Puede lanzar OverflowException o crecer la memoria sin control"
+      - "Se activa un buffer de backpressure por defecto"
+    correct: 2
+    explanation: "Sin respetar sink.requestedFromDownstream() ni configurar una estrategia de saturación, las emisiones sobrantes provocan OverflowException o buffering descontrolado. La pereza y la pausa automática son ideas incorrectas."
 ---
 
 ## Cuando añadir más hilos deja de ayudar

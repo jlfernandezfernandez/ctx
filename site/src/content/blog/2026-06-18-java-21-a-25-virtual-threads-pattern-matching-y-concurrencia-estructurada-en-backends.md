@@ -7,6 +7,31 @@ issue: 25
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"
 reviewer: "minimax-m3"
+quiz:
+  - question: "¿Cuál es una limitación clave de los virtual threads?"
+    options:
+      - "Mejoran la latencia de peticiones individuales"
+      - "No sustituyen backpressure ni modelos de streaming reactivo"
+      - "Añaden paralelismo real para tareas CPU-bound"
+      - "Eliminan la necesidad de hacer thread dumps"
+    correct: 1
+    explanation: "Los virtual threads simplifican la concurrencia bloqueante pero no proporcionan backpressure ni ayudan en carga CPU-bound. La latencia individual no mejora y los thread dumps siguen existiendo, aunque con más hilos."
+  - question: "¿Qué aporta el pattern matching con sealed records frente a cadenas de instanceof?"
+    options:
+      - "Mayor rendimiento en runtime"
+      - "Exhaustividad verificada por el compilador"
+      - "Serialización JSON automática"
+      - "Bytecode más compacto"
+    correct: 1
+    explanation: "Sealed interfaces + records permiten al compilador comprobar que se manejan todos los casos. El rendimiento, la serialización y el tamaño del bytecode no son beneficios directos."
+  - question: "¿Qué hace ShutdownOnFailure en StructuredTaskScope?"
+    options:
+      - "Reintenta automáticamente las subtareas fallidas"
+      - "Cancela las subtareas restantes cuando una falla"
+      - "Ejecuta las subtareas de forma secuencial"
+      - "Aumenta la prioridad de los virtual threads"
+    correct: 1
+    explanation: "ShutdownOnFailure cancela el resto de forks cuando uno falla. No reintenta, no secuencializa y no afecta a la prioridad de los hilos."
 ---
 
 Un servicio concreto como hilo conductor

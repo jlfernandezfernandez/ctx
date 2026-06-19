@@ -7,6 +7,31 @@ issue: 4
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"
 reviewer: "minimax-m3"
+quiz:
+  - question: "¿Qué mecanismo usa KRaft para almacenar los metadatos del clúster?"
+    options:
+      - "ZooKeeper znodes"
+      - "Un topic compactado interno __cluster_metadata"
+      - "Una base de datos relacional externa"
+      - "BookKeeper ledgers"
+    correct: 1
+    explanation: "KRaft replica los metadatos mediante Raft en un topic compactado interno. ZooKeeper ha sido eliminado, no usa base de datos externa y BookKeeper es la opción de Pulsar."
+  - question: "¿Por qué en producción con mucho tráfico se recomiendan controllers dedicados en lugar del modo combinado?"
+    options:
+      - "El modo combinado requiere más espacio en disco"
+      - "El tráfico de datos puede robar CPU al controller y provocar elecciones espurias"
+      - "Los controllers dedicados tienen menos opciones de seguridad"
+      - "El modo combinado no soporta SASL_SSL"
+    correct: 1
+    explanation: "En nodos combinados, la carga de datos compite con los heartbeats del quorum. Las otras opciones son incorrectas: la seguridad es igual y el disco no es el motivo."
+  - question: "¿Qué configuración debe ser idéntica en todos los nodos de un quorum KRaft?"
+    options:
+      - "El node.id"
+      - "La lista controller.quorum.voters"
+      - "El advertised.listeners"
+      - "La ruta metadata.log.dir"
+    correct: 1
+    explanation: "controller.quorum.voters debe ser exactamente igual y apuntar a hosts resolubles entre nodos. node.id es único por nodo, advertised.listeners varía y metadata.log.dir es local."
 ---
 
 ## El problema de la doble operación

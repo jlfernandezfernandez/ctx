@@ -44,6 +44,15 @@ def setup_llms(llm_cls):
         "title": "Project Reactor y backpressure",
         "summary": "Cómo funciona el control de demanda.",
         "tags": ["auth"],
+        "quiz": [
+            {
+                "question": f"Pregunta {i}?",
+                "options": ["A", "B", "C", "D"],
+                "correct": 1,
+                "explanation": "Porque B.",
+            }
+            for i in range(3)
+        ],
     }
     reviewer = MagicMock()
     reviewer.generate_structured.return_value = {"issues": []}
