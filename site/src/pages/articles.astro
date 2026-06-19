@@ -1,6 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import ArticleList from '../components/ArticleList.astro';
+import ReadingStreak from '../components/ReadingStreak.astro';
 import Page from '../layouts/Page.astro';
 import { BASE, SITE_TITLE } from '../consts';
 
@@ -32,6 +33,7 @@ const tags = [...tagCounts.entries()]
 	<p class="kicker term-command">ls articles/</p>
 	<h1>Artículos</h1>
 	<p>{posts.length} artículos publicados. Busca o filtra por tema:</p>
+	<ReadingStreak />
 	<section class="filters" aria-label="Buscar y filtrar artículos">
 		<div class="filters-head">
 			<span>article_index</span>
