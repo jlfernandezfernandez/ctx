@@ -7,6 +7,7 @@ summary: "El bucle de tool‑calling es suficiente para agentes lineales, pero f
 issue: 24
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"
+reviewer: "minimax-m3"
 ---
 
 El bucle autónomo: tool‑calling como máquina de estados efímera
