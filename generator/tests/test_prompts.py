@@ -23,9 +23,11 @@ def test_system_prompts_are_loaded_verbatim():
 
 def test_writer_selects_central_tags_and_can_create_one():
     prompt = metadata_prompt("MSAL", "cuerpo", ["agents", "java"])
-    assert "ejes centrales" in prompt
-    assert "agradecería encontrar este artículo" in prompt
-    assert "como máximo un tag nuevo" in prompt
+    assert "Tags existentes para reutilizar" in prompt
+    assert "agents" in prompt
+    assert "ejes centrales" in SYSTEM_PROMPT
+    assert "agradecería encontrar este artículo" in SYSTEM_PROMPT
+    assert "como máximo un tag nuevo" in SYSTEM_PROMPT
     assert normalize_tags(["Auth", "auth", "OAuth", "agents"], ["agents"]) == ["auth", "agents"]
 
 

@@ -193,7 +193,7 @@ def _review_draft(env: dict, github: GitHubClient, pr_number: int) -> int:
         )
         fixed = None
         for attempt in range(1, 4):
-            fixed = revise_article(writer_chat, topic, body, blocking, attempt)
+            fixed = revise_article(writer_chat, topic, body, blocking, attempt, _body_defects(fixed) if fixed else None)
             if not _body_defects(fixed):
                 break
         else:

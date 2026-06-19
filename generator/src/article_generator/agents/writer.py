@@ -76,20 +76,21 @@ def metadata_prompt(topic: str, body: str, canonical_tags: list[str]) -> str:
 {body}
 </articulo>
 
-Tags existentes, reutilízalos siempre que representen correctamente el tema: {taxonomy}
+Tags existentes para reutilizar: {taxonomy}
 
 Devuelve SOLO un objeto JSON con:
 - "title": título final concreto y descriptivo
 - "summary": TL;DR técnico en 2-3 frases, sin empezar por "El artículo" o "Este artículo"
-- "tags": entre 1 y {MAX_TAGS_PER_ARTICLE} tags que representen ejes centrales del artículo. \
-Incluye cada tag solo si alguien interesado en él agradecería encontrar este artículo. \
-Crea como máximo un tag nuevo, general y reutilizable, solo cuando ningún tag existente \
-represente ese eje central"""
+- "tags": entre 1 y {MAX_TAGS_PER_ARTICLE} tags"""
 
 
-def rewrite_prompt(topic: str, body: str, feedback: list[str], attempt: int = 1) -> str:
+def rewrite_prompt(topic: str, body: str, feedback: list[str], attempt: int = 1, defects: list[str] | None = None) -> str:
     issues = "\n".join(f"- {item}" for item in feedback)
-    retry = "\nEl intento anterior produjo Markdown inválido. Conserva intacto todo lo no afectado." if attempt >= 2 else ""
+    retry = ""
+    if attempt >= 2 and defects:
+        retry = "\n\nTu intento anterior tuvo estos errores de formato:\n" + "\n".join(f"- {d}" for d in defects)
+    elif attempt >= 2:
+        retry = "\n\nTu intento anterior produjo Markdown inválido. Conserva intacto todo lo no afectado."
     return f"""Corrige este artículo técnico sobre: {topic}
 
 <articulo>
@@ -140,6 +141,6 @@ def write_article(
 
 
 def revise_article(
-    llm: LLMClient, topic: str, body: str, feedback: list[str], attempt: int = 1
+    llm: LLMClient, topic: str, body: str, feedback: list[str], attempt: int = 1, defects: list[str] | None = None
 ) -> str:
-    return llm.generate(SYSTEM_PROMPT, rewrite_prompt(topic, body, feedback, attempt))
+    return llm.generate(SYSTEM_PROMPT, rewrite_prompt(topic, body, feedback, attempt, defects))

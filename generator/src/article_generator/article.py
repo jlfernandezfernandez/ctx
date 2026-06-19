@@ -110,15 +110,6 @@ def _validate_headings(headings: list[tuple[int, str]]) -> None:
         previous_level = level
 
 
-def make_description(body: str) -> str:
-    paragraphs = (p.strip() for p in body.split("\n\n"))
-    prose = next(
-        (p for p in paragraphs if p and not p.startswith(("#", "```"))),
-        "",
-    )
-    return re.sub(r"\s+", " ", re.sub(r"[*_`]", "", prose))[:200].strip()
-
-
 def _yaml_str(value: str) -> str:
     flat = " ".join(value.split())  # newlines would break single-line YAML
     escaped = flat.replace("\\", "\\\\").replace('"', '\\"')

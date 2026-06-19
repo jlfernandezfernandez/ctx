@@ -5,7 +5,6 @@ import pytest
 
 from article_generator.article import (
     ValidationError,
-    make_description,
     parse_title_and_tags,
     sign_reviewer,
     slugify,
@@ -77,16 +76,6 @@ def test_validate_tags_accepts_new_tags():
 def test_validate_tags_rejects_more_than_three():
     with pytest.raises(ValidationError, match="more than 3"):
         validate_tags(["a", "b", "c", "d"])
-
-
-def test_make_description_uses_first_paragraph_stripped():
-    body = "## Intro\n\nEl **paradigma** reactivo cambia el modelo.\n\nMás texto."
-    assert make_description(body) == "El paradigma reactivo cambia el modelo."
-
-
-def test_make_description_truncates_at_200_chars():
-    body = "x" * 500
-    assert len(make_description(body)) <= 200
 
 
 def test_render_article_returns_frontmatter_and_body():
