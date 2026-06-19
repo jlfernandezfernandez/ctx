@@ -7,6 +7,7 @@ summary: "Netty ofrece control fino sobre I/O y máxima escalabilidad con códig
 issue: 28
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"
+reviewer: "minimax/minimax-m3"
 ---
 
 ## El coste oculto del código síncrono
