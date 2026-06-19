@@ -18,7 +18,6 @@ from .article import (
     slugify,
     split_frontmatter,
     validate_body,
-    validate_tags,
     word_count,
 )
 from .config import AppConfig, load_config
@@ -47,10 +46,6 @@ def _canonical_tags() -> list[str]:
         return [tag for tag in tags if isinstance(tag, str)]
     except (OSError, ValueError):
         return []
-
-
-def _updated_taxonomy(canonical_tags: list[str], article_tags: list[str]) -> list[str]:
-    return sorted(set(canonical_tags) | set(article_tags))
 
 
 def _body_defects(body: str) -> list[str]:
@@ -99,14 +94,12 @@ def _open_draft(env: dict, github: GitHubClient) -> int | None:
     draft = write_article(
         writer_chat, writer_json, issue["title"], issue.get("body") or "", canonical_tags
     )
-    validate_tags(draft.tags)
     content = render_article(
         pub_date=date.today(),
         title=draft.title,
         description=draft.summary,
         tags=draft.tags,
         body=draft.body,
-        summary=draft.summary,
         issue_number=issue["number"],
         requested_by=(issue.get("user") or {}).get("login", ""),
         writer=config.agents["WRITER"].model,
@@ -118,7 +111,7 @@ def _open_draft(env: dict, github: GitHubClient) -> int | None:
         title=f"article: {draft.title}",
         body=f"Closes #{issue['number']}",
     )
-    taxonomy = _updated_taxonomy(canonical_tags, draft.tags)
+    taxonomy = sorted(set(canonical_tags) | set(draft.tags))
     if taxonomy != sorted(canonical_tags):
         github.update_file(
             f"article/issue-{issue['number']}",

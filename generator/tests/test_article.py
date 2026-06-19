@@ -9,7 +9,6 @@ from article_generator.article import (
     sign_reviewer,
     slugify,
     validate_body,
-    validate_tags,
     word_count,
 )
 
@@ -69,15 +68,6 @@ def test_validate_body_rejects_unclosed_code_fence():
         validate_body(valid_body() + "\n\n```python\nprint('hola')")
 
 
-def test_validate_tags_accepts_new_tags():
-    validate_tags(["auth"])
-
-
-def test_validate_tags_rejects_more_than_three():
-    with pytest.raises(ValidationError, match="more than 3"):
-        validate_tags(["a", "b", "c", "d"])
-
-
 def test_render_article_returns_frontmatter_and_body():
 
     from article_generator.article import render_article
@@ -88,7 +78,6 @@ def test_render_article_returns_frontmatter_and_body():
         description="desc",
         tags=["java"],
         body="## Sección\n\nTexto.",
-        summary="El TL;DR.",
         issue_number=5,
         requested_by="jordi",
         writer="deepseek-v4-pro",
