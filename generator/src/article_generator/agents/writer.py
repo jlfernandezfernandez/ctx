@@ -60,6 +60,7 @@ Usa este esquema como guía, adaptándolo si mejora el resultado:
 Requisitos:
 - Markdown puro con encabezados descriptivos y bloques de código con su lenguaje.
 - Sin frontmatter YAML ni título principal: empieza por la primera sección.
+- 800-1200 palabras (techo duro 1300). Densidad antes que extensión.
 - Profundidad suficiente para que un ingeniero pueda tomar decisiones técnicas.
 - Desarrolla un argumento coherente; no recorras mecánicamente una lista de características.
 - Explica los conceptos del ecosistema que sean necesarios para entender el tema.

@@ -15,7 +15,7 @@ REVIEWER_SCHEMA = {
             "items": {
                 "type": "object",
                 "properties": {
-                    "category": {"type": "string"},
+                    "category": {"type": "string", "enum": ["codigo", "rigor", "legibilidad"]},
                     "detail": {"type": "string"},
                     "blocking": {"type": "boolean"},
                 },
