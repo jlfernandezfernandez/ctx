@@ -51,14 +51,12 @@ Devuelve SOLO el informe JSON definido en tu system prompt."""
 def review_article(
     llm: LLMClient, topic: str, body: str, previous_feedback: list[str] | None = None
 ) -> dict | None:
-    for _ in range(2):
-        try:
-            return llm.generate_structured(
-                SYSTEM_PROMPT, reviewer_prompt(topic, body, previous_feedback), REVIEWER_SCHEMA
-            )
-        except LLMError:
-            continue
-    return None
+    try:
+        return llm.generate_structured(
+            SYSTEM_PROMPT, reviewer_prompt(topic, body, previous_feedback), REVIEWER_SCHEMA
+        )
+    except LLMError:
+        return None
 
 
 def split_issues(report: dict) -> tuple[list[str], list[str]]:
