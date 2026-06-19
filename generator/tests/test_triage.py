@@ -22,9 +22,10 @@ def env(tmp_path, issue=None):
         "GITHUB_EVENT_PATH": str(event),
         "GITHUB_REPOSITORY": "owner/repo",
         "GITHUB_TOKEN": "tok",
-        "LLM_BASE_URL": "https://ollama.com/v1",
-        "LLM_API_KEY": "key",
-        "LLM_TRIAGE_MODEL": "curator-model",
+        "OPENROUTER_BASE_URL": "https://openrouter.ai/api/v1",
+        "OPENROUTER_API_KEY": "key",
+        "AGENT_TRIAGE_PROVIDER": "openrouter",
+        "AGENT_TRIAGE_MODEL": "curator-model",
     }
 
 
@@ -64,7 +65,7 @@ def test_parse_classification_rejects_invalid_response(data):
 @patch("article_generator.pipeline.GitHubClient")
 def test_run_approves_and_updates_title_and_description(issues_cls, llm_cls, tmp_path):
     issues = issues_cls.return_value
-    llm_cls.return_value.generate_json.return_value = {
+    llm_cls.return_value.generate_structured.return_value = {
         "action": "APPROVE",
         "title": "Pydantic AI",
         "description": "Cómo crear agentes tipados con Pydantic AI.",
@@ -90,7 +91,7 @@ def test_run_approves_without_changes_when_identical(issues_cls, llm_cls, tmp_pa
         "labels": [{"name": "triage"}],
     }
     issues = issues_cls.return_value
-    llm_cls.return_value.generate_json.return_value = {
+    llm_cls.return_value.generate_structured.return_value = {
         "action": "APPROVE",
         "title": "Pydantic AI",
         "description": "Cómo crear agentes tipados.",
@@ -109,9 +110,10 @@ def test_run_approves_without_changes_when_identical(issues_cls, llm_cls, tmp_pa
 @patch("article_generator.pipeline.GitHubClient")
 def test_run_rejects_clear_spam(issues_cls, llm_cls, tmp_path):
     issues = issues_cls.return_value
-    llm_cls.return_value.generate_json.return_value = {
+    llm_cls.return_value.generate_structured.return_value = {
         "action": "REJECT",
         "title": "Compra seguidores",
+        "description": "",
         "reason": "Spam sin contenido técnico",
     }
 
@@ -126,9 +128,10 @@ def test_run_rejects_clear_spam(issues_cls, llm_cls, tmp_path):
 @patch("article_generator.pipeline.GitHubClient")
 def test_run_leaves_doubtful_topic_for_review(issues_cls, llm_cls, tmp_path):
     issues = issues_cls.return_value
-    llm_cls.return_value.generate_json.return_value = {
+    llm_cls.return_value.generate_structured.return_value = {
         "action": "REVIEW",
         "title": "Una propuesta ambigua",
+        "description": "",
         "reason": "No queda claro el enfoque",
     }
 
@@ -145,7 +148,7 @@ def test_run_leaves_doubtful_topic_for_review(issues_cls, llm_cls, tmp_path):
 @patch("article_generator.pipeline.GitHubClient")
 def test_run_fails_safe_when_curator_response_is_invalid(issues_cls, llm_cls, tmp_path):
     issues = issues_cls.return_value
-    llm_cls.return_value.generate_json.return_value = {"action": "APPROVE"}
+    llm_cls.return_value.generate_structured.return_value = {"action": "APPROVE"}
 
     assert triage_run(env(tmp_path)) == 0
 
@@ -166,7 +169,7 @@ def test_manual_run_fetches_requested_issue(issues_cls, llm_cls, tmp_path):
     }
     issues = issues_cls.return_value
     issues.get_issue.return_value = issue
-    llm_cls.return_value.generate_json.return_value = {
+    llm_cls.return_value.generate_structured.return_value = {
         "action": "APPROVE",
         "title": issue["title"],
         "description": "",

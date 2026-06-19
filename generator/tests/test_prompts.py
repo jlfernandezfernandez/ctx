@@ -5,7 +5,6 @@ from article_generator.agents.writer import (
     article_prompt,
     metadata_prompt,
     normalize_tags,
-    outline_prompt,
     rewrite_prompt,
 )
 from article_generator.prompt import load_system_prompt
@@ -23,28 +22,18 @@ def test_system_prompts_are_loaded_verbatim():
 
 def test_writer_selects_central_tags_and_can_create_one():
     prompt = metadata_prompt("MSAL", "cuerpo", ["agents", "java"])
-    assert "ejes centrales" in prompt
-    assert "agradecería encontrar este artículo" in prompt
-    assert "como máximo un tag nuevo" in prompt
+    assert "Tags existentes para reutilizar" in prompt
+    assert "agents" in prompt
+    assert "ejes centrales" in SYSTEM_PROMPT
+    assert "agradecería encontrar este artículo" in SYSTEM_PROMPT
+    assert "como máximo un tag nuevo" in SYSTEM_PROMPT
     assert normalize_tags(["Auth", "auth", "OAuth", "agents"], ["agents"]) == ["auth", "agents"]
 
 
-def test_outline_prompt_includes_topic_and_notes():
-    p = outline_prompt("Project Reactor", "no entendemos el paradigma")
-    assert "Project Reactor" in p
-    assert "no entendemos el paradigma" in p
-
-
-def test_outline_prompt_omits_notes_section_when_empty():
-    p = outline_prompt("Project Reactor", "")
-    assert "Notas del equipo" not in p
-
-
-def test_article_prompt_includes_outline_topic_and_notes():
-    p = article_prompt("SSE", "lo usamos con agentes", "1. Intro\n2. Detalle")
+def test_article_prompt_includes_topic_and_notes():
+    p = article_prompt("SSE", "lo usamos con agentes")
     assert "SSE" in p
     assert "lo usamos con agentes" in p
-    assert "1. Intro" in p
 
 
 def test_reviewer_prompt_includes_article_and_json_contract():
@@ -55,13 +44,6 @@ def test_reviewer_prompt_includes_article_and_json_contract():
     assert '"issues"' in system
     assert "category" in system
     assert "blocking" in system
-    assert "ronda anterior" not in p
-
-
-def test_reviewer_prompt_includes_previous_feedback_on_later_rounds():
-    p = reviewer_prompt("Project Reactor", "cuerpo", ["[codigo] falta import de Flux"])
-    assert "ronda anterior" in p
-    assert "falta import de Flux" in p
 
 
 def test_rewrite_prompt_includes_draft_and_feedback():

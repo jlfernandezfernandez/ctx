@@ -8,10 +8,16 @@ def env(pr_number=""):
     return {
         "GITHUB_REPOSITORY": "owner/repo",
         "GITHUB_TOKEN": "tok",
-        "LLM_BASE_URL": "https://llm.example/v1",
-        "LLM_API_KEY": "k",
-        "LLM_WRITER_MODEL": "writer-m",
-        "LLM_REVIEWER_MODEL": "reviewer-m",
+        "OLLAMA_BASE_URL": "https://ollama.com/v1",
+        "OLLAMA_API_KEY": "k",
+        "OPENROUTER_BASE_URL": "https://openrouter.ai/api/v1",
+        "OPENROUTER_API_KEY": "k",
+        "AGENT_WRITER_PROVIDER": "ollama",
+        "AGENT_WRITER_MODEL": "writer-m",
+        "AGENT_WRITER_JSON_PROVIDER": "openrouter",
+        "AGENT_WRITER_JSON_MODEL": "writer-json-m",
+        "AGENT_REVIEWER_PROVIDER": "openrouter",
+        "AGENT_REVIEWER_MODEL": "reviewer-m",
         "MAX_REVIEW_ROUNDS": "2",
         "PR_NUMBER": pr_number,
         "SITE_URL": "https://owner.github.io/repo",
@@ -28,17 +34,29 @@ def topic_issue():
 
 
 def setup_llms(llm_cls):
-    writer = MagicMock()
-    writer.generate.side_effect = ["outline", "## Contexto\n\nArtículo.", "## Contexto\n\nCorregido."]
-    writer.generate_json.return_value = {
+    writer_chat = MagicMock()
+    writer_chat.generate.side_effect = [
+        "## Contexto\n\nArtículo.",
+        "## Contexto\n\nCorregido.",
+    ]
+    writer_json = MagicMock()
+    writer_json.generate_structured.return_value = {
         "title": "Project Reactor y backpressure",
         "summary": "Cómo funciona el control de demanda.",
         "tags": ["auth"],
     }
     reviewer = MagicMock()
-    reviewer.generate_json.return_value = {"issues": []}
-    llm_cls.side_effect = lambda base_url, api_key, model: reviewer if model == "reviewer-m" else writer
-    return writer, reviewer
+    reviewer.generate_structured.return_value = {"issues": []}
+
+    def make_client(base_url, api_key, model):
+        if model == "reviewer-m":
+            return reviewer
+        if model == "writer-json-m":
+            return writer_json
+        return writer_chat
+
+    llm_cls.side_effect = make_client
+    return writer_chat, writer_json, reviewer
 
 
 @patch("article_generator.pipeline._body_defects", return_value=[])
@@ -101,8 +119,8 @@ def test_pipeline_does_not_update_taxonomy_when_writer_reuses_tag(
         '---\ntitle: "Project Reactor"\ntags: ["reactive"]\nwriter: "writer-m"\n---\n\n'
         "## Contexto\n\nArtículo."
     )
-    writer, _ = setup_llms(llm_cls)
-    writer.generate_json.return_value["tags"] = ["reactive"]
+    writer_chat, writer_json, _ = setup_llms(llm_cls)
+    writer_json.generate_structured.return_value["tags"] = ["reactive"]
 
     assert run(env()) == 0
 

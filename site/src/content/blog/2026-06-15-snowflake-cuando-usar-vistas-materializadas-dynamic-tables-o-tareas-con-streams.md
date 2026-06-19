@@ -3,7 +3,6 @@ title: "Snowflake: cuándo usar vistas materializadas, Dynamic Tables o tareas c
 description: "Las vistas materializadas ofrecen frescura automática para agregaciones simples, las Dynamic Tables añaden control de lag y coste incremental, y las tareas con streams cubren cualquier complejidad SQL a costa de mayor operación. La elección depende de la frescura requerida, la complejidad de la transformación y la tolerancia al esfuerzo operativo."
 date: 2026-06-15
 tags: ["snowflake"]
-summary: "Las vistas materializadas ofrecen frescura automática para agregaciones simples, las Dynamic Tables añaden control de lag y coste incremental, y las tareas con streams cubren cualquier complejidad SQL a costa de mayor operación. La elección depende de la frescura requerida, la complejidad de la transformación y la tolerancia al esfuerzo operativo."
 issue: 26
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"

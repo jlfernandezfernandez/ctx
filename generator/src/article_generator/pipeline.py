@@ -18,9 +18,9 @@ from .article import (
     slugify,
     split_frontmatter,
     validate_body,
-    validate_tags,
     word_count,
 )
+from .config import AppConfig, load_config
 from .github import (
     PRIORITY_LABEL,
     REJECTED_LABEL,
@@ -34,8 +34,10 @@ from .llm import LLMClient, LLMError
 TAGS_FILE = Path("site/src/data/tags.json")
 
 
-def _client(env: dict, model: str) -> LLMClient:
-    return LLMClient(base_url=env["LLM_BASE_URL"], api_key=env["LLM_API_KEY"], model=model)
+def _client(config: AppConfig, name: str) -> LLMClient:
+    agent = config.agents[name]
+    provider = config.providers[agent.provider]
+    return LLMClient(base_url=provider.base_url, api_key=provider.api_key, model=agent.model)
 
 
 def _canonical_tags() -> list[str]:
@@ -44,10 +46,6 @@ def _canonical_tags() -> list[str]:
         return [tag for tag in tags if isinstance(tag, str)]
     except (OSError, ValueError):
         return []
-
-
-def _updated_taxonomy(canonical_tags: list[str], article_tags: list[str]) -> list[str]:
-    return sorted(set(canonical_tags) | set(article_tags))
 
 
 def _body_defects(body: str) -> list[str]:
@@ -89,21 +87,22 @@ def _open_draft(env: dict, github: GitHubClient) -> int | None:
         print("No pending topics; nothing to publish.")
         return None
 
-    writer_model = env["LLM_WRITER_MODEL"]
-    writer = _client(env, writer_model)
+    config = load_config(env, "WRITER", "WRITER_JSON")
+    writer_chat = _client(config, "WRITER")
+    writer_json = _client(config, "WRITER_JSON")
     canonical_tags = _canonical_tags()
-    draft = write_article(writer, issue["title"], issue.get("body") or "", canonical_tags)
-    validate_tags(draft.tags)
+    draft = write_article(
+        writer_chat, writer_json, issue["title"], issue.get("body") or "", canonical_tags
+    )
     content = render_article(
         pub_date=date.today(),
         title=draft.title,
         description=draft.summary,
         tags=draft.tags,
         body=draft.body,
-        summary=draft.summary,
         issue_number=issue["number"],
         requested_by=(issue.get("user") or {}).get("login", ""),
-        writer=writer_model,
+        writer=config.agents["WRITER"].model,
     )
     url, pr_number = github.open_pr(
         branch=f"article/issue-{issue['number']}",
@@ -112,7 +111,7 @@ def _open_draft(env: dict, github: GitHubClient) -> int | None:
         title=f"article: {draft.title}",
         body=f"Closes #{issue['number']}",
     )
-    taxonomy = _updated_taxonomy(canonical_tags, draft.tags)
+    taxonomy = sorted(set(canonical_tags) | set(draft.tags))
     if taxonomy != sorted(canonical_tags):
         github.update_file(
             f"article/issue-{issue['number']}",
@@ -134,9 +133,9 @@ def _review_draft(env: dict, github: GitHubClient, pr_number: int) -> int:
     title, _ = parse_title_and_tags(content)
     topic = title or pr["title"].removeprefix("article: ").strip()
 
-    reviewer_model = env["LLM_REVIEWER_MODEL"]
-    reviewer = _client(env, reviewer_model)
-    writer = _client(env, env["LLM_WRITER_MODEL"])
+    config = load_config(env, "REVIEWER", "WRITER")
+    reviewer = _client(config, "REVIEWER")
+    writer_chat = _client(config, "WRITER")
     max_rounds = int(env["MAX_REVIEW_ROUNDS"])
 
     def escalate(reason: str, pending: list[str]) -> int:
@@ -148,12 +147,11 @@ def _review_draft(env: dict, github: GitHubClient, pr_number: int) -> int:
         print("Could not approve. PR left open for a human.")
         return 0
 
-    previous_blocking: list[str] | None = None
     for fixes_done in range(max_rounds + 1):
         blocking = _body_defects(body)
         suggestions: list[str] = []
         if not blocking:
-            report = review_article(reviewer, topic, f"# {topic}\n\n{body}", previous_blocking)
+            report = review_article(reviewer, topic, f"# {topic}\n\n{body}")
             if report is None:
                 return escalate("El reviewer no devolvió un informe válido.", [])
             blocking, suggestions = split_issues(report)
@@ -163,7 +161,7 @@ def _review_draft(env: dict, github: GitHubClient, pr_number: int) -> int:
                 github.comment(
                     pr_number, f"Aprobado con sugerencias no bloqueantes:\n\n{_bullets(suggestions)}"
                 )
-            signed = sign_reviewer(frontmatter, reviewer_model)
+            signed = sign_reviewer(frontmatter, config.agents["REVIEWER"].model)
             if signed != frontmatter:
                 github.update_file(branch, path, signed + body, "chore: reviewer sign-off")
             github.merge_pr(pr_number, branch=branch)
@@ -185,18 +183,12 @@ def _review_draft(env: dict, github: GitHubClient, pr_number: int) -> int:
         github.comment(
             pr_number, f"Cambios solicitados (ronda {round_number}):\n\n{_bullets(blocking)}"
         )
-        fixed = None
-        for attempt in range(1, 4):
-            fixed = revise_article(writer, topic, body, blocking, attempt)
-            if not _body_defects(fixed):
-                break
-        else:
-            return escalate("La corrección del writer produjo Markdown inválido tras 3 intentos.", blocking)
+        fixed = revise_article(writer_chat, topic, body, blocking)
+        if _body_defects(fixed):
+            return escalate("La corrección del writer produjo Markdown inválido.", blocking)
 
         github.update_file(branch, path, frontmatter + fixed, f"fix: review feedback (round {round_number})")
         body = fixed
-        if not blocking[0].startswith("[validacion]"):
-            previous_blocking = blocking
     return 0
 
 
@@ -233,9 +225,10 @@ def triage_run(env: dict) -> int:
         issue = github.get_issue(int(env["TRIAGE_ISSUE_NUMBER"]))
     else:
         issue = json.loads(Path(env["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))["issue"]
+    config = load_config(env, "TRIAGE")
     try:
         result = classify(
-            _client(env, env["LLM_TRIAGE_MODEL"]), issue["title"], issue.get("body") or ""
+            _client(config, "TRIAGE"), issue["title"], issue.get("body") or ""
         )
     except (LLMError, TriageError, OSError, ValueError, KeyError, TypeError) as exc:
         result = Classification("REVIEW", issue["title"], issue.get("body") or "", str(exc))

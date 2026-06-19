@@ -35,11 +35,19 @@ jobs:
 
       - name: Publish pipeline — draft PR, review loop, merge or leave open
         env:
-          LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
-          LLM_WRITER_MODEL: ${{ vars.LLM_WRITER_MODEL }}
-          LLM_REVIEWER_MODEL: ${{ vars.LLM_REVIEWER_MODEL }}
+          # Providers
+          OLLAMA_BASE_URL: ${{ vars.OLLAMA_BASE_URL }}
+          OLLAMA_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
+          OPENROUTER_BASE_URL: ${{ vars.OPENROUTER_BASE_URL }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          # Agents / capabilities
+          AGENT_WRITER_PROVIDER: ${{ vars.AGENT_WRITER_PROVIDER }}
+          AGENT_WRITER_MODEL: ${{ vars.AGENT_WRITER_MODEL }}
+          AGENT_WRITER_JSON_PROVIDER: ${{ vars.AGENT_WRITER_JSON_PROVIDER }}
+          AGENT_WRITER_JSON_MODEL: ${{ vars.AGENT_WRITER_JSON_MODEL }}
+          AGENT_REVIEWER_PROVIDER: ${{ vars.AGENT_REVIEWER_PROVIDER }}
+          AGENT_REVIEWER_MODEL: ${{ vars.AGENT_REVIEWER_MODEL }}
           MAX_REVIEW_ROUNDS: ${{ vars.MAX_REVIEW_ROUNDS }}
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ inputs.pr_number }}

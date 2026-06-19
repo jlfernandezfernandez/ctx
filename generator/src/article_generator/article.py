@@ -62,7 +62,7 @@ def validate_body(body: str) -> None:
     if not body.strip():
         raise ValidationError("Body is empty")
 
-    _validate_headings(_parse_headings(body))
+    _validate_headings(_heading_lines(body))
     if sum(1 for line in body.splitlines() if line.strip().startswith("```")) % 2:
         raise ValidationError("Body contains an unclosed fenced code block")
 
@@ -74,16 +74,11 @@ def word_count(markdown: str) -> int:
     return len(_WORD.findall(prose))
 
 
-def validate_tags(tags: list[str]) -> None:
-    if len(tags) > MAX_TAGS_PER_ARTICLE:
-        raise ValidationError(f"Article has more than {MAX_TAGS_PER_ARTICLE} tags")
-
-
-def _heading_lines(body: str) -> list[tuple[int, int, str]]:
-    """(line index, level, title) for each heading outside fenced code blocks."""
+def _heading_lines(body: str) -> list[tuple[int, str]]:
+    """(level, title) for each heading outside fenced code blocks."""
     headings = []
     in_fence = False
-    for index, line in enumerate(body.splitlines()):
+    for line in body.splitlines():
         if line.strip().startswith("```"):
             in_fence = not in_fence
             continue
@@ -91,12 +86,8 @@ def _heading_lines(body: str) -> list[tuple[int, int, str]]:
             continue
         match = re.match(r"^(#{1,6})\s+(.+)$", line)
         if match:
-            headings.append((index, len(match.group(1)), match.group(2).strip()))
+            headings.append((len(match.group(1)), match.group(2).strip()))
     return headings
-
-
-def _parse_headings(body: str) -> list[tuple[int, str]]:
-    return [(level, title) for _, level, title in _heading_lines(body)]
 
 
 def _validate_headings(headings: list[tuple[int, str]]) -> None:
@@ -108,15 +99,6 @@ def _validate_headings(headings: list[tuple[int, str]]) -> None:
         if level > previous_level + 1:
             raise ValidationError("Heading hierarchy skips a level")
         previous_level = level
-
-
-def make_description(body: str) -> str:
-    paragraphs = (p.strip() for p in body.split("\n\n"))
-    prose = next(
-        (p for p in paragraphs if p and not p.startswith(("#", "```"))),
-        "",
-    )
-    return re.sub(r"\s+", " ", re.sub(r"[*_`]", "", prose))[:200].strip()
 
 
 def _yaml_str(value: str) -> str:
@@ -131,13 +113,11 @@ def render_article(
     description: str,
     tags: list[str],
     body: str,
-    summary: str = "",
     issue_number: int | None = None,
     requested_by: str = "",
     writer: str = "",
 ) -> str:
     tags_yaml = "[" + ", ".join(_yaml_str(t) for t in tags) + "]"
-    summary_line = f"summary: {_yaml_str(summary)}\n" if summary else ""
     issue_line = f"issue: {issue_number}\n" if issue_number else ""
     requested_line = f"requestedBy: {_yaml_str(requested_by)}\n" if requested_by else ""
     writer_line = f"writer: {_yaml_str(writer)}\n" if writer else ""
@@ -147,7 +127,6 @@ def render_article(
         f"description: {_yaml_str(description)}\n"
         f"date: {pub_date.isoformat()}\n"
         f"tags: {tags_yaml}\n"
-        f"{summary_line}"
         f"{issue_line}"
         f"{requested_line}"
         f"{writer_line}"

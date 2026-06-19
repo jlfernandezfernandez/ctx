@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   triage:
-    if: contains(github.event.issue.labels.*.name, 'triage')
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.issue.labels.*.name, 'triage')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -34,9 +34,10 @@ jobs:
 
       - name: Curate proposed topic
         env:
-          LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-          LLM_TRIAGE_MODEL: ${{ vars.LLM_TRIAGE_MODEL }}
+          OPENROUTER_BASE_URL: ${{ vars.OPENROUTER_BASE_URL }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          AGENT_TRIAGE_PROVIDER: ${{ vars.AGENT_TRIAGE_PROVIDER }}
+          AGENT_TRIAGE_MODEL: ${{ vars.AGENT_TRIAGE_MODEL }}
           TRIAGE_ISSUE_NUMBER: ${{ inputs.issue_number }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}

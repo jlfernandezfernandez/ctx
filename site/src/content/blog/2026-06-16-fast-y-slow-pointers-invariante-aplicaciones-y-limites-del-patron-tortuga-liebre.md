@@ -3,7 +3,6 @@ title: "Fast y slow pointers: invariante, aplicaciones y límites del patrón to
 description: "Dos punteros que avanzan a distinta velocidad crean una relación de distancia predecible que permite detectar ciclos, encontrar puntos medios y localizar entradas de ciclo en secuencias unidireccionales. El invariante matemático 2(a+b)=a+b+nL garantiza la corrección del algoritmo de Floyd y sus extensiones a problemas como el duplicado en arrays. La técnica exige una función next determinista y un ratio de velocidad coprimo con la longitud del ciclo, y ofrece complejidad O(n) en tiempo y O(1) en espacio."
 date: 2026-06-16
 tags: ["algorithms"]
-summary: "Dos punteros que avanzan a distinta velocidad crean una relación de distancia predecible que permite detectar ciclos, encontrar puntos medios y localizar entradas de ciclo en secuencias unidireccionales. El invariante matemático 2(a+b)=a+b+nL garantiza la corrección del algoritmo de Floyd y sus extensiones a problemas como el duplicado en arrays. La técnica exige una función next determinista y un ratio de velocidad coprimo con la longitud del ciclo, y ofrece complejidad O(n) en tiempo y O(1) en espacio."
 issue: 30
 requestedBy: "charliecgu"
 writer: "deepseek-v4-pro"
