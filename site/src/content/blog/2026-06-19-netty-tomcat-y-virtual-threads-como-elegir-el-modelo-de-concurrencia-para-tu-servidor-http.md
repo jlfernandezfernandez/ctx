@@ -7,6 +7,7 @@ summary: "Cada modelo de concurrencia (thread-per-request, event loop, virtual t
 issue: 28
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"
+reviewer: "minimax/minimax-m3"
 ---
 
 ## Tres estrategias de concurrencia para una misma petición HTTP
