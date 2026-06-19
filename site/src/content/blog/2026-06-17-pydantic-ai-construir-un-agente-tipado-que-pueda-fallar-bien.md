@@ -3,7 +3,6 @@ title: "Pydantic AI: Construir un agente tipado que pueda fallar bien"
 description: "Pydantic AI modela los fallos de agentes de IA como estados tipados, permitiendo manejo de errores predecible, reintentos y observabilidad nativa. A diferencia de SDKs nativos o LangGraph, cada interacción produce un resultado tipado que el programa puede inspeccionar, facilitando pruebas y resiliencia en producción."
 date: 2026-06-17
 tags: ["ai-agents"]
-summary: "Pydantic AI modela los fallos de agentes de IA como estados tipados, permitiendo manejo de errores predecible, reintentos y observabilidad nativa. A diferencia de SDKs nativos o LangGraph, cada interacción produce un resultado tipado que el programa puede inspeccionar, facilitando pruebas y resiliencia en producción."
 issue: 27
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"

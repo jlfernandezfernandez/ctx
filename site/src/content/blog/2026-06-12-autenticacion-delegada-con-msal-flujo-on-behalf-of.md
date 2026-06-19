@@ -3,7 +3,6 @@ title: "De SPN a OBO: cómo cambiar de autenticación de servicio a delegada en 
 description: "Cuando un BFF autentica con SPN (client credentials) la API downstream no sabe quién es el usuario. El flujo On-Behalf-Of (OBO) permite al BFF actuar en nombre del usuario, pero cambia el JWT, los permisos y la configuración. Este artículo recorre ambos flujos desde cero, explica la terminología de Azure (appId, SPN, tenant, resource ID), compara los JWTs claim por claim, y muestra cómo migrar de uno a otro."
 date: 2026-06-12
 tags: ["auth", "azure"]
-summary: "Cuando un BFF autentica con SPN (client credentials) la API downstream no sabe quién es el usuario. El flujo On-Behalf-Of (OBO) permite al BFF actuar en nombre del usuario, pero cambia el JWT, los permisos y la configuración. Este artículo recorre ambos flujos desde cero, explica la terminología de Azure, compara los JWTs claim por claim, y muestra cómo migrar de uno a otro."
 issue: 19
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"

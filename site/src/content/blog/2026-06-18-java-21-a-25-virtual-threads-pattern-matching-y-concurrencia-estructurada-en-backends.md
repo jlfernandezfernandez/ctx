@@ -3,7 +3,6 @@ title: "Java 21 a 25: Virtual Threads, Pattern Matching y Concurrencia Estructur
 description: "Virtual threads eliminan la gestión manual de pools y simplifican la concurrencia bloqueante. Pattern matching con tipos sellados garantiza exhaustividad en el modelado de estados. Structured concurrency y scoped values (preview) corrigen la fragilidad de CompletableFuture y ThreadLocal."
 date: 2026-06-18
 tags: ["java", "concurrency"]
-summary: "Virtual threads eliminan la gestión manual de pools y simplifican la concurrencia bloqueante. Pattern matching con tipos sellados garantiza exhaustividad en el modelado de estados. Structured concurrency y scoped values (preview) corrigen la fragilidad de CompletableFuture y ThreadLocal."
 issue: 25
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"

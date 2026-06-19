@@ -3,7 +3,6 @@ title: "LangGraph: Grafos de estado vs. bucles de tool‑calling para agentes fi
 description: "El bucle de tool‑calling es suficiente para agentes lineales, pero falla cuando se necesita bifurcación por reglas de negocio, aprobación humana o recuperación granular. LangGraph modela el proceso como un grafo de estados con checkpoints, permitiendo pausar, persistir y reanudar desde el punto exacto. Se detalla el criterio de decisión y un ejemplo de flujo de pagos con intervención humana e idempotencia."
 date: 2026-06-19
 tags: ["ai-agents", "state-machines"]
-summary: "El bucle de tool‑calling es suficiente para agentes lineales, pero falla cuando se necesita bifurcación por reglas de negocio, aprobación humana o recuperación granular. LangGraph modela el proceso como un grafo de estados con checkpoints, permitiendo pausar, persistir y reanudar desde el punto exacto. Se detalla el criterio de decisión y un ejemplo de flujo de pagos con intervención humana e idempotencia."
 issue: 24
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"
