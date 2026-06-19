@@ -154,12 +154,11 @@ def _review_draft(env: dict, github: GitHubClient, pr_number: int) -> int:
         print("Could not approve. PR left open for a human.")
         return 0
 
-    previous_blocking: list[str] | None = None
     for fixes_done in range(max_rounds + 1):
         blocking = _body_defects(body)
         suggestions: list[str] = []
         if not blocking:
-            report = review_article(reviewer, topic, f"# {topic}\n\n{body}", previous_blocking)
+            report = review_article(reviewer, topic, f"# {topic}\n\n{body}")
             if report is None:
                 return escalate("El reviewer no devolvió un informe válido.", [])
             blocking, suggestions = split_issues(report)
@@ -197,8 +196,6 @@ def _review_draft(env: dict, github: GitHubClient, pr_number: int) -> int:
 
         github.update_file(branch, path, frontmatter + fixed, f"fix: review feedback (round {round_number})")
         body = fixed
-        if not blocking[0].startswith("[validacion]"):
-            previous_blocking = blocking
     return 0
 
 

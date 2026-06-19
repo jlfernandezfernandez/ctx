@@ -29,31 +29,20 @@ REVIEWER_SCHEMA = {
 }
 
 
-def reviewer_prompt(topic: str, body: str, previous_feedback: list[str] | None = None) -> str:
-    previous = ""
-    if previous_feedback:
-        fixed = "\n".join(f"- {item}" for item in previous_feedback)
-        previous = f"""
-
-En una ronda anterior señalaste estos defectos:
-{fixed}
-
-Comprueba que están resueltos. Solo añade bloqueantes nuevos si son errores objetivos importantes."""
+def reviewer_prompt(topic: str, body: str) -> str:
     return f"""Revisa este artículo técnico sobre "{topic}":
 
 <articulo>
 {body}
-</articulo>{previous}
+</articulo>
 
 Devuelve SOLO el informe JSON definido en tu system prompt."""
 
 
-def review_article(
-    llm: LLMClient, topic: str, body: str, previous_feedback: list[str] | None = None
-) -> dict | None:
+def review_article(llm: LLMClient, topic: str, body: str) -> dict | None:
     try:
         return llm.generate_structured(
-            SYSTEM_PROMPT, reviewer_prompt(topic, body, previous_feedback), REVIEWER_SCHEMA
+            SYSTEM_PROMPT, reviewer_prompt(topic, body), REVIEWER_SCHEMA
         )
     except LLMError:
         return None

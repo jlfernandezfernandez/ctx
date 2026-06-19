@@ -73,14 +73,13 @@ def test_approved_first_round_merges_and_closes_issue(github_cls, llm_cls, _body
 @patch("article_generator.pipeline.GitHubClient")
 def test_blocking_defect_writer_fixes_then_merges(github_cls, llm_cls, _body_defects):
     github = setup_github(github_cls)
-    reviewer, writer_chat = setup_llms(
+    _, writer_chat = setup_llms(
         llm_cls, [{"issues": [issue()]}, APPROVED], fixes=[ARTICLE_BODY]
     )
 
     assert run(env()) == 0
 
     assert "falta import de Flux" in writer_chat.generate.call_args.args[1]
-    assert "falta import de Flux" in reviewer.generate_structured.call_args.args[1]
     github.merge_pr.assert_called_once()
 
 

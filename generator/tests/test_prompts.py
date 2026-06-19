@@ -44,13 +44,6 @@ def test_reviewer_prompt_includes_article_and_json_contract():
     assert '"issues"' in system
     assert "category" in system
     assert "blocking" in system
-    assert "ronda anterior" not in p
-
-
-def test_reviewer_prompt_includes_previous_feedback_on_later_rounds():
-    p = reviewer_prompt("Project Reactor", "cuerpo", ["[codigo] falta import de Flux"])
-    assert "ronda anterior" in p
-    assert "falta import de Flux" in p
 
 
 def test_rewrite_prompt_includes_draft_and_feedback():
