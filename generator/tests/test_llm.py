@@ -59,28 +59,32 @@ def test_generate_raises_on_empty_content():
             client().generate("sys", "user")
 
 
-def test_generate_json_parses_object_and_requests_json_format():
-    payload = {"choices": [{"message": {"content": '{"summary": "s", "tags": ["a"]}'}}]}
+def test_generate_structured_uses_json_schema():
+    schema = {
+        "title": "test",
+        "type": "object",
+        "properties": {"x": {"type": "integer"}},
+        "required": ["x"],
+        "additionalProperties": False,
+    }
+    payload = {"choices": [{"message": {"content": '{"x": 1}'}}]}
     with patch("article_generator.llm.requests.post", return_value=make_response(payload=payload)) as post:
-        assert client().generate_json("sys", "user") == {"summary": "s", "tags": ["a"]}
-    assert post.call_args.kwargs["json"]["response_format"] == {"type": "json_object"}
+        assert client().generate_structured("sys", "user", schema) == {"x": 1}
+    rf = post.call_args.kwargs["json"]["response_format"]
+    assert rf["type"] == "json_schema"
+    assert rf["json_schema"]["name"] == "test"
+    assert rf["json_schema"]["strict"] is True
 
 
-def test_generate_json_strips_code_fences():
-    payload = {"choices": [{"message": {"content": '```json\n{"tags": []}\n```'}}]}
-    with patch("article_generator.llm.requests.post", return_value=make_response(payload=payload)):
-        assert client().generate_json("sys", "user") == {"tags": []}
-
-
-def test_generate_json_raises_on_invalid_json():
+def test_generate_structured_raises_on_invalid_json():
     payload = {"choices": [{"message": {"content": "not json"}}]}
     with patch("article_generator.llm.requests.post", return_value=make_response(payload=payload)):
         with pytest.raises(LLMError, match="JSON"):
-            client().generate_json("sys", "user")
+            client().generate_structured("sys", "user", {})
 
 
-def test_generate_json_raises_on_non_object():
+def test_generate_structured_raises_on_non_object():
     payload = {"choices": [{"message": {"content": "[1, 2]"}}]}
     with patch("article_generator.llm.requests.post", return_value=make_response(payload=payload)):
         with pytest.raises(LLMError, match="JSON"):
-            client().generate_json("sys", "user")
+            client().generate_structured("sys", "user", {})

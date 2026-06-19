@@ -1,12 +1,28 @@
 """Writer agent: creates an article and applies reviewer feedback."""
 from dataclasses import dataclass
 
-from ..article import MAX_TAGS_PER_ARTICLE, make_description, slugify
-from ..llm import LLMClient, LLMError
+from ..article import MAX_TAGS_PER_ARTICLE, slugify
+from ..llm import LLMClient
 from ..prompt import load_system_prompt
 
 
 SYSTEM_PROMPT = load_system_prompt("writer")
+
+
+METADATA_SCHEMA = {
+    "title": "article_metadata",
+    "type": "object",
+    "properties": {
+        "title": {"type": "string"},
+        "summary": {"type": "string"},
+        "tags": {
+            "type": "array",
+            "items": {"type": "string"},
+        },
+    },
+    "required": ["title", "summary", "tags"],
+    "additionalProperties": False,
+}
 
 
 @dataclass(frozen=True)
@@ -20,7 +36,7 @@ class Draft:
 def _notes_block(notes: str) -> str:
     if not notes.strip():
         return ""
-    return f"\n\nBriefing editorial:\n<briefing>\n{notes}\n</briefing>"
+    return f"\n\nBriefing editorial:\n<briefing>\n{notes}</briefing>"
 
 
 def outline_prompt(topic: str, notes: str) -> str:
@@ -105,20 +121,21 @@ def normalize_tags(raw: list[str], canonical_tags: list[str]) -> list[str]:
     return result
 
 
-def write_article(llm: LLMClient, topic: str, notes: str, canonical_tags: list[str]) -> Draft:
-    outline = llm.generate(SYSTEM_PROMPT, outline_prompt(topic, notes))
-    body = llm.generate(SYSTEM_PROMPT, article_prompt(topic, notes, outline))
-    title, summary, tags = topic, make_description(body), []
-    try:
-        metadata = llm.generate_json(SYSTEM_PROMPT, metadata_prompt(topic, body, canonical_tags))
-        if isinstance(metadata.get("title"), str) and metadata["title"].strip():
-            title = metadata["title"].strip()
-        if isinstance(metadata.get("summary"), str) and metadata["summary"].strip():
-            summary = metadata["summary"].strip()
-        if isinstance(metadata.get("tags"), list):
-            tags = normalize_tags(metadata["tags"], canonical_tags)
-    except LLMError as exc:
-        print(f"Metadata generation failed ({exc}); falling back to defaults.")
+def write_article(
+    chat_llm: LLMClient,
+    json_llm: LLMClient,
+    topic: str,
+    notes: str,
+    canonical_tags: list[str],
+) -> Draft:
+    outline = chat_llm.generate(SYSTEM_PROMPT, outline_prompt(topic, notes))
+    body = chat_llm.generate(SYSTEM_PROMPT, article_prompt(topic, notes, outline))
+    metadata = json_llm.generate_structured(
+        SYSTEM_PROMPT, metadata_prompt(topic, body, canonical_tags), METADATA_SCHEMA
+    )
+    title = metadata["title"].strip()
+    summary = metadata["summary"].strip()
+    tags = normalize_tags(metadata["tags"], canonical_tags)
     return Draft(title=title, summary=summary, tags=tags, body=body)
 
 

@@ -47,16 +47,30 @@ Los únicos labels requeridos por el producto son `triage`, `topic`, `priority`,
 
 ## Configuración (Actions)
 
-| Dónde    | Nombre               | Valor actual            |
-| -------- | -------------------- | ----------------------- |
-| Secret   | `LLM_API_KEY`        | API key del proveedor   |
-| Variable | `LLM_BASE_URL`       | `https://ollama.com/v1` |
-| Variable | `LLM_WRITER_MODEL`   | `deepseek-v4-pro`       |
-| Variable | `LLM_REVIEWER_MODEL` | `minimax-m3`            |
-| Variable | `LLM_TRIAGE_MODEL`   | `deepseek-v4-flash`     |
-| Variable | `MAX_REVIEW_ROUNDS`  | `2`                     |
+### Providers
 
-Cambiar de proveedor o modelo = cambiar esas variables, cero código.
+| Dónde    | Nombre                    | Valor actual                       |
+| -------- | ------------------------- | ---------------------------------- |
+| Secret   | `OLLAMA_API_KEY`          | API key de Ollama Cloud            |
+| Variable | `OLLAMA_BASE_URL`         | `https://ollama.com/v1`            |
+| Secret   | `OPENROUTER_API_KEY`      | API key de OpenRouter              |
+| Variable | `OPENROUTER_BASE_URL`     | `https://openrouter.ai/api/v1`     |
+
+### Agentes
+
+| Dónde    | Nombre                          | Valor de ejemplo              |
+| -------- | ------------------------------- | ----------------------------- |
+| Variable | `AGENT_TRIAGE_PROVIDER`         | `openrouter`                  |
+| Variable | `AGENT_TRIAGE_MODEL`            | `openai/gpt-5-nano`           |
+| Variable | `AGENT_WRITER_PROVIDER`         | `ollama`                      |
+| Variable | `AGENT_WRITER_MODEL`            | `deepseek-v4-pro`             |
+| Variable | `AGENT_WRITER_JSON_PROVIDER`    | `openrouter`                  |
+| Variable | `AGENT_WRITER_JSON_MODEL`       | `anthropic/claude-sonnet-4.6` |
+| Variable | `AGENT_REVIEWER_PROVIDER`       | `openrouter`                  |
+| Variable | `AGENT_REVIEWER_MODEL`          | `openai/gpt-5`                |
+| Variable | `MAX_REVIEW_ROUNDS`             | `2`                           |
+
+Cada agente apunta a un provider y modelo. El writer usa dos capabilities: chat libre (`AGENT_WRITER_*`) y JSON estructurado (`AGENT_WRITER_JSON_*`). OpenRouter se usa para tareas con `response_format: json_schema`; Ollama Cloud para texto libre.
 
 ## Desarrollo local
 

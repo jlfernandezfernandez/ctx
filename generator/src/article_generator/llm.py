@@ -1,7 +1,7 @@
 """Minimal client for any OpenAI-compatible chat completions API.
 
-Provider-agnostic on purpose: switching provider means changing
-LLM_BASE_URL / LLM_API_KEY / LLM_MODEL, nothing else.
+Provider-agnostic on purpose: the caller decides which provider and model
+to use for each task.
 """
 import json
 
@@ -19,17 +19,22 @@ class LLMClient:
         self.model = model
         self.timeout = timeout
 
-    def generate_json(self, system: str, user: str) -> dict:
-        """For metadata extraction. Falls back gracefully at call sites:
-        providers without json_object support usually still return JSON text."""
-        content = self.generate(system, user, response_format={"type": "json_object"})
-        text = content.strip()
-        if text.startswith("```"):
-            text = text.strip("`")
-            if text.startswith("json"):
-                text = text[4:]
+    def generate_structured(self, system: str, user: str, schema: dict) -> dict:
+        """Generate a response that conforms to the supplied JSON schema."""
+        content = self.generate(
+            system,
+            user,
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": schema.get("title", "response"),
+                    "strict": True,
+                    "schema": schema,
+                },
+            },
+        )
         try:
-            data = json.loads(text)
+            data = json.loads(content)
         except ValueError as exc:
             raise LLMError(f"LLM did not return valid JSON: {content[:300]}") from exc
         if not isinstance(data, dict):

@@ -8,6 +8,20 @@ from ..prompt import load_system_prompt
 SYSTEM_PROMPT = load_system_prompt("triage")
 
 
+TRIAGE_SCHEMA = {
+    "title": "classification",
+    "type": "object",
+    "properties": {
+        "action": {"type": "string", "enum": ["APPROVE", "REJECT", "REVIEW"]},
+        "title": {"type": "string"},
+        "description": {"type": "string"},
+        "reason": {"type": "string"},
+    },
+    "required": ["action", "title", "description", "reason"],
+    "additionalProperties": False,
+}
+
+
 class TriageError(Exception):
     pass
 
@@ -21,21 +35,17 @@ class Classification:
 
 
 def parse_classification(data: dict) -> Classification:
-    action = data.get("action")
-    title = data.get("title")
-    description = data.get("description")
-    reason = data.get("reason")
-    if not isinstance(action, str) or action.upper() not in {"APPROVE", "REJECT", "REVIEW"}:
+    action = data.get("action", "").strip().upper()
+    title = data.get("title", "").strip()
+    reason = data.get("reason", "").strip()
+    description = data.get("description", "").strip()
+    if action not in {"APPROVE", "REJECT", "REVIEW"}:
         raise TriageError("triage action must be APPROVE, REJECT or REVIEW")
-    if not isinstance(title, str) or not title.strip():
+    if not title:
         raise TriageError("triage title is empty")
-    if not isinstance(reason, str) or not reason.strip():
+    if not reason:
         raise TriageError("triage reason is empty")
-    if description is None or not isinstance(description, str):
-        description = ""
-    return Classification(
-        action.upper(), title.strip()[:300], description.strip()[:1000], reason.strip()[:160]
-    )
+    return Classification(action, title[:300], description[:1000], reason[:160])
 
 
 def classification_prompt(title: str, body: str) -> str:
@@ -47,5 +57,7 @@ Notas:
 
 
 def classify(llm: LLMClient, title: str, body: str) -> Classification:
-    data = llm.generate_json(SYSTEM_PROMPT, classification_prompt(title, body))
+    data = llm.generate_structured(
+        SYSTEM_PROMPT, classification_prompt(title, body), TRIAGE_SCHEMA
+    )
     return parse_classification(data)
