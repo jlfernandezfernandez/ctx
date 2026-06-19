@@ -5,7 +5,6 @@ from article_generator.agents.writer import (
     article_prompt,
     metadata_prompt,
     normalize_tags,
-    outline_prompt,
     rewrite_prompt,
 )
 from article_generator.prompt import load_system_prompt
@@ -31,22 +30,10 @@ def test_writer_selects_central_tags_and_can_create_one():
     assert normalize_tags(["Auth", "auth", "OAuth", "agents"], ["agents"]) == ["auth", "agents"]
 
 
-def test_outline_prompt_includes_topic_and_notes():
-    p = outline_prompt("Project Reactor", "no entendemos el paradigma")
-    assert "Project Reactor" in p
-    assert "no entendemos el paradigma" in p
-
-
-def test_outline_prompt_omits_notes_section_when_empty():
-    p = outline_prompt("Project Reactor", "")
-    assert "Notas del equipo" not in p
-
-
-def test_article_prompt_includes_outline_topic_and_notes():
-    p = article_prompt("SSE", "lo usamos con agentes", "1. Intro\n2. Detalle")
+def test_article_prompt_includes_topic_and_notes():
+    p = article_prompt("SSE", "lo usamos con agentes")
     assert "SSE" in p
     assert "lo usamos con agentes" in p
-    assert "1. Intro" in p
 
 
 def test_reviewer_prompt_includes_article_and_json_contract():

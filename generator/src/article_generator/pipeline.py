@@ -191,13 +191,9 @@ def _review_draft(env: dict, github: GitHubClient, pr_number: int) -> int:
         github.comment(
             pr_number, f"Cambios solicitados (ronda {round_number}):\n\n{_bullets(blocking)}"
         )
-        fixed = None
-        for attempt in range(1, 4):
-            fixed = revise_article(writer_chat, topic, body, blocking, attempt, _body_defects(fixed) if fixed else None)
-            if not _body_defects(fixed):
-                break
-        else:
-            return escalate("La corrección del writer produjo Markdown inválido tras 3 intentos.", blocking)
+        fixed = revise_article(writer_chat, topic, body, blocking)
+        if _body_defects(fixed):
+            return escalate("La corrección del writer produjo Markdown inválido.", blocking)
 
         github.update_file(branch, path, frontmatter + fixed, f"fix: review feedback (round {round_number})")
         body = fixed

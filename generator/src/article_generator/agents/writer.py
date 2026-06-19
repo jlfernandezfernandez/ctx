@@ -39,23 +39,12 @@ def _notes_block(notes: str) -> str:
     return f"\n\nBriefing editorial:\n<briefing>\n{notes}</briefing>"
 
 
-def outline_prompt(topic: str, notes: str) -> str:
-    return f"""Diseña el mejor esquema para un artículo técnico profundo sobre: {topic}{_notes_block(notes)}
-
-Formula la pregunta central que resolverá el artículo y la tesis que defenderá. Decide qué conceptos \
-necesita el lector para seguir el argumento y qué detalles, ejemplos y trade-offs aportan criterio. \
-Descarta los subtemas que solo convertirían el texto en un catálogo.
-
-Devuelve SOLO la tesis y el esquema con secciones y bullets concretos."""
-
-
-def article_prompt(topic: str, notes: str, outline: str) -> str:
+def article_prompt(topic: str, notes: str) -> str:
     return f"""Escribe el artículo completo sobre: {topic}{_notes_block(notes)}
 
-Usa este esquema como guía, adaptándolo si mejora el resultado:
-<esquema>
-{outline}
-</esquema>
+Formula una pregunta central y una tesis útil. Decide qué conceptos necesita el lector para seguir \
+el argumento y qué detalles, ejemplos y trade-offs aportan criterio. Descarta los subtemas que solo \
+convertirían el texto en un catálogo.
 
 Requisitos:
 - Markdown puro con encabezados descriptivos y bloques de código con su lenguaje.
@@ -85,13 +74,8 @@ Devuelve SOLO un objeto JSON con:
 - "tags": entre 1 y {MAX_TAGS_PER_ARTICLE} tags"""
 
 
-def rewrite_prompt(topic: str, body: str, feedback: list[str], attempt: int = 1, defects: list[str] | None = None) -> str:
+def rewrite_prompt(topic: str, body: str, feedback: list[str]) -> str:
     issues = "\n".join(f"- {item}" for item in feedback)
-    retry = ""
-    if attempt >= 2 and defects:
-        retry = "\n\nTu intento anterior tuvo estos errores de formato:\n" + "\n".join(f"- {d}" for d in defects)
-    elif attempt >= 2:
-        retry = "\n\nTu intento anterior produjo Markdown inválido. Conserva intacto todo lo no afectado."
     return f"""Corrige este artículo técnico sobre: {topic}
 
 <articulo>
@@ -102,7 +86,7 @@ Defectos que debes corregir:
 {issues}
 
 Corrige únicamente lo necesario para resolver todos los defectos. No añadas frontmatter ni título \
-principal. Devuelve SOLO el cuerpo completo corregido en markdown.{retry}"""
+principal. Devuelve SOLO el cuerpo completo corregido en markdown."""
 
 
 def normalize_tags(raw: list[str], canonical_tags: list[str]) -> list[str]:
@@ -130,8 +114,7 @@ def write_article(
     notes: str,
     canonical_tags: list[str],
 ) -> Draft:
-    outline = chat_llm.generate(SYSTEM_PROMPT, outline_prompt(topic, notes))
-    body = chat_llm.generate(SYSTEM_PROMPT, article_prompt(topic, notes, outline))
+    body = chat_llm.generate(SYSTEM_PROMPT, article_prompt(topic, notes))
     metadata = json_llm.generate_structured(
         SYSTEM_PROMPT, metadata_prompt(topic, body, canonical_tags), METADATA_SCHEMA
     )
@@ -142,6 +125,6 @@ def write_article(
 
 
 def revise_article(
-    llm: LLMClient, topic: str, body: str, feedback: list[str], attempt: int = 1, defects: list[str] | None = None
+    llm: LLMClient, topic: str, body: str, feedback: list[str]
 ) -> str:
-    return llm.generate(SYSTEM_PROMPT, rewrite_prompt(topic, body, feedback, attempt, defects))
+    return llm.generate(SYSTEM_PROMPT, rewrite_prompt(topic, body, feedback))

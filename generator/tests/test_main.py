@@ -36,7 +36,6 @@ def topic_issue():
 def setup_llms(llm_cls):
     writer_chat = MagicMock()
     writer_chat.generate.side_effect = [
-        "outline",
         "## Contexto\n\nArtículo.",
         "## Contexto\n\nCorregido.",
     ]
