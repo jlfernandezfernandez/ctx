@@ -8,5 +8,6 @@
   "kafka",
   "reactive",
   "snowflake",
-  "state-machines"
+  "state-machines",
+  "virtual-threads"
 ]
