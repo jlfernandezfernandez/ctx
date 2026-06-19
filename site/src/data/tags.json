@@ -7,5 +7,6 @@
   "java",
   "kafka",
   "reactive",
-  "snowflake"
+  "snowflake",
+  "state-machines"
 ]
