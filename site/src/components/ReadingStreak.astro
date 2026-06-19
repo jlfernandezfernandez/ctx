@@ -1,59 +1,113 @@
 ---
-// Reading streak badge. Value lives in localStorage (client-only), so the shell
-// renders empty and the inline script fills it on load.
+// Reading streak: a 5-tile weekly strip (L–V). Read days fill amber.
+// Client-only (localStorage); renders hidden, the inline script fills it on load
+// and on `ctx:reading` (live-update from a blog post).
+const DOW = ['L', 'M', 'X', 'J', 'V'];
 ---
 
 <section class="streak" data-streak hidden>
-	<span class="term-command">ctx --streak</span>
-	<p class="streak-body"></p>
+	<p class="streak-command term-command">reading_streak --week</p>
+	<div class="track" role="group" aria-label="Racha de lectura de esta semana">
+		{DOW.map((d, i) => <span class="cell" data-i={i}>{d}</span>)}
+	</div>
 </section>
 
 <script>
 	import { KEY, parseReading } from '../utils/reading';
 
-	const el = document.querySelector<HTMLElement>('[data-streak]');
-	const body = el?.querySelector<HTMLElement>('.streak-body');
-	if (el && body) {
-		const { current } = parseReading(localStorage.getItem(KEY)).streak;
-		if (current <= 0) {
-			body.textContent = 'Lee el artículo de hoy para empezar tu racha.';
-		} else {
-			const days = current === 1 ? 'día' : 'días';
-			body.innerHTML = `🔥 <strong>${current}</strong> ${days} seguidos leyendo`;
-			if (current >= 5) el.classList.add('hot');
-		}
-		el.hidden = false;
+	const NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+	// en-CA → YYYY-MM-DD, local timezone (matches BlogPost's markRead).
+	const ymd = (d: Date) => d.toLocaleDateString('en-CA');
+
+	// Monday of the week containing `today`. On weekends, returns the Monday of
+	// the week that just ended — that's the streak unit still in play.
+	function mondayOf(today0: Date): Date {
+		const since = (today0.getUTCDay() + 6) % 7;
+		const m = new Date(today0);
+		m.setUTCDate(today0.getUTCDate() - since);
+		return m;
 	}
+
+	function render() {
+		const root = document.querySelector<HTMLElement>('[data-streak]');
+		if (!root) return;
+		const readSet = new Set(parseReading(localStorage.getItem(KEY)).days);
+		const today = ymd(new Date());
+		const monday = mondayOf(new Date(today + 'T00:00:00Z'));
+
+		root.querySelectorAll<HTMLElement>('.cell').forEach((cell) => {
+			const i = Number(cell.dataset.i);
+			const d = new Date(monday);
+			d.setUTCDate(monday.getUTCDate() + i);
+			const key = ymd(d);
+			const read = readSet.has(key);
+			cell.classList.toggle('is-read', read);
+			cell.classList.toggle('is-today', key === today && !read);
+			cell.setAttribute('aria-label', `${NAMES[i]}: ${read ? 'leído' : 'no leído'}`);
+		});
+		root.hidden = false;
+	}
+
+	render();
+	window.addEventListener('ctx:reading', render);
 </script>
 
 <style>
 	.streak {
-		display: flex;
-		align-items: baseline;
-		gap: 1em;
-		margin-top: 2em;
-		padding: 0.9em 1.2em;
+		margin-top: 3em;
+		padding: 1.5em 1.75em;
 		border: 1px solid rgb(var(--gray-light));
-		border-radius: 8px;
-		background: rgba(17, 21, 28, 0.72);
+		border-radius: 6px;
+		background: var(--bg-raise);
 		box-shadow: var(--panel-shadow);
+	}
+	.streak-command {
+		margin: 0 0 1.1em;
+		font-size: 0.75em;
+	}
+	.track {
+		display: flex;
+		gap: 0.6em;
+	}
+	.cell {
+		flex: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		height: clamp(44px, 7vw, 54px);
+		border-radius: 6px;
+		border: 1px solid rgb(var(--gray-light));
+		background: transparent;
+		color: rgb(var(--gray));
 		font-family: var(--font-mono);
 		font-size: 0.85em;
+		font-weight: 600;
+		line-height: 1;
+		opacity: 0.55;
+		transition: background 160ms ease, color 160ms ease, border-color 160ms ease, opacity 160ms ease;
 	}
-	.streak.hot {
+	.cell.is-read {
+		background: var(--accent);
 		border-color: var(--accent);
-		background: linear-gradient(90deg, rgba(255, 180, 84, 0.08), rgba(17, 21, 28, 0.72) 40%);
+		color: var(--bg);
+		opacity: 1;
 	}
-	.streak .term-command {
-		flex-shrink: 0;
-		color: rgb(var(--gray));
-	}
-	.streak-body {
-		margin: 0;
-		color: rgb(var(--gray-dark));
-	}
-	.streak-body strong {
+	/* Today, still unread: a pulsing amber ring — "lee hoy". */
+	.cell.is-today {
+		opacity: 1;
 		color: var(--accent);
-		font-size: 1.15em;
+		border-color: var(--accent);
+		box-shadow: 0 0 0 3px rgba(255, 180, 84, 0.12);
+		animation: streak-pulse 2s ease-in-out infinite;
+	}
+	@keyframes streak-pulse {
+		50% {
+			box-shadow: 0 0 0 5px rgba(255, 180, 84, 0.05);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.cell.is-today {
+			animation: none;
+		}
 	}
 </style>
