@@ -4,7 +4,7 @@ from unittest.mock import call, patch
 
 import pytest
 
-from article_generator.agents.triage import Classification, TriageError, parse_classification
+from article_generator.agents.triage import Classification, TriageError, classification_prompt, parse_classification
 from article_generator.pipeline import triage_run
 
 
@@ -181,3 +181,18 @@ def test_manual_run_fetches_requested_issue(issues_cls, llm_cls, tmp_path):
     issues.get_issue.assert_called_once_with(3)
     issues.update_issue.assert_called_once_with(3, title=issue["title"], body="")
     issues.set_labels.assert_called_once_with(3, ["topic", "priority"])
+
+
+def test_classification_prompt_preserves_structured_body():
+    body = (
+        "### Motivación\nQuiero entender por qué fallan los agentes de IA.\n\n"
+        "### Qué ya sabes\nSé modelar resultados con Pydantic, no sé gestionar reintentos.\n\n"
+        "### Caso concreto\nUn chatbot que debe devolver JSON válido siempre."
+    )
+    prompt = classification_prompt("Agentes tipados", body)
+    assert "### Motivación" in prompt
+    assert "Quiero entender por qué fallan los agentes de IA." in prompt
+    assert "### Qué ya sabes" in prompt
+    assert "Sé modelar resultados con Pydantic, no sé gestionar reintentos." in prompt
+    assert "### Caso concreto" in prompt
+    assert "Un chatbot que debe devolver JSON válido siempre." in prompt
