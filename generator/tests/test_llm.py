@@ -1,4 +1,5 @@
 """Tests for the OpenAI-compatible LLM client."""
+import os
 from unittest.mock import patch, MagicMock
 
 import pytest
@@ -88,3 +89,28 @@ def test_generate_structured_raises_on_non_object():
     with patch("article_generator.llm.requests.post", return_value=make_response(payload=payload)):
         with pytest.raises(LLMError, match="JSON"):
             client().generate_structured("sys", "user", {})
+
+
+@pytest.mark.skipif(
+    not os.getenv("OPENROUTER_API_KEY"),
+    reason="needs OPENROUTER_API_KEY for a live OpenRouter call",
+)
+def test_generate_structured_against_openrouter():
+    """Live: OpenRouter honours json_schema strict and returns conforming JSON."""
+    llm = LLMClient(
+        base_url=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
+        api_key=os.environ["OPENROUTER_API_KEY"],
+        model=os.getenv("LLM_TEST_MODEL", "openai/gpt-4o-mini"),
+    )
+    schema = {
+        "title": "color",
+        "type": "object",
+        "properties": {"name": {"type": "string"}, "hex": {"type": "string"}},
+        "required": ["name", "hex"],
+        "additionalProperties": False,
+    }
+    data = llm.generate_structured(
+        "Eres un conversor de colores.", "Dame el color rojo.", schema
+    )
+    assert set(data) == {"name", "hex"}
+    assert isinstance(data["name"], str) and isinstance(data["hex"], str)

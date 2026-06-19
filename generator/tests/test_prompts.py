@@ -36,12 +36,13 @@ def test_article_prompt_includes_topic_and_notes():
     assert "lo usamos con agentes" in p
 
 
-def test_reviewer_prompt_includes_article_and_json_contract():
+def test_reviewer_prompt_includes_article_and_field_semantics():
     p = reviewer_prompt("Project Reactor", "cuerpo del articulo")
     assert "cuerpo del articulo" in p
     assert "Project Reactor" in p
+    # The JSON shape lives in REVIEWER_SCHEMA now; the prompt only carries
+    # the semantics of each field.
     system = load_system_prompt("reviewer")
-    assert '"issues"' in system
     assert "category" in system
     assert "blocking" in system
 
