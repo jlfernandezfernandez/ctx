@@ -107,12 +107,25 @@ def _yaml_str(value: str) -> str:
     return f'"{escaped}"'
 
 
+def _render_quiz(quiz: list[dict]) -> str:
+    lines = ["quiz:"]
+    for item in quiz:
+        lines.append(f"  - question: {_yaml_str(item['question'])}")
+        lines.append("    options:")
+        for opt in item["options"]:
+            lines.append(f"      - {_yaml_str(opt)}")
+        lines.append(f"    correct: {item['correct']}")
+        lines.append(f"    explanation: {_yaml_str(item['explanation'])}")
+    return "\n".join(lines)
+
+
 def render_article(
     pub_date: date,
     title: str,
     description: str,
     tags: list[str],
     body: str,
+    quiz: list[dict] | None = None,
     issue_number: int | None = None,
     requested_by: str = "",
     writer: str = "",
@@ -121,6 +134,7 @@ def render_article(
     issue_line = f"issue: {issue_number}\n" if issue_number else ""
     requested_line = f"requestedBy: {_yaml_str(requested_by)}\n" if requested_by else ""
     writer_line = f"writer: {_yaml_str(writer)}\n" if writer else ""
+    quiz_block = f"{_render_quiz(quiz)}\n" if quiz else ""
     frontmatter = (
         "---\n"
         f"title: {_yaml_str(title)}\n"
@@ -130,6 +144,7 @@ def render_article(
         f"{issue_line}"
         f"{requested_line}"
         f"{writer_line}"
+        f"{quiz_block}"
         "---\n\n"
     )
     return frontmatter + body.strip() + "\n"

@@ -7,6 +7,31 @@ issue: 27
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"
 reviewer: "minimax-m3"
+quiz:
+  - question: "¿Cómo representa Pydantic AI un fallo de validación en la salida del LLM?"
+    options:
+      - "Lanzando una excepción genérica de Python"
+      - "Como parte del estado tipado RunResult"
+      - "Devolviendo silenciosamente None"
+      - "Registrando el error y reintentando indefinidamente"
+    correct: 1
+    explanation: "Pydantic AI modela el fracaso como datos dentro de RunResult, no como excepciones, para que el llamador inspeccione y decida. Devolver None en silencio o reintentar para siempre no son comportamientos del framework."
+  - question: "¿Cuál es la ventaja de devolver un ToolResponse con success=False en lugar de lanzar una excepción?"
+    options:
+      - "Ocultar los errores al LLM"
+      - "Permitir que el LLM vea el fallo y decida el siguiente paso"
+      - "Evitar la validación de Pydantic"
+      - "Reducir el consumo de tokens"
+    correct: 1
+    explanation: "Codificar el fallo como dato mantiene al LLM en el bucle: puede reintentar, cambiar de herramienta o escalar. Ocultar errores o saltar la validación iría contra el diseño del framework."
+  - question: "¿Qué utilidad de Pydantic AI permite pruebas unitarias deterministas sin llamar a modelos reales?"
+    options:
+      - "logfire.instrument_pydantic_ai"
+      - "TestModel con custom_output_text"
+      - "deps_type injection"
+      - "ModelRetry"
+    correct: 1
+    explanation: "TestModel permite inyectar respuestas deterministas, incluidas salidas malformadas. logfire sirve para observabilidad, deps_type para inyectar dependencias y ModelRetry para reintentos en runtime."
 ---
 
 Los agentes de IA en producción tropiezan con una realidad incómoda: los LLM son estocásticos. Un *tool call* malformado, un JSON que no respeta el esquema o una alucinación en los parámetros descarrila el flujo sin previo aviso. Los SDK nativos delegan en el desarrollador detectar y recuperar el fallo —*try/except* frágiles, reintentos manuales, sin contrato programático—. Frameworks como LangGraph ofrecen grafos potentes pero opacos: el error se propaga por nodos sin representación uniforme y depurar es arqueología.

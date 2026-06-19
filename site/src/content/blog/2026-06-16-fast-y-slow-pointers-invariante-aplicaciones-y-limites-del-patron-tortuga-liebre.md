@@ -7,6 +7,31 @@ issue: 30
 requestedBy: "charliecgu"
 writer: "deepseek-v4-pro"
 reviewer: "minimax-m3"
+quiz:
+  - question: "¿Qué invariante justifica reiniciar slow a la cabeza tras el primer encuentro en el algoritmo de Floyd?"
+    options:
+      - "slow ha recorrido exactamente la mitad de la lista"
+      - "a = nL - b, así ambos punteros coinciden en la entrada del ciclo"
+      - "fast siempre está dos nodos por delante de slow"
+      - "La longitud del ciclo coincide con la distancia a la entrada"
+    correct: 1
+    explanation: "De 2(a+b) = a+b+nL se deriva a = nL-b, lo que garantiza que un puntero desde la cabeza y otro desde el encuentro llegan juntos a la entrada. Las demás afirmaciones son imprecisas o falsas."
+  - question: "¿Por qué el ratio 2:1 detecta ciclos pero el 3:1 puede fallar?"
+    options:
+      - "3:1 es demasiado rápido y salta nodos"
+      - "La velocidad relativa 2 no es coprima con ciclos de longitud par"
+      - "3:1 consume demasiada memoria"
+      - "El ratio 2:1 está hardcodeado en el intérprete de Python"
+    correct: 1
+    explanation: "La velocidad relativa debe ser coprima con L. 3:1 da velocidad relativa 2, que comparte factor con ciclos pares y puede no encontrar el encuentro. 2:1 da velocidad relativa 1, coprima con cualquier L."
+  - question: "En el problema del duplicado en un array, ¿a qué corresponde el valor repetido?"
+    options:
+      - "Al nodo medio de la secuencia"
+      - "A la entrada del ciclo en el grafo implícito f(i)=nums[i]"
+      - "A la suma de todos los valores del array"
+      - "Al primer índice visitado dos veces"
+    correct: 1
+    explanation: "Tomando índices como nodos y valores como punteros next, el valor que se repite es donde la secuencia vuelve a un nodo ya visitado: la entrada del ciclo. El nodo medio y la suma no tienen relación."
 ---
 
 La idea de fast and slow pointers (tortoise and hare) parece un truco: dos referencias avanzan a distinta velocidad sobre una secuencia. Lo interesante es que esa diferencia crea una **relación de distancia predecible** que codifica propiedades estructurales: ciclos, puntos medios, entradas de ciclo. El patrón no se limita a listas enlazadas; sirve para cualquier secuencia con una función `next` determinista y un único sucesor por elemento.

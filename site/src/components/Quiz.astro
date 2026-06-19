@@ -1,0 +1,180 @@
+---
+export interface QuizQuestion {
+	question: string;
+	options: string[];
+	correct: number;
+	explanation: string;
+}
+
+export interface Props {
+	quiz: QuizQuestion[];
+}
+
+const { quiz } = Astro.props;
+---
+
+<section class="quiz" data-quiz>
+	<p class="quiz-command term-command">quiz --check</p>
+	<h2>Comprueba lo que has entendido</h2>
+	<div class="questions">
+		{
+			quiz.map((q, qi) => (
+				<fieldset class="question" data-qi={qi} data-correct={q.correct}>
+					<legend>{q.question}</legend>
+					<div class="options" role="group">
+						{q.options.map((opt, oi) => (
+							<button
+								type="button"
+								class="option"
+								data-oi={oi}
+								aria-pressed="false"
+							>
+								<span class="marker">[{String.fromCharCode(65 + oi)}]</span>
+								<span class="text">{opt}</span>
+							</button>
+						))}
+					</div>
+				<p class="explanation" hidden>
+					<strong>Respuesta correcta:</strong> {q.options[q.correct]}
+					<br />
+					{q.explanation}
+				</p>
+			</fieldset>
+		))
+	}
+	</div>
+</section>
+
+<script>
+	function initQuiz(root: HTMLElement) {
+		root.querySelectorAll<HTMLButtonElement>('.option').forEach((btn) => {
+			btn.addEventListener('click', () => {
+				const fieldset = btn.closest<HTMLElement>('.question');
+				if (!fieldset) return;
+
+				const correct = Number(fieldset.dataset.correct);
+				const chosen = Number(btn.dataset.oi);
+				const isCorrect = chosen === correct;
+
+				fieldset.classList.add(isCorrect ? 'is-correct' : 'is-incorrect');
+
+				fieldset.querySelectorAll<HTMLButtonElement>('.option').forEach((opt) => {
+					opt.disabled = true;
+					opt.setAttribute('aria-pressed', 'false');
+					const oi = Number(opt.dataset.oi);
+					if (oi === correct) opt.classList.add('is-correct-answer');
+					if (oi === chosen && !isCorrect) opt.classList.add('is-wrong-answer');
+				});
+
+				const explanation = fieldset.querySelector<HTMLElement>('.explanation');
+				if (explanation) explanation.hidden = false;
+			});
+		});
+	}
+
+	document.querySelectorAll<HTMLElement>('[data-quiz]').forEach(initQuiz);
+</script>
+
+<style>
+	.quiz {
+		margin-top: 3em;
+		padding: 1.5em 1.75em;
+		border: 1px solid rgb(var(--gray-light));
+		border-radius: 6px;
+		background: var(--bg-raise);
+		box-shadow: var(--panel-shadow);
+	}
+	.quiz-command {
+		margin: 0 0 1.1em;
+		font-size: 0.75em;
+	}
+	.quiz h2 {
+		margin: 0 0 1.2em;
+		font-family: var(--font-sans);
+		font-size: 1.15em;
+		color: rgb(var(--black));
+	}
+	.questions {
+		display: flex;
+		flex-direction: column;
+		gap: 1.4em;
+	}
+	.question {
+		margin: 0;
+		padding: 0;
+		border: none;
+	}
+	.question legend {
+		font-weight: 600;
+		color: rgb(var(--black));
+		line-height: 1.4;
+		margin-bottom: 0.75em;
+	}
+	.options {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5em;
+	}
+	.option {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.6em;
+		width: 100%;
+		padding: 0.7em 0.85em;
+		border: 1px solid rgb(var(--gray-light));
+		border-radius: 6px;
+		background: transparent;
+		color: rgb(var(--gray-dark));
+		font-family: var(--font-sans);
+		font-size: 0.95em;
+		line-height: 1.5;
+		text-align: left;
+		cursor: pointer;
+		transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+	}
+	.option:hover:not(:disabled) {
+		border-color: var(--accent);
+		color: rgb(var(--black));
+	}
+	.option .marker {
+		font-family: var(--font-mono);
+		font-size: 0.85em;
+		color: var(--accent);
+		white-space: nowrap;
+	}
+	.option .text {
+		flex: 1;
+	}
+	.question.is-correct .option.is-correct-answer,
+	.question.is-incorrect .option.is-correct-answer {
+		border-color: var(--accent);
+		background: rgba(255, 180, 84, 0.1);
+		color: rgb(var(--black));
+	}
+	.question.is-incorrect .option.is-wrong-answer {
+		border-color: #ff6b6b;
+		background: rgba(255, 107, 107, 0.1);
+		color: rgb(var(--black));
+	}
+	.option:disabled {
+		cursor: default;
+	}
+	.explanation {
+		margin: 0.85em 0 0;
+		padding: 0.85em 1em;
+		border-left: 3px solid var(--accent);
+		border-radius: 0 6px 6px 0;
+		background: var(--accent-soft);
+		color: rgb(var(--gray-dark));
+		font-size: 0.9em;
+		line-height: 1.55;
+	}
+	.explanation strong {
+		color: var(--accent);
+	}
+	@media (max-width: 720px) {
+		.quiz {
+			padding: 1.25em;
+		}
+	}
+</style>

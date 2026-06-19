@@ -7,6 +7,31 @@ issue: 19
 requestedBy: "jlfernandezfernandez"
 writer: "deepseek-v4-pro"
 reviewer: "minimax-m3"
+quiz:
+  - question: "En un token de client credentials, ¿a qué equivale normalmente el claim sub?"
+    options:
+      - "Al object ID del usuario"
+      - "Al appId de la aplicación que solicita el token"
+      - "Al tenant ID"
+      - "Al scope solicitado"
+    correct: 1
+    explanation: "En client credentials el token representa a la aplicación, por eso sub coincide con appid. No hay usuario, por lo que oid, upn o name no aparecen."
+  - question: "¿Qué condición debe cumplir el token entrante usado como assertion en OBO?"
+    options:
+      - "Debe ser un refresh token"
+      - "Su audiencia debe ser la propia API del BFF"
+      - "Debe contener el scope .default"
+      - "Debe estar firmado por la API downstream"
+    correct: 1
+    explanation: "OBO exige intercambiar un token cuyo aud sea el BFF; si se usa un token para otra API se produce AADSTS50013. No se usan refresh tokens ni .default en este flujo."
+  - question: "¿Qué claim debe usarse para identificar a un usuario de forma estable entre APIs?"
+    options:
+      - "sub"
+      - "appid"
+      - "oid"
+      - "tid"
+    correct: 2
+    explanation: "sub es distinto para cada par (usuario, aplicación), por lo que no sirve para correlacionar usuarios entre APIs. oid identifica al usuario dentro del tenant. appid es de la aplicación y tid es el tenant."
 ---
 
 ## El escenario: SPA, BFF y una API downstream
