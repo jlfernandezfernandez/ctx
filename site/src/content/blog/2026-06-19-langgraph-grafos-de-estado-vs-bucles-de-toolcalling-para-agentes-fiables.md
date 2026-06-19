@@ -96,10 +96,10 @@ builder.add_edge("request_approval", "execute_payment")
 builder.add_edge("execute_payment", END)
 
 checkpointer = MemorySaver()
-graph = builder.compile(checkpointer=checkpointer, interrupt_before=["request_approval"])
+graph = builder.compile(checkpointer=checkpointer)
 ```
 
-El grafo se detiene antes de `request_approval`. Un sistema externo notifica al humano, quien reanuda con:
+El grafo se detiene en el nodo `request_approval` mediante `interrupt()`. Un sistema externo notifica al humano, quien reanuda con:
 
 ```python
 graph.invoke(Command(resume=True), config={"configurable": {"thread_id": "txn-123"}})
