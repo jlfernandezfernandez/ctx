@@ -31,6 +31,7 @@ quiz:
       - "Un monolito Java EE migrado a Jakarta EE 10."
     correct: 1
     explanation: "Netty ofrece control directo sobre la asignación de hilos y evita el overhead del scheduler de virtual threads, crucial para latencias extremas y cientos de miles de conexiones. A se beneficia de virtual threads por su simplicidad. C es CPU-bound y no necesita ni Netty ni virtual threads. D puede usar virtual threads sin problemas."
+reviewer: "minimax/minimax-m3"
 ---
 
 ## El coste oculto del thread-per-request
