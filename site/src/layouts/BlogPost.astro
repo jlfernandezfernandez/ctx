@@ -81,10 +81,7 @@ const {
 	import { KEY, markRead } from '../utils/reading';
 	const slug = document.querySelector('article')?.dataset.readSlug;
 	if (slug) {
-		const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD, local timezone
-		localStorage.setItem(KEY, markRead(localStorage.getItem(KEY), slug, today));
-		// Notify streak widgets on the page to re-render with the fresh state.
-		window.dispatchEvent(new Event('ctx:reading'));
+		localStorage.setItem(KEY, markRead(localStorage.getItem(KEY), slug));
 	}
 </script>
 
