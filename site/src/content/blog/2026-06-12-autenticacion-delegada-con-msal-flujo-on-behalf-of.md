@@ -76,6 +76,14 @@ No aparecen `oid`, `upn`, `name` ni `scp`: no hay usuario. Configuración: app r
 
 ## On-Behalf-Of: el BFF habla en nombre del usuario
 
+```mermaid
+flowchart LR
+  Client -->|OBO request| MiddleTier
+  MiddleTier -->|Exchange token| AzureAD
+  AzureAD -->|Access token| MiddleTier
+  MiddleTier -->|Call downstream| API
+```
+
 El BFF recibe un access token dirigido a él (`aud: api://mi-bff/access_as_user`) y lo **intercambia** por otro token dirigido a la API downstream, manteniendo la identidad del usuario. La petición a `/token`:
 
 - `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer`

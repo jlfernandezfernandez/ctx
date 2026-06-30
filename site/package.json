@@ -17,7 +17,8 @@
     "@astrojs/sitemap": "^3.7.3",
     "@fontsource/ibm-plex-mono": "^5.2.7",
     "@fontsource/ibm-plex-sans": "^5.2.8",
-    "astro": "^6.4.6"
+    "astro": "^6.4.6",
+    "mermaid": "^11.16.0"
   },
   "devDependencies": {
     "pagefind": "^1.5.2"
